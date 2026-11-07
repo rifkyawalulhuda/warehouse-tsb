@@ -3,7 +3,7 @@ import { render, type RenderResult } from 'vitest-browser-react'
 import { userEvent } from 'vitest/browser'
 import { SearchProvider } from '@/context/search-provider'
 
-const COMMAND_MENU_PLACEHOLDER = 'Type a command or search...'
+const COMMAND_MENU_PLACEHOLDER = 'Cari menu atau perintah...'
 
 const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
@@ -84,10 +84,10 @@ describe('SearchProvider and CommandMenu', () => {
     await expect
       .element(getByPlaceholder(COMMAND_MENU_PLACEHOLDER))
       .toBeInTheDocument()
-    await expect.element(getByText('Theme')).toBeInTheDocument()
-    await expect.element(getByText('Light')).toBeInTheDocument()
-    await expect.element(getByText('Dark')).toBeInTheDocument()
-    await expect.element(getByText('System')).toBeInTheDocument()
+    await expect.element(getByText('Tampilan')).toBeInTheDocument()
+    await expect.element(getByText('Terang')).toBeInTheDocument()
+    await expect.element(getByText('Gelap')).toBeInTheDocument()
+    await expect.element(getByText('Ikuti sistem')).toBeInTheDocument()
     await expect.element(getByText('Dashboard')).toBeInTheDocument()
     await expect.element(getByText('Laporan')).toBeInTheDocument()
   })
@@ -138,7 +138,7 @@ describe('SearchProvider and CommandMenu', () => {
 
     await openCommandPalette(screen)
 
-    await userEvent.click(screen.getByText('Dark'))
+    await userEvent.click(screen.getByText('Gelap'))
 
     expect(mocks.setTheme).toHaveBeenCalledWith('dark')
     await expect
@@ -157,7 +157,7 @@ describe('SearchProvider and CommandMenu', () => {
     )
 
     await expect
-      .element(screen.getByText('No results found.'))
+      .element(screen.getByText('Tidak ada hasil.'))
       .toBeInTheDocument()
   })
 })

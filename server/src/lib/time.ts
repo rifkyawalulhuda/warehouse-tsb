@@ -63,3 +63,19 @@ export function diffMinutes(a: Date | null | undefined, b: Date | null | undefin
 export function addDaysISO(iso: DateISO, days: number): DateISO {
   return dayjs.tz(`${iso}T00:00:00`, TZ).add(days, 'day').format('YYYY-MM-DD')
 }
+
+/**
+ * Apakah hari operasional untuk tanggal tertentu sudah berakhir?
+ *
+ * Dipakai cron NO_SHOW. Truk yang datang terlambat masih boleh dipindai dan
+ * masuk `LATE_WAITING_LIST` selama gudang buka, jadi booking baru boleh
+ * ditandai tidak hadir setelah jam operasional tutup — bukan begitu jam
+ * selesainya lewat.
+ */
+export function isOperationalDayOver(
+  dateISO: DateISO,
+  now: Date,
+  endMinute: number
+): boolean {
+  return now.getTime() >= jakartaInstant(dateISO, endMinute).getTime()
+}

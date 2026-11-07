@@ -29,7 +29,7 @@ Sumber kebutuhan: `docs/prd/product_requirements_document.md`,
 
 ### Koreksi terhadap PRD
 
-Tiga hal di PRD tidak bisa dijalankan apa adanya dan sudah diganti:
+Empat hal di PRD tidak bisa dijalankan apa adanya dan sudah diganti:
 
 1. **Anti-double-booking.** PRD meminta `SELECT ... FOR UPDATE` pada "baris konfigurasi kuota
    pada tanggal dan aktivitas", tetapi `warehouse_settings` tidak punya kolom tanggal maupun
@@ -41,6 +41,11 @@ Tiga hal di PRD tidak bisa dijalankan apa adanya dan sudah diganti:
 3. **Kedatangan terlalu awal.** PRD memberi `CHECKED_IN_ON_TIME` untuk truk yang datang jauh
    lebih awal tanpa batas. Ditambahkan `early_arrival_limit_minutes` (default 60): lebih awal
    dari itu gate-in ditolak dan Security diminta menunggu.
+4. **Kapan booking dianggap NO_SHOW.** PRD tidak mengaturnya, dan menerapkannya pada `end_time`
+   booking membuat truk yang datang 10 menit setelah jadwal sudah ditolak di gerbang — bertabrakan
+   dengan janji bahwa QR tidak hangus. Patokannya sekarang akhir hari operasional
+   (`isOperationalDayOver`), sehingga truk terlambat masih bisa masuk `LATE_WAITING_LIST` selama
+   gudang buka.
 
 ---
 
@@ -60,9 +65,9 @@ Tailwind v4, Vite 8, Vitest browser mode) dengan satu dashboard TSB statis.
 **Dipakai ulang**
 
 - Semua `src/components/ui/**`, layout sidebar/header, tema, `components/data-table/**`
-- `src/features/users/**` ? dijadikan **Manajemen Pengguna** (Admin membuat akun Security,
+- `src/features/users/**` → dijadikan **Manajemen Pengguna** (Admin membuat akun Security,
   Checker, Customer)
-- `src/features/tsb-admin/**` ? kerangka visual dashboard Admin, datanya disambungkan ke API
+- `src/features/tsb-admin/**` → kerangka visual dashboard Admin, datanya disambungkan ke API
 
 **Diubah**
 
@@ -77,19 +82,19 @@ Tailwind v4, Vite 8, Vitest browser mode) dengan satu dashboard TSB statis.
 warehouse-tsb/
 +-- src/                        # frontend (Vite, root sekarang)
 —   +-- routes/
-—   —   +-- login.tsx
-—   —   +-- t.$qrToken.tsx      # tiket supir publik
-—   —   +-- scan.tsx            # petugas gate
-—   —   +-- dock.tsx            # petugas checker
-—   —   +-- _app/               # admin + customer, terlindungi
+—   —   +-- (auth)/sign-in.tsx
+—   —   +-- t/$token.tsx         # tiket supir publik
+—   —   +-- _authenticated/      # admin, customer, gate, checker (terlindungi)
 —   +-- features/
-—   —   +-- bookings/           # buat booking, booking saya
-—   —   +-- ticket/             # tiket supir + QR
-—   —   +-- scanner/            # kamera QR, gate & dock
-—   —   +-- dashboard/          # monitoring realtime
-—   —   +-- master/             # dock, jenis truk, pengaturan
-—   —   +-- reports/            # KPI + ekspor
-—   —   +-- users/
+—   —   +-- auth/                # form masuk
+—   —   +-- bookings/            # buat booking, booking saya, detail
+—   —   +-- ticket/              # tiket supir + QR
+—   —   +-- scanner/             # kamera QR, gate & dock
+—   —   +-- dashboard/           # monitoring realtime
+—   —   +-- queue/  dock/        # antrean & papan dock
+—   —   +-- master/              # dock, jenis truk
+—   —   +-- reports/             # KPI + ekspor
+—   —   +-- users/  settings/
 —   +-- lib/api/                # axios instance + tipe respons
 —   +-- lib/socket.ts
 +-- server/
@@ -99,13 +104,27 @@ warehouse-tsb/
 —   —   +-- app.ts
 —   —   +-- config/
 —   —   +-- middleware/         # auth, rbac, error, validate
-—   —   +-- modules/            # auth, settings, docks, truck-types,
-—   —   —                       # slots, bookings, public-ticket, ops, reports, users
+—   —   +-- modules/            # auth, settings, master, bookings,
+—   —   —                       # slots, public-ticket, ops, reports, users
 —   —   +-- realtime/           # socket.io rooms
 —   —   +-- lib/quota.ts        # engine kuota (murni, mudah dites)
 —   +-- test/
-—   +-- vitest.config.ts        # environment node
-+-- docker-compose.yml          # postgres + api untuk dev/produksi
+—   +-- vitest.config.mts      # environment node
++-- docker-compose.yml          # postgres + api untuk dev
++-- docker-compose.prod.yml     # nginx + api + postgres untuk produksi
+```
+
+Rute yang benar-benar ada (bukan rencana awal):
+
+```
+src/routes/
++-- (auth)/sign-in.tsx           # halaman masuk tunggal
++-- t/$token.tsx                # tiket supir publik (qr_token)
++-- _authenticated/
+—   +-- route.tsx                # guard sesi + layout
+—   +-- index.tsx  dashboard.tsx  queue.tsx  dock.tsx  scan.tsx  reports.tsx
+—   +-- master.tsx  settings.tsx  users.tsx
+—   +-- bookings/index.tsx  bookings/new.tsx  bookings/$bookingId.tsx
 ```
 
 Frontend dan server berbagi satu `package.json` di root? **Tidak.** `server/` punya
@@ -134,8 +153,10 @@ Catatan perilaku:
 - `capacity` disimpan sebagai snapshot saat baris dibuat, supaya laporan historis tidak berubah
   ketika Admin menambah dock.
 - Pembatalan mengembalikan `used` pada semua blok yang tertutup booking tersebut.
-- Cron `NO_SHOW` berjalan 23:59 Asia/Jakarta untuk booking yang `start_time` sudah lewat dan
-  belum pernah gate-in; kuotanya dikembalikan.
+- Cron `NO_SHOW` berjalan setiap 10 menit dan menandai booking yang **hari operasionalnya sudah
+  berakhir** (bukan saat `end_time` booking lewat) tanpa pernah gate-in; kuotanya dikembalikan.
+  Dengan patokan ini truk yang datang terlambat masih bisa dipindai dan masuk
+  `LATE_WAITING_LIST` selama gudang buka, sesuai janji PRD bahwa QR tidak hangus.
 - Booking `COMPLETED` tidak otomatis membebaskan kuota; kuota sudah terpakai sejak booking dibuat.
 
 ---
@@ -145,17 +166,26 @@ Catatan perilaku:
 Mengikuti `rencana_pengembangan_endpoint_api.md`, dengan tambahan:
 
 - `POST /api/auth/refresh`, `POST /api/auth/logout`, `GET /api/auth/me`
-- `GET /api/bookings/:id`, `GET /api/ops/queue` (antrean on-time + late untuk dashboard)
+- `GET /api/bookings/:id`, `GET /api/ops/queue` (antrean on-time + late untuk dashboard),
+  `GET /api/ops/dock-worklist`, `POST /api/ops/no-show` (penanda manual)
+- `GET /api/slots/availability?date&activity`
 - `GET /api/reports/kpi?from&to`, `GET /api/reports/export.xlsx`
 - `GET /api/users`, `POST /api/users`, `PATCH /api/users/:id` (Admin)
-- `GET /api/admin/truck-types`, `POST/PATCH` (Admin)
+- `GET /api/master/truck-types`, `GET /api/master/docks`, `POST/PATCH` (Admin)
 - `GET /api/health`
 
 Token: access 15 menit + refresh 7 hari, keduanya cookie `httpOnly`, `SameSite=Lax`, `Secure`
 saat produksi. Frontend memanggil `/api/auth/me` saat boot; `auth-store` hanya menyimpan profil.
 
-Realtime (Socket.io): room `admin`, `dock:<id>`, `booking:<id>`. Tiket supir bergabung lewat
-`qr_token` tanpa login. Event: `booking.updated`, `dock.updated`, `queue.updated`.
+Realtime (Socket.io): identitas diambil **dari cookie sesi pada handshake**, tidak pernah dari
+data kiriman klien. Room: `staff` (Admin/Checker/Security), `admin`, `user:<id>`, dan
+`ticket:<qr_token>`. Tiket supir bergabung lewat `qr_token` tanpa login.
+Event: `booking.updated`, `dock.updated`, `queue.updated`. `queue.updated` adalah ping tanpa isi
+untuk menyegarkan daftar, jadi tidak membocorkan data booking milik customer lain.
+
+Room `dock:<id>` dan `booking:<id>` sempat ditulis di draf awal lalu dicabut: tidak ada klien yang
+pernah bergabung ke sana, sehingga event yang dikirim ke dua room itu selalu hilang. Yang benar-benar
+membutuhkannya — papan dock dan detail booking — sudah tercakup `staff` dan `user:<id>`.
 
 ---
 
@@ -166,10 +196,10 @@ Realtime (Socket.io): room `admin`, `dock:<id>`, `booking:<id>`. Tiket supir ber
 - [x] Ganti nama paket, rapikan script `dev:web` / `dev:api` / `dev` / `db:*`
 - [x] `docker-compose.yml` dengan Postgres 16 + healthcheck
 - [x] Scaffold `server/` (Express 5, TypeScript, Prisma, tsx watch)
-- [x] `server/vitest.config.ts` (environment node) terpisah dari Vitest browser frontend
+- [x] `server/vitest.config.mts` (environment node) terpisah dari Vitest browser frontend
 - [x] Cabut Clerk: hapus rute `clerk/**`, dependensi, dan pemakaian `ClerkProvider`
 - [x] Hapus halaman demo (chats, apps, tasks, help-center), `netlify.toml`
-- [x] `.env.example` di root dan `server/`
+- [x] `.env.example` di root (dibaca server/ dan Prisma CLI)
 
 Verifikasi: `npm run build` lolos, `npm run dev` menyalakan web + api, `GET /api/health`
 mengembalikan 200, `docker compose up -d` membuat Postgres sehat.
@@ -189,11 +219,11 @@ Verifikasi: `npx prisma migrate dev`, `npm run db:seed`, inspeksi tabel.
 - [x] Register/login/refresh/logout, bcrypt, JWT
 - [x] Middleware `requireAuth` dan `requireRole`
 - [x] Endpoint `me`, manajemen pengguna oleh Admin
-- [x] Halaman `/login` tunggal + redirect per role
-- [x] Guard rute TanStack untuk `_app`, `/scan`, `/dock`
+- [x] Halaman `/sign-in` tunggal + redirect per role
+- [x] Guard rute TanStack untuk `_authenticated`, `/scan`, `/dock`
 
-Verifikasi: tes integrasi login per role, akses lintas role ditolak 403, refresh token bekerja,
-login ulang setelah logout gagal.
+Verifikasi: tes integrasi di `server/test/users.test.ts` dan `server/test/settings.test.ts`
+mencakup sesi per peran dan penolakan lintas role (403/401); `npm run test:api` menjalankannya.
 
 ### Fase 3 — Engine kuota & booking (inti risiko)
 
@@ -202,23 +232,23 @@ login ulang setelah logout gagal.
       berurutan menurut `slot_start`, tolak bila salah satu blok penuh
 - [x] `GET /api/slots/availability`
 - [x] `GET /api/bookings/my-list`, `PATCH /vehicle-info`, `POST /cancel`
-- [x] Tes: dua booking paralel pada sisa 1 kuota ? tepat satu berhasil
-- [x] Tes: durasi 120 menit yang salah satu blok tengahnya penuh ? ditolak
+- [x] Tes: dua booking paralel pada sisa 1 kuota → tepat satu berhasil
+- [x] Tes: durasi 120 menit yang salah satu blok tengahnya penuh → ditolak
 - [x] Tes: pembatalan mengembalikan kuota
 
-Verifikasi: `npm test` di `server/`, termasuk tes konkurensi dengan dua koneksi Prisma terpisah.
+Verifikasi: `npm run test:api`, termasuk tes konkurensi dengan dua koneksi Prisma terpisah.
 
 ### Fase 4 — Frontend customer & tiket supir
 
 - [x] Halaman buat booking: tanggal, aktivitas, jenis truk, grid jam dengan sisa kuota
 - [x] Form dokumen + data kendaraan opsional (`BOOKED_INCOMPLETE` vs `BOOKED_READY`)
 - [x] Halaman Booking Saya + lengkapi data menyusul
-- [x] Tiket publik `/t/$qrToken`: QR besar hanya saat `BOOKED_READY`, status realtime
+- [x] Tiket publik `/t/$token`: QR besar hanya saat `BOOKED_READY`, status realtime
 - [x] Tombol "Kirim via WhatsApp" (`wa.me`), unduh QR PNG, cetak PDF via CSS print
 - [x] Supir boleh melengkapi plat/supir dari halaman tiket
 
-Verifikasi: alur penuh di viewport 390—844 — booking tanpa data ? QR terkunci ? lengkapi ?
-QR muncul ? status berubah saat ops memindai.
+Verifikasi: alur penuh di viewport 390—844 — booking tanpa data → QR terkunci → lengkapi →
+QR muncul → status berubah saat ops memindai.
 
 ### Fase 5 — Lapangan & dashboard realtime
 
@@ -230,13 +260,18 @@ QR muncul ? status berubah saat ops memindai.
 - [x] Dashboard Admin: dock grid, antrean on-time, late waiting list, assign dock
 - [x] Socket.io: perubahan status tampil di semua layar tanpa refresh
 
-Verifikasi: simulasi 5 peran di 3 tab/perangkat; assign dock mengubah layar supir < 2 detik.
+Verifikasi: `server/test/realtime.test.ts` (4 kasus) membuktikan handshake dengan cookie sesi masuk ke
+room `staff` dan menerima `booking.updated`, sedangkan koneksi anonim tidak menerimanya; tiket supir
+tanpa login menerima update booking-nya sendiri lewat `qr_token`; dan cookie yang access token-nya
+sudah kedaluwarsa tetap dikenali lewat refresh token. Diuji juga terhadap server yang sedang
+berjalan dengan `node scripts/verify-realtime.cjs`, dan secara manual di browser: mengubah status
+lewat API langsung mengubah dashboard tanpa reload.
 
 ### Fase 6 — Laporan, KPI, deploy
 
 - [x] Perhitungan waiting time, processing time, turnaround dari `booking_time_logs`
 - [x] Halaman laporan + filter tanggal, ekspor `.xlsx` (exceljs)
-- [x] `docker-compose` produksi: nginx, api, postgres, volume, restart policy
+- [x] Docker Compose produksi: nginx, api, postgres, volume, restart policy
 - [x] Panduan Cloudflare Tunnel + HTTPS, pastikan kamera berjalan di HP
 - [x] UAT: simulasi satu hari operasional
 
@@ -282,8 +317,13 @@ Empat pertanyaan terbuka di draf awal sudah dijawab saat implementasi:
 | `npm run build` (typecheck + Vite) | lolos |
 | `npm run build:api` (tsc server) | lolos |
 | `npm run lint` | 0 error (4 warning bawaan template) |
-| `npm run test:api` | 40 tes lolos, termasuk konkurensi dua koneksi |
+| `npm run test:api` | 52 tes lolos (8 berkas), termasuk konkurensi dua koneksi, kuota, auth, realtime, no-show |
 | `npm test` (Vitest browser) | 64 tes lolos |
 | Alur manual di browser | login 4 peran, booking, tiket, scan, dock, dashboard, laporan |
 | `PUT /api/settings` tanpa `requireAuth` | diperbaiki; tes regresi di `server/test/settings.test.ts` (200 admin, 403 customer, 401 tanpa sesi) |
+| Realtime setelah perbaikan | `realtime.test.ts` (4 kasus): petugas menerima `booking.updated`, tamu tidak, tiket lewat `qr_token`, refresh token dipakai saat access token habis |
+| NO_SHOW | dihitung terhadap akhir hari operasional, bukan `end_time` booking; tes di `no-show.test.ts` |
+| Form booking untuk Admin | `/bookings/new` dibatasi ke CUSTOMER, sama dengan aturan `POST /api/bookings` |
+| Nonaktifkan akun sendiri | ditolak server (`CANNOT_DEACTIVATE_SELF`, `LAST_ADMIN`); switch-nya dimatikan di UI |
+| Mode terang/gelap | pemilih tema di sidebar, header, dan Pengaturan; `resolvedTheme` diperbaiki agar ikut berubah saat OS berganti tema |
 

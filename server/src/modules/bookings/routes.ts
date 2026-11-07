@@ -234,6 +234,7 @@ bookingsRouter.post('/', requireExactRole('CUSTOMER'), async (req, res, next) =>
       bookingId: created.id,
       qrToken: created.qrToken,
       status: created.status,
+      userId: created.customer.id,
     })
 
     res.status(201).json({ data: created })
@@ -384,6 +385,7 @@ bookingsRouter.patch('/:id/vehicle-info', async (req, res, next) => {
       bookingId: updated.id,
       qrToken: updated.qrToken,
       status: updated.status,
+      userId: updated.customer.id,
     })
 
     res.json({ data: updated })
@@ -450,6 +452,7 @@ bookingsRouter.post('/:id/cancel', async (req, res, next) => {
       bookingId: booking.id,
       qrToken: booking.qrToken,
       status: 'CANCELLED',
+      userId: booking.customerId,
     })
 
     res.json({ data: { id, status: 'CANCELLED' as BookingStatus } })

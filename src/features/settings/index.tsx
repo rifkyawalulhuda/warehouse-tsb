@@ -20,6 +20,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
+import { AppearancePicker } from './appearance-picker'
 
 type FormState = {
   warehouseName: string
@@ -92,6 +93,18 @@ function SettingsForm({ settings }: { settings: Settings }) {
           </Button>
         }
       />
+
+      <Card>
+        <CardHeader>
+          <CardTitle className='text-base'>Tampilan</CardTitle>
+          <CardDescription>
+            Pilih tema terang atau gelap. Berlaku di peramban ini saja, bukan di akun.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AppearancePicker />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

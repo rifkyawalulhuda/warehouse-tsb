@@ -133,6 +133,7 @@ publicTicketRouter.patch('/:qrToken/vehicle-info', async (req, res, next) => {
       bookingId: updated.id,
       qrToken: updated.qrToken,
       status: updated.status,
+      userId: updated.customer.id,
     })
 
     res.json({ data: { status: updated.status, licensePlate: updated.licensePlate } })

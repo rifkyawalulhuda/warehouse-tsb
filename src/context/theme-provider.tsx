@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useMemo } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 import { getCookie, setCookie, removeCookie } from '@/lib/cookies'
 
 type Theme = 'dark' | 'light' | 'system'
@@ -32,6 +32,12 @@ const initialState: ThemeProviderState = {
 
 const ThemeContext = createContext<ThemeProviderState>(initialState)
 
+const DARK_QUERY = '(prefers-color-scheme: dark)'
+
+function systemTheme(): ResolvedTheme {
+  return window.matchMedia(DARK_QUERY).matches ? 'dark' : 'light'
+}
+
 export function ThemeProvider({
   children,
   defaultTheme = DEFAULT_THEME,
@@ -42,19 +48,18 @@ export function ThemeProvider({
     () => (getCookie(storageKey) as Theme) || defaultTheme
   )
 
-  // Optimized: Memoize the resolved theme calculation to prevent unnecessary re-computations
-  const resolvedTheme = useMemo((): ResolvedTheme => {
-    if (theme === 'system') {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches
-        ? 'dark'
-        : 'light'
-    }
-    return theme as ResolvedTheme
-  }, [theme])
+  // Disimpan sebagai state, bukan diturunkan lewat useMemo dari `theme` saja:
+  // pada mode "system" nilainya harus ikut berubah saat OS berganti tema,
+  // dan perubahan itu tidak terlihat oleh dependensi `theme`.
+  const [systemResolved, setSystemResolved] =
+    useState<ResolvedTheme>(systemTheme)
+
+  const resolvedTheme: ResolvedTheme =
+    theme === 'system' ? systemResolved : (theme as ResolvedTheme)
 
   useEffect(() => {
     const root = window.document.documentElement
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    const mediaQuery = window.matchMedia(DARK_QUERY)
 
     const applyTheme = (currentResolvedTheme: ResolvedTheme) => {
       root.classList.remove('light', 'dark') // Remove existing theme classes
@@ -62,10 +67,9 @@ export function ThemeProvider({
     }
 
     const handleChange = () => {
-      if (theme === 'system') {
-        const systemTheme = mediaQuery.matches ? 'dark' : 'light'
-        applyTheme(systemTheme)
-      }
+      const next = mediaQuery.matches ? 'dark' : 'light'
+      setSystemResolved(next)
+      if (theme === 'system') applyTheme(next)
     }
 
     applyTheme(resolvedTheme)

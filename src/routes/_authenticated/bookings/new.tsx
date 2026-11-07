@@ -4,7 +4,7 @@ import { RequireAuth } from '@/components/require-auth'
 
 export const Route = createFileRoute('/_authenticated/bookings/new')({
   component: () => (
-    <RequireAuth roles={['CUSTOMER', 'ADMIN']}>
+    <RequireAuth roles={['CUSTOMER']}>
       <CreateBooking />
     </RequireAuth>
   ),

@@ -1,0 +1,7 @@
+Peran	Email
+Admin	admin@tsb.test
+Customer	customer@tsb.test, customer2@tsb.test
+Security	gate@tsb.test, gate2@tsb.test
+Checker	checker@tsb.test, checker2@tsb.test
+
+Password : Rahasia123

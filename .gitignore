@@ -32,6 +32,9 @@ server/dist
 # Test coverage
 /coverage
 
+# Screenshot sesi agen (artefak lokal, bukan bagian repo)
+/.openchamber/
+
 # Vitest artifacts (browser screenshots/attachments)
 **/__screenshots__/
 .vitest-attachments/

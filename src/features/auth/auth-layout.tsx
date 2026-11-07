@@ -1,3 +1,5 @@
+import { ThemeSwitch } from '@/components/theme-switch'
+
 type AuthLayoutProps = {
   children: React.ReactNode
 }
@@ -5,6 +7,9 @@ type AuthLayoutProps = {
 export function AuthLayout({ children }: AuthLayoutProps) {
   return (
     <div className='container grid h-svh max-w-none items-center justify-center'>
+      <div className='absolute end-4 top-4'>
+        <ThemeSwitch />
+      </div>
       <div className='mx-auto flex w-full flex-col justify-center space-y-2 py-8 sm:p-8'>
         <div className='mb-4 flex items-center justify-center gap-2'>
           <div className='flex size-10 items-center justify-center rounded-lg bg-primary text-primary-foreground'>

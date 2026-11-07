@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams } from '@tanstack/react-router'
 import { Download, Loader2, Lock, MessageCircle, Printer } from 'lucide-react'
@@ -6,6 +6,7 @@ import { QRCodeCanvas } from 'qrcode.react'
 import { toast } from 'sonner'
 import { apiErrorMessage } from '@/lib/api/client'
 import { completeVehicleByTicket, fetchPublicTicket } from '@/lib/api/endpoints'
+import { closeTicketSocket, getTicketSocket } from '@/lib/socket'
 import { activityLabels, formatDate, formatTime, waNumber } from '@/lib/format'
 import { ErrorBlock, LoadingBlock } from '@/components/query-state'
 import { StatusBadge } from '@/components/status-badge'
@@ -26,14 +27,31 @@ export function TicketPage() {
   const { data, isPending, isError, error, refetch } = useQuery({
     queryKey: ['ticket', token],
     queryFn: () => fetchPublicTicket(token),
-    // Tiket yang sudah selesai tidak perlu di-poll lagi.
+    // Polling tetap ada sebagai jaring pengaman (mis. HP tertidur dan socket
+    // terputus); realtime di bawah membuat perubahan terasa seketika.
     refetchInterval: (query) => {
       const status = query.state.data?.status
       return status === 'CHECKED_OUT' || status === 'CANCELLED' || status === 'NO_SHOW'
         ? false
-        : 15_000
+        : 60_000
     },
   })
+
+  // Tiket supir tidak punya sesi, jadi ia bergabung lewat qr_token. Tanpa ini
+  // status di layar supir baru berubah saat polling berikutnya.
+  useEffect(() => {
+    const socket = getTicketSocket(token)
+    const refresh = () => {
+      void queryClient.invalidateQueries({ queryKey: ['ticket', token] })
+    }
+    socket.on('booking.updated', refresh)
+    socket.on('connect', refresh)
+    return () => {
+      socket.off('booking.updated', refresh)
+      socket.off('connect', refresh)
+      closeTicketSocket()
+    }
+  }, [token, queryClient])
 
   if (isPending) return <LoadingBlock label='Memuat tiket...' />
   if (isError)

@@ -11,6 +11,7 @@ import { AppTitle } from './app-title'
 import { buildSidebarData } from './data/sidebar-data'
 import { NavGroup } from './nav-group'
 import { NavUser } from './nav-user'
+import { ThemeMenu } from './theme-menu'
 
 export function AppSidebar() {
   const { collapsible, variant } = useLayout()
@@ -32,6 +33,7 @@ export function AppSidebar() {
         ))}
       </SidebarContent>
       <SidebarFooter>
+        <ThemeMenu />
         <NavUser user={data.user} />
       </SidebarFooter>
       <SidebarRail />

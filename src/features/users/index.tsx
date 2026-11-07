@@ -6,6 +6,7 @@ import { apiErrorMessage } from '@/lib/api/client'
 import { createUser, fetchUsers, updateUser } from '@/lib/api/endpoints'
 import type { ManagedUser, Role } from '@/lib/api/types'
 import { formatDate, roleLabels } from '@/lib/format'
+import { useAuthStore } from '@/stores/auth-store'
 import { Main } from '@/components/layout/main'
 import { PageHeader } from '@/components/page-header'
 import { ErrorBlock, LoadingBlock } from '@/components/query-state'
@@ -48,6 +49,7 @@ import {
 const ROLES: Role[] = ['ADMIN', 'CUSTOMER', 'GATE_OFFICER', 'CHECKER']
 
 export function UsersPage() {
+  const currentUser = useAuthStore((state) => state.user)
   const queryClient = useQueryClient()
   const [q, setQ] = useState('')
   const [role, setRole] = useState<Role | 'ALL'>('ALL')
@@ -136,7 +138,14 @@ export function UsersPage() {
                 <TableBody>
                   {users.data.map((user) => (
                     <TableRow key={user.id}>
-                      <TableCell className='font-medium'>{user.name}</TableCell>
+                      <TableCell className='font-medium'>
+                        {user.name}
+                        {user.id === currentUser?.id && (
+                          <Badge variant='secondary' className='ms-2'>
+                            Anda
+                          </Badge>
+                        )}
+                      </TableCell>
                       <TableCell className='text-sm text-muted-foreground'>
                         {user.email}
                       </TableCell>
@@ -152,7 +161,14 @@ export function UsersPage() {
                       <TableCell className='text-end'>
                         <Switch
                           checked={user.isActive}
-                          disabled={toggleActive.isPending}
+                          disabled={
+                            toggleActive.isPending || user.id === currentUser?.id
+                          }
+                          title={
+                            user.id === currentUser?.id
+                              ? 'Akun Anda sendiri tidak bisa dinonaktifkan'
+                              : undefined
+                          }
                           onCheckedChange={(checked) =>
                             toggleActive.mutate({ id: user.id, isActive: checked })
                           }

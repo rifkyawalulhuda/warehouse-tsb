@@ -125,6 +125,31 @@ usersRouter.patch('/:id', async (req, res, next) => {
     const exists = await prisma.user.findUnique({ where: { id } })
     if (!exists) throw notFound('Pengguna tidak ditemukan')
 
+    // Admin tidak boleh menonaktifkan atau menurunkan akunnya sendiri: hanya
+    // Admin yang bisa membuka kembali akun, jadi kesalahan ini mengunci sistem
+    // secara permanen tanpa jalan pulih lewat aplikasi.
+    if (id === req.user?.id) {
+      if (body.isActive === false) {
+        throw badRequest(
+          'CANNOT_DEACTIVATE_SELF',
+          'Anda tidak bisa menonaktifkan akun Anda sendiri'
+        )
+      }
+    }
+
+    // Jangan sampai tidak ada Admin aktif yang tersisa.
+    if (body.isActive === false && exists.role === 'ADMIN') {
+      const activeAdmins = await prisma.user.count({
+        where: { role: 'ADMIN', isActive: true, id: { not: id } },
+      })
+      if (activeAdmins === 0) {
+        throw badRequest(
+          'LAST_ADMIN',
+          'Harus ada minimal satu Admin aktif. Aktifkan admin lain lebih dulu.'
+        )
+      }
+    }
+
     const user = await prisma.user.update({
       where: { id },
       data: {
