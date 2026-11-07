@@ -1,0 +1,506 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<mxfile host="app.diagrams.net" agent="Hermes" version="24.7.17">
+  <diagram id="tsb-flow" name="Alur Proses TSB">
+    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="3075" pageHeight="4360" math="0" shadow="0" background="#ffffff">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="2" value="ALUR PROSES  ·  WAREHOUSE TIME SLOT BOOKING (TSB)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#1f3a5f;strokeColor=#14283f;fontSize=18;fontColor=#ffffff;align=center;verticalAlign=middle;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="18" width="3035" height="44" as="geometry" />
+        </mxCell>
+        <mxCell id="3" value="Cross-Functional Flow  ·  Penjadwalan Kedatangan Armada Berbasis QR Code  ·  Loading &amp;amp; Unloading  ·  5 Tahap End-to-End" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#eef3f8;strokeColor=#9fb3c8;fontSize=12;fontColor=#233040;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="20" y="64" width="3035" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="4" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontColor=#1a1a1a;align=center;verticalAlign=middle;opacity=22;" vertex="1" parent="1">
+          <mxGeometry x="165" y="130" width="460" height="3760" as="geometry" />
+        </mxCell>
+        <mxCell id="5" value="1. ADMIN GUDANG&lt;br&gt;&lt;font style='font-size:11px'&gt;(Desktop Web)&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontColor=#1a1a1a;align=center;verticalAlign=middle;opacity=92;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="165" y="130" width="460" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="6" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontColor=#1a1a1a;align=center;verticalAlign=middle;opacity=22;" vertex="1" parent="1">
+          <mxGeometry x="649" y="130" width="460" height="3760" as="geometry" />
+        </mxCell>
+        <mxCell id="7" value="2. CUSTOMER / EKSPEDISI&lt;br&gt;&lt;font style='font-size:11px'&gt;(Desktop &amp;amp; Mobile)&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontColor=#1a1a1a;align=center;verticalAlign=middle;opacity=92;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="649" y="130" width="460" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="8" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=13;fontColor=#1a1a1a;align=center;verticalAlign=middle;opacity=22;" vertex="1" parent="1">
+          <mxGeometry x="1133" y="130" width="460" height="3760" as="geometry" />
+        </mxCell>
+        <mxCell id="9" value="3. SISTEM TSB&lt;br&gt;&lt;font style='font-size:11px'&gt;(Validasi &amp;amp; Auto-Decision)&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=12;fontColor=#1a1a1a;align=center;verticalAlign=middle;opacity=92;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1133" y="130" width="460" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="10" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=13;fontColor=#1a1a1a;align=center;verticalAlign=middle;opacity=22;" vertex="1" parent="1">
+          <mxGeometry x="1617" y="130" width="460" height="3760" as="geometry" />
+        </mxCell>
+        <mxCell id="11" value="4. SUPIR TRUK&lt;br&gt;&lt;font style='font-size:11px'&gt;(Mobile Web, tanpa login)&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;fontColor=#1a1a1a;align=center;verticalAlign=middle;opacity=92;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1617" y="130" width="460" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="12" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=13;fontColor=#1a1a1a;align=center;verticalAlign=middle;opacity=22;" vertex="1" parent="1">
+          <mxGeometry x="2101" y="130" width="460" height="3760" as="geometry" />
+        </mxCell>
+        <mxCell id="13" value="5. PETUGAS GATE / SECURITY&lt;br&gt;&lt;font style='font-size:11px'&gt;(Mobile Web Scanner)&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;fontColor=#1a1a1a;align=center;verticalAlign=middle;opacity=92;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="2101" y="130" width="460" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="14" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;fontColor=#1a1a1a;align=center;verticalAlign=middle;opacity=22;" vertex="1" parent="1">
+          <mxGeometry x="2585" y="130" width="460" height="3760" as="geometry" />
+        </mxCell>
+        <mxCell id="15" value="6. CHECKER DOCK&lt;br&gt;&lt;font style='font-size:11px'&gt;(Mobile Web Scanner)&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontColor=#1a1a1a;align=center;verticalAlign=middle;opacity=92;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="2585" y="130" width="460" height="62" as="geometry" />
+        </mxCell>
+        <mxCell id="16" value="&lt;b&gt;TAHAP 1&lt;/b&gt;&lt;br&gt;PRA-OPERASIONAL" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontColor=#1a1a1a;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="14" y="196" width="142" height="272" as="geometry" />
+        </mxCell>
+        <mxCell id="17" value="Setup kapasitas oleh Admin" style="text;html=1;whiteSpace=wrap;fontSize=10;fontColor=#1a1a1a;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="14" y="468" width="142" height="272" as="geometry" />
+        </mxCell>
+        <mxCell id="18" value="" style="endArrow=none;dashed=1;dashPattern=10 8;strokeColor=#9aa5b1;strokeWidth=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+            <mxPoint x="165" y="180" as="sourcePoint" />
+            <mxPoint x="3045" y="180" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="19" value="&lt;b&gt;TAHAP 2&lt;/b&gt;&lt;br&gt;PEMESANAN SLOT &amp;amp; TIKET QR" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontColor=#1a1a1a;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="14" y="770" width="142" height="347" as="geometry" />
+        </mxCell>
+        <mxCell id="20" value="Customer booking → tiket QR ke Supir" style="text;html=1;whiteSpace=wrap;fontSize=10;fontColor=#1a1a1a;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="14" y="1117" width="142" height="347" as="geometry" />
+        </mxCell>
+        <mxCell id="21" value="" style="endArrow=none;dashed=1;dashPattern=10 8;strokeColor=#9aa5b1;strokeWidth=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+            <mxPoint x="165" y="754" as="sourcePoint" />
+            <mxPoint x="3045" y="754" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="22" value="&lt;b&gt;TAHAP 3&lt;/b&gt;&lt;br&gt;KEDATANGAN &amp;amp; GATE-IN" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontColor=#1a1a1a;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="14" y="1490" width="142" height="420" as="geometry" />
+        </mxCell>
+        <mxCell id="23" value="Tiba → scan QR → validasi waktu" style="text;html=1;whiteSpace=wrap;fontSize=10;fontColor=#1a1a1a;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="14" y="1910" width="142" height="420" as="geometry" />
+        </mxCell>
+        <mxCell id="24" value="" style="endArrow=none;dashed=1;dashPattern=10 8;strokeColor=#9aa5b1;strokeWidth=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+            <mxPoint x="165" y="1474" as="sourcePoint" />
+            <mxPoint x="3045" y="1474" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="25" value="&lt;b&gt;TAHAP 4&lt;/b&gt;&lt;br&gt;ALOKASI DOCK &amp;amp; PROSES" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontColor=#1a1a1a;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="14" y="2380" width="142" height="425" as="geometry" />
+        </mxCell>
+        <mxCell id="26" value="Assign dock → mulai → selesai" style="text;html=1;whiteSpace=wrap;fontSize=10;fontColor=#1a1a1a;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="14" y="2805" width="142" height="425" as="geometry" />
+        </mxCell>
+        <mxCell id="27" value="" style="endArrow=none;dashed=1;dashPattern=10 8;strokeColor=#9aa5b1;strokeWidth=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+            <mxPoint x="165" y="2364" as="sourcePoint" />
+            <mxPoint x="3045" y="2364" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="28" value="&lt;b&gt;TAHAP 5&lt;/b&gt;&lt;br&gt;GATE-OUT / CHECK-OUT" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontColor=#1a1a1a;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="14" y="3260" width="142" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="29" value="Scan keluar → rekapitulasi" style="text;html=1;whiteSpace=wrap;fontSize=10;fontColor=#1a1a1a;align=center;verticalAlign=middle;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="14" y="3480" width="142" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="30" value="" style="endArrow=none;dashed=1;dashPattern=10 8;strokeColor=#9aa5b1;strokeWidth=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+            <mxPoint x="165" y="3244" as="sourcePoint" />
+            <mxPoint x="3045" y="3244" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="31" value="MULAI" style="ellipse;whiteSpace=wrap;html=1;fillColor=#82b366;strokeColor=#4d7a3a;fontStyle=1;fontSize=13;fontColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="366" y="221" width="58" height="58" as="geometry" />
+        </mxCell>
+        <mxCell id="32" value="&lt;b&gt;Login Web Desktop&lt;/b&gt;&lt;br&gt;Menu &lt;b&gt;Pengaturan Master Gudang&lt;/b&gt;" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="230" y="316" width="330" height="68" as="geometry" />
+        </mxCell>
+        <mxCell id="33" value="&lt;b&gt;Atur Master Dock &amp;amp; Kuota&lt;/b&gt;&lt;br&gt;4 Dock Unloading · 2 Dock Loading&lt;br&gt;Jam operasional 08:00 – 17:00" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="230" y="418" width="330" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="34" value="&lt;b&gt;Atur Durasi Armada (SLA)&lt;/b&gt;&lt;br&gt;Pickup/Blindvan/CDE &lt;b&gt;30'&lt;/b&gt; · CDD/Fuso &lt;b&gt;60'&lt;/b&gt;&lt;br&gt;Wingbox/Cnt 20ft &lt;b&gt;90'&lt;/b&gt; · Cnt 40ft &lt;b&gt;120'&lt;/b&gt;" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="230" y="536" width="330" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="35" value="&lt;b&gt;Atur Grace Period&lt;/b&gt;&lt;br&gt;Toleransi keterlambatan&lt;br&gt;(mis. 15 menit dari jam mulai)" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="230" y="656" width="330" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="36" value="&lt;b&gt;Slot &amp;amp; Kuota Terbentuk&lt;/b&gt;&lt;br&gt;Kapasitas per jam siap dipesan&lt;br&gt;Status: &lt;b&gt;AVAILABLE&lt;/b&gt;" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="1198" y="758" width="330" height="84" as="geometry" />
+        </mxCell>
+        <mxCell id="37" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="31" target="32">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="38" value="1.1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="32" target="33">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="39" value="1.2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="33" target="34">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="40" value="1.3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="34" target="35">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="41" value="1.4  simpan config" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="35" target="36">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="42" value="&lt;b&gt;Login &amp;amp; Buat Booking Baru&lt;/b&gt;&lt;br&gt;Pilih tanggal kedatangan +&lt;br&gt;aktivitas: &lt;b&gt;Loading&lt;/b&gt; / &lt;b&gt;Unloading&lt;/b&gt;" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="714" y="846" width="330" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="43" value="&lt;b&gt;Pilih Jenis Truk&lt;/b&gt;&lt;br&gt;mis. Container 40ft → sistem&lt;br&gt;mengunci durasi &lt;b&gt;120 menit (2 jam)&lt;/b&gt;" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="714" y="968" width="330" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="44" value="&lt;b&gt;Pilih Jam Kedatangan&lt;/b&gt;&lt;br&gt;Kuota ditampilkan per jam:&lt;br&gt;08:00 [3] · 09:00 [2] · 10:00 [PENUH]" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="714" y="1090" width="330" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="45" value="&lt;b&gt;Validasi Kuota Berturut-turut&lt;/b&gt;&lt;br&gt;Hanya jam dengan kuota kosong&lt;br&gt;selama durasi truk yang diizinkan" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="1198" y="1076" width="330" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="46" value="&lt;b&gt;Input Detail Pengiriman&lt;/b&gt;&lt;br&gt;No. Dokumen (PO/DO/SJ) · Plat Nomor&lt;br&gt;Nama &amp;amp; No. WhatsApp Supir" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="714" y="1218" width="330" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="47" value="&lt;b&gt;Booking Dibuat&lt;/b&gt;&lt;br&gt;Kunci kapasitas 08:00–10:00&lt;br&gt;Terbitkan Kode Booking + QR" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="1198" y="1212" width="330" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="48" value="&lt;b&gt;E-Ticket Terbit&lt;/b&gt;&lt;br&gt;Kode booking · jadwal · QR Code&lt;br&gt;dapat diunduh PDF / gambar" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="714" y="1346" width="330" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="49" value="&lt;b&gt;Kirim Tiket ke WhatsApp Supir&lt;/b&gt;&lt;br&gt;Click-to-WA: tautan unik&lt;br&gt;tsb.gudanganda.com/ticket/xyz123" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="714" y="1456" width="330" height="88" as="geometry" />
+        </mxCell>
+        <mxCell id="50" value="siap dipesan" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#82b366;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;dashed=1;dashPattern=6 4;" edge="1" parent="1" source="36" target="42">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="51" value="2.1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="42" target="43">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="52" value="2.2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="43" target="44">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="53" value="cek kuota" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#b85450;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;dashed=1;dashPattern=6 4;" edge="1" parent="1" source="44" target="45">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="54" value="booking dibuat" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#b85450;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;dashed=1;dashPattern=6 4;" edge="1" parent="1" source="46" target="47">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="55" value="2.3  slot tersedia" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="44" target="46">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="56" value="2.4  konfirmasi" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="46" target="48">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="57" value="2.5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#82b366;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;dashed=1;dashPattern=6 4;" edge="1" parent="1" source="48" target="49">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="58" value="&lt;b&gt;Hari-H: Buka Tautan WA&lt;/b&gt;&lt;br&gt;Tanpa login / tanpa instal aplikasi&lt;br&gt;QR besar + jadwal 08:00–10:00" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="1682" y="1564" width="330" height="92" as="geometry" />
+        </mxCell>
+        <mxCell id="59" value="&lt;b&gt;Status: TERJADWAL&lt;/b&gt;&lt;br&gt;BELUM CHECK-IN" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="1682" y="1688" width="330" height="64" as="geometry" />
+        </mxCell>
+        <mxCell id="60" value="&lt;b&gt;Truk Tiba di Pos Security&lt;/b&gt;&lt;br&gt;Tunjukkan QR Code dari layar HP" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="1682" y="1794" width="330" height="76" as="geometry" />
+        </mxCell>
+        <mxCell id="61" value="&lt;b&gt;Scan QR Code Supir&lt;/b&gt;&lt;br&gt;Kamera HP petugas (web-based&lt;br&gt;scanner, tanpa instal aplikasi)" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="2161" y="1786" width="340" height="92" as="geometry" />
+        </mxCell>
+        <mxCell id="62" value="&lt;b&gt;Validasi Waktu Otomatis&lt;/b&gt;&lt;br&gt;Jam tiba aktual vs jam booking&lt;br&gt;+ grace period" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="1198" y="1929" width="330" height="92" as="geometry" />
+        </mxCell>
+        <mxCell id="63" value="&lt;b&gt;Dalam batas&lt;br&gt;toleransi?&lt;/b&gt;&lt;br&gt;&lt;font style='font-size:11px'&gt;±15 menit&lt;/font&gt;" style="rhombus;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="1243" y="2052" width="240" height="126" as="geometry" />
+        </mxCell>
+        <mxCell id="64" value="&lt;b&gt;SKENARIO A — TEPAT WAKTU&lt;/b&gt;&lt;br&gt;Layar petugas &lt;b&gt;HIJAU&lt;/b&gt;: Valid / On Time&lt;br&gt;Status tiket → &lt;b&gt;CHECKED-IN&lt;/b&gt;" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="2131" y="2065" width="400" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="65" value="&lt;b&gt;SKENARIO B — TERLAMBAT&lt;/b&gt;&lt;br&gt;Layar petugas &lt;b&gt;KUNING/ORANYE&lt;/b&gt;&lt;br&gt;Status tiket → &lt;b&gt;LATE WAITING LIST&lt;/b&gt;" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="2131" y="2250" width="400" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="66" value="tiket terkirim" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;dashed=1;dashPattern=6 4;" edge="1" parent="1" source="49" target="58">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1109" y="1500" />
+              <mxPoint x="1109" y="1610" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="67" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="58" target="59">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="68" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="59" target="60">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="69" value="2.6  tunjukkan QR" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;dashed=1;dashPattern=6 4;" edge="1" parent="1" source="60" target="61">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="70" value="hasil scan" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#b85450;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;dashed=1;dashPattern=6 4;" edge="1" parent="1" source="61" target="62">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2331" y="1905" />
+              <mxPoint x="1363" y="1905" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="71" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="62" target="63">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="72" value="YA · On-Time" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#4d7a3a;strokeWidth=2.4;fontSize=11;fontColor=#1a1a1a;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="63" target="64">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1635" y="2115" />
+              <mxPoint x="1635" y="2023" />
+              <mxPoint x="2331" y="2023" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="73" value="TIDAK · Terlambat" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#d79b00;strokeWidth=2.4;fontSize=11;fontColor=#1a1a1a;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="63" target="65">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1363" y="2222" />
+              <mxPoint x="2331" y="2222" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="74" value="&lt;b&gt;Dashboard Admin Menyala&lt;/b&gt;&lt;br&gt;Baris jadwal jadi &lt;b&gt;HIJAU&lt;/b&gt; + notifikasi:&lt;br&gt;truk siap di area parkir tunggu" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="230" y="2067" width="330" height="96" as="geometry" />
+        </mxCell>
+        <mxCell id="75" value="&lt;b&gt;Truk Dipindah ke Kolom&lt;/b&gt;&lt;br&gt;&lt;b&gt;“Antrean Terlambat”&lt;/b&gt;&lt;br&gt;(tidak ditolak — tetap dilayani)" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="230" y="2252" width="330" height="96" as="geometry" />
+        </mxCell>
+        <mxCell id="76" value="push notif" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#82b366;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=0.5;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;dashed=1;dashPattern=6 4;" edge="1" parent="1" source="74" target="64">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="395" y="2036" />
+              <mxPoint x="2331" y="2036" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="77" value="push notif" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#d79b00;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;dashed=1;dashPattern=6 4;" edge="1" parent="1" source="75" target="65">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="78" value="&lt;b&gt;HP Supir Diperbarui&lt;/b&gt;&lt;br&gt;“Anda tiba melewati jadwal.&lt;br&gt;Status: Antrean Tunggu.&lt;br&gt;Silakan parkir &amp;amp; tunggu panggilan dock.”" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="1682" y="2420" width="330" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="79" value="real-time update" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#d79b00;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;dashed=1;dashPattern=6 4;" edge="1" parent="1" source="65" target="78">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="2519" y="2300" />
+              <mxPoint x="2519" y="2470" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="80" value="&lt;b&gt;Dashboard Monitoring Dock&lt;/b&gt;&lt;br&gt;Dock 1 Kosong · Dock 2 Sedang Proses&lt;br&gt;Dock 3 Kosong (real-time)" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="230" y="2424" width="330" height="92" as="geometry" />
+        </mxCell>
+        <mxCell id="81" value="&lt;b&gt;Pilih Truk dari Daftar&lt;/b&gt;&lt;br&gt;On-Time → prioritas langsung&lt;br&gt;Late → cek dock kosong / jeda slot" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="230" y="2546" width="330" height="92" as="geometry" />
+        </mxCell>
+        <mxCell id="82" value="&lt;b&gt;Klik ASSIGN ke Dock&lt;/b&gt;&lt;br&gt;mis. On-Time → Dock 1&lt;br&gt;Late → Dock 3 (jika aman dipakai)" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="230" y="2668" width="330" height="92" as="geometry" />
+        </mxCell>
+        <mxCell id="83" value="&lt;b&gt;Alokasi Tercatat&lt;/b&gt;&lt;br&gt;Dock 1 → TERISI (Occupied)&lt;br&gt;masuk timeline dock" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="1198" y="2778" width="330" height="84" as="geometry" />
+        </mxCell>
+        <mxCell id="84" value="3.1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="74" target="80">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="595" y="2115" />
+              <mxPoint x="595" y="2470" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="85" value="3.2  tarik dari Late Waiting List" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#d79b00;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="75" target="80">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="86" value="4.1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="80" target="81">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="87" value="4.2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="81" target="82">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="88" value="assign" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="82" target="83">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="89" value="&lt;b&gt;Instruksi Real-Time&lt;/b&gt;&lt;br&gt;HP getar + bunyi:&lt;br&gt;&lt;b&gt;“SILAKAN MENUJU DOCK 1”&lt;/b&gt;" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="1682" y="2714" width="330" height="92" as="geometry" />
+        </mxCell>
+        <mxCell id="90" value="push update" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#b85450;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;dashed=1;dashPattern=6 4;" edge="1" parent="1" source="83" target="89">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1091" y="2820" />
+              <mxPoint x="1091" y="2760" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="91" value="&lt;b&gt;Truk Merapat ke Dock&lt;/b&gt;&lt;br&gt;Mundur &amp;amp; parkir di dock tujuan" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="1682" y="2834" width="330" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="92" value="5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="89" target="91">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="93" value="&lt;b&gt;Scan Ulang QR Supir&lt;/b&gt;&lt;br&gt;atau tekan &lt;b&gt;“Mulai Proses”&lt;/b&gt;&lt;br&gt;di HP Checker" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="2645" y="2924" width="340" height="92" as="geometry" />
+        </mxCell>
+        <mxCell id="94" value="&lt;b&gt;Status: IN PROGRESS&lt;/b&gt;&lt;br&gt;Timer berjalan — durasi aktual&lt;br&gt;vs estimasi 120 menit" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="1198" y="3038" width="330" height="84" as="geometry" />
+        </mxCell>
+        <mxCell id="95" value="&lt;b&gt;Bongkar/Muat Selesai&lt;/b&gt;&lt;br&gt;Surat jalan ditandatangani&lt;br&gt;tekan &lt;b&gt;“Selesai Proses”&lt;/b&gt;" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="2645" y="3129" width="340" height="92" as="geometry" />
+        </mxCell>
+        <mxCell id="96" value="&lt;b&gt;Status: COMPLETED&lt;/b&gt;&lt;br&gt;Siap keluar gudang" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="1198" y="3234" width="330" height="72" as="geometry" />
+        </mxCell>
+        <mxCell id="97" value="start process" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;dashed=1;dashPattern=6 4;" edge="1" parent="1" source="91" target="93">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="98" value="4.3  mulai proses" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="93" target="94">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="99" value="4.4  selesai proses" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="94" target="95">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="100" value="4.5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="95" target="96">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="101" value="&lt;b&gt;Dock 1 → KOSONG (Available)&lt;/b&gt;&lt;br&gt;otomatis siap untuk truk&lt;br&gt;antrean berikutnya" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="230" y="3304" width="330" height="92" as="geometry" />
+        </mxCell>
+        <mxCell id="102" value="release dock" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#82b366;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;dashed=1;dashPattern=6 4;" edge="1" parent="1" source="96" target="101">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1038" y="3270" />
+              <mxPoint x="1038" y="3350" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="103" value="&lt;b&gt;Scan QR Gate-Out&lt;/b&gt;&lt;br&gt;Truk melewati pos satpam keluar" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="2161" y="3382" width="340" height="76" as="geometry" />
+        </mxCell>
+        <mxCell id="104" value="&lt;b&gt;Sesi Ditutup&lt;/b&gt;&lt;br&gt;Status → &lt;b&gt;CHECKED-OUT&lt;/b&gt; (Selesai)" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="1198" y="3467" width="330" height="76" as="geometry" />
+        </mxCell>
+        <mxCell id="105" value="&lt;b&gt;Rekapitulasi Otomatis&lt;/b&gt;&lt;br&gt;Jam booking vs jam tiba (On-Time/Late)&lt;br&gt;&lt;b&gt;Waiting Time&lt;/b&gt; · &lt;b&gt;Processing Time&lt;/b&gt;&lt;br&gt;&lt;b&gt;Turnaround Time&lt;/b&gt; (Gate-In → Gate-Out)" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=13;fontColor=#1a1a1a;" vertex="1" parent="1">
+          <mxGeometry x="1198" y="3567" width="330" height="116" as="geometry" />
+        </mxCell>
+        <mxCell id="106" value="SELESAI" style="ellipse;whiteSpace=wrap;html=1;fillColor=#b85450;strokeColor=#8b3a36;fontStyle=1;fontSize=13;fontColor=#ffffff;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="1330" y="3729" width="66" height="66" as="geometry" />
+        </mxCell>
+        <mxCell id="107" value="gate out" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;dashed=1;dashPattern=6 4;" edge="1" parent="1" source="101" target="103">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="108" value="5.1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="103" target="104">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="109" value="5.2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="104" target="105">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="110" value="log" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=block;endFill=1;strokeColor=#333333;strokeWidth=1.4;fontSize=11;fontColor=#1a1a1a;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;labelBackgroundColor=#ffffff;" edge="1" parent="1" source="105" target="106">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="111" value="KETERANGAN" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#1f3a5f;strokeColor=#14283f;fontSize=14;fontColor=#ffffff;align=left;verticalAlign=middle;spacingLeft=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="20" y="3936" width="700" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="112" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#82b366;strokeColor=#4d7a3a;fontSize=13;fontColor=#1a1a1a;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="20" y="3986" width="34" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="113" value="MULAI / SELESAI" style="text;html=1;whiteSpace=wrap;fontSize=12;fontColor=#1a1a1a;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="64" y="3986" width="310" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="114" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontColor=#1a1a1a;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="20" y="4024" width="34" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="115" value="Proses Admin Gudang (Desktop)" style="text;html=1;whiteSpace=wrap;fontSize=12;fontColor=#1a1a1a;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="64" y="4024" width="310" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="116" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontColor=#1a1a1a;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="20" y="4062" width="34" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="117" value="Proses Customer / Ekspedisi" style="text;html=1;whiteSpace=wrap;fontSize=12;fontColor=#1a1a1a;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="64" y="4062" width="310" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="118" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=13;fontColor=#1a1a1a;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="20" y="4100" width="34" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="119" value="Proses Supir Truk (Mobile)" style="text;html=1;whiteSpace=wrap;fontSize=12;fontColor=#1a1a1a;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="64" y="4100" width="310" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="120" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=13;fontColor=#1a1a1a;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="20" y="4138" width="34" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="121" value="Proses Petugas Gate / Security" style="text;html=1;whiteSpace=wrap;fontSize=12;fontColor=#1a1a1a;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="64" y="4138" width="310" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="122" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;fontColor=#1a1a1a;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="390" y="3986" width="34" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="123" value="Proses Checker Dock" style="text;html=1;whiteSpace=wrap;fontSize=12;fontColor=#1a1a1a;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="434" y="3986" width="310" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="124" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=13;fontColor=#1a1a1a;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="390" y="4024" width="34" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="125" value="Validasi / keputusan otomatis sistem" style="text;html=1;whiteSpace=wrap;fontSize=12;fontColor=#1a1a1a;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="434" y="4024" width="310" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="126" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontColor=#1a1a1a;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="390" y="4062" width="34" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="127" value="Kondisi On-Time (layar hijau)" style="text;html=1;whiteSpace=wrap;fontSize=12;fontColor=#1a1a1a;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="434" y="4062" width="310" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="128" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=13;fontColor=#1a1a1a;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="390" y="4100" width="34" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="129" value="Kondisi Terlambat (layar kuning)" style="text;html=1;whiteSpace=wrap;fontSize=12;fontColor=#1a1a1a;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="434" y="4100" width="310" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="130" value="ALUR &amp;amp; KONEKTOR" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#1f3a5f;strokeColor=#14283f;fontSize=14;fontColor=#ffffff;align=left;verticalAlign=middle;spacingLeft=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="760" y="3936" width="620" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="131" value="—" style="text;html=1;whiteSpace=wrap;fontSize=14;fontColor=#333333;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="770" y="3992" width="40" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="132" value="Panah solid = alur proses utama antar aktor" style="text;html=1;whiteSpace=wrap;fontSize=12;fontColor=#1a1a1a;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="812" y="3992" width="560" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="133" value="--" style="text;html=1;whiteSpace=wrap;fontSize=14;fontColor=#333333;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="770" y="4026" width="40" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="134" value="Panah putus-putus = instruksi / notifikasi / sync sistem" style="text;html=1;whiteSpace=wrap;fontSize=12;fontColor=#1a1a1a;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="812" y="4026" width="560" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="135" value="&amp;#9670;" style="text;html=1;whiteSpace=wrap;fontSize=14;fontColor=#d79b00;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="770" y="4060" width="40" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="136" value="Diamond = percabangan otomatis validasi waktu" style="text;html=1;whiteSpace=wrap;fontSize=12;fontColor=#1a1a1a;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="812" y="4060" width="560" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="137" value="&lt;b&gt;Status tiket:&lt;/b&gt; TERJADWAL → CHECKED-IN / LATE WAITING LIST → IN PROGRESS → COMPLETED → CHECKED-OUT" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=12;fontColor=#1a1a1a;align=left;verticalAlign=middle;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="760" y="4108" width="620" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="138" value="KPI &amp;amp; REKAP YANG DICATAT SISTEM" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#1f3a5f;strokeColor=#14283f;fontSize=14;fontColor=#ffffff;align=left;verticalAlign=middle;spacingLeft=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1410" y="3936" width="700" height="38" as="geometry" />
+        </mxCell>
+        <mxCell id="139" value="&amp;#8226; On-Time Arrival Rate — jam booking vs jam tiba aktual" style="text;html=1;whiteSpace=wrap;fontSize=12;fontColor=#1a1a1a;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1420" y="3986" width="680" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="140" value="&amp;#8226; Dock Utilization — per dock, per jam operasional" style="text;html=1;whiteSpace=wrap;fontSize=12;fontColor=#1a1a1a;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1420" y="4016" width="680" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="141" value="&amp;#8226; Waiting Time — Gate-In sampai masuk Dock" style="text;html=1;whiteSpace=wrap;fontSize=12;fontColor=#1a1a1a;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1420" y="4046" width="680" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="142" value="&amp;#8226; Processing Time — Mulai Dock sampai Selesai Dock" style="text;html=1;whiteSpace=wrap;fontSize=12;fontColor=#1a1a1a;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1420" y="4076" width="680" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="143" value="&amp;#8226; Turnaround Time / Dwelling Time — Gate-In sampai Gate-Out" style="text;html=1;whiteSpace=wrap;fontSize=12;fontColor=#1a1a1a;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1420" y="4106" width="680" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="144" value="&amp;#8226; Export laporan ke Excel / CSV" style="text;html=1;whiteSpace=wrap;fontSize=12;fontColor=#1a1a1a;align=left;verticalAlign=middle;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+          <mxGeometry x="1420" y="4136" width="680" height="26" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

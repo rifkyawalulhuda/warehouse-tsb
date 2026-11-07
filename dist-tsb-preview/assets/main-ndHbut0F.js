@@ -1,0 +1,1 @@
+import{a as e,t}from"./jsx-runtime-B-hcVAMW.js";import{t as n}from"./utils-BOkx8FqX.js";var r=e(t(),1);function i({fixed:e,className:t,fluid:i,...a}){return(0,r.jsx)(`main`,{"data-layout":e?`fixed`:`auto`,className:n(`px-4 py-6`,e&&`flex min-h-0 grow flex-col overflow-hidden`,!i&&`@7xl/content:mx-auto @7xl/content:w-full @7xl/content:max-w-7xl`,t),...a})}export{i as t};
