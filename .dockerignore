@@ -1,0 +1,22 @@
+# Image API tidak butuh frontend, dokumentasi, atau data lokal.
+node_modules
+**/node_modules
+dist
+server/dist
+coverage
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+.env.production.example
+*.log
+docs
+.vscode
+.idea
+Dockerfile
+.dockerignore
+docker-compose*.yml
+deploy
+README.md
+LICENSE

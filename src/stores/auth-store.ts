@@ -1,53 +1,45 @@
 import { create } from 'zustand'
-import { getCookie, setCookie, removeCookie } from '@/lib/cookies'
+import type { Role, SessionUser } from '@/lib/api/types'
 
-const ACCESS_TOKEN = 'thisisjustarandomstring'
-
-interface AuthUser {
-  accountNo: string
-  email: string
-  role: string[]
-  exp: number
+type AuthState = {
+  user: SessionUser | null
+  /** true selama sesi awal (GET /auth/me) belum selesai diperiksa. */
+  loading: boolean
+  setUser: (user: SessionUser | null) => void
+  setLoading: (loading: boolean) => void
+  reset: () => void
 }
 
-interface AuthState {
-  auth: {
-    user: AuthUser | null
-    setUser: (user: AuthUser | null) => void
-    accessToken: string
-    setAccessToken: (accessToken: string) => void
-    resetAccessToken: () => void
-    reset: () => void
-  }
+/**
+ * Hanya profil yang disimpan di sini. Token sesi ada di cookie httpOnly
+ * sehingga JavaScript tidak bisa membacanya (aman dari XSS).
+ */
+export const useAuthStore = create<AuthState>()((set) => ({
+  user: null,
+  loading: true,
+  setUser: (user) => set({ user }),
+  setLoading: (loading) => set({ loading }),
+  reset: () => set({ user: null, loading: false }),
+}))
+
+export function useCurrentUser() {
+  return useAuthStore((state) => state.user)
 }
 
-export const useAuthStore = create<AuthState>()((set) => {
-  const cookieState = getCookie(ACCESS_TOKEN)
-  const initToken = cookieState ? JSON.parse(cookieState) : ''
-  return {
-    auth: {
-      user: null,
-      setUser: (user) =>
-        set((state) => ({ ...state, auth: { ...state.auth, user } })),
-      accessToken: initToken,
-      setAccessToken: (accessToken) =>
-        set((state) => {
-          setCookie(ACCESS_TOKEN, JSON.stringify(accessToken))
-          return { ...state, auth: { ...state.auth, accessToken } }
-        }),
-      resetAccessToken: () =>
-        set((state) => {
-          removeCookie(ACCESS_TOKEN)
-          return { ...state, auth: { ...state.auth, accessToken: '' } }
-        }),
-      reset: () =>
-        set((state) => {
-          removeCookie(ACCESS_TOKEN)
-          return {
-            ...state,
-            auth: { ...state.auth, user: null, accessToken: '' },
-          }
-        }),
-    },
+export function useRole(): Role | null {
+  return useAuthStore((state) => state.user?.role ?? null)
+}
+
+/** Halaman beranda tiap peran setelah login. */
+export function homeForRole(role: Role): string {
+  switch (role) {
+    case 'ADMIN':
+      return '/dashboard'
+    case 'CUSTOMER':
+      return '/bookings'
+    case 'GATE_OFFICER':
+      return '/scan'
+    case 'CHECKER':
+      return '/dock'
   }
-})
+}

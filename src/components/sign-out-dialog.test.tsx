@@ -3,22 +3,39 @@ import { render } from 'vitest-browser-react'
 import { userEvent } from 'vitest/browser'
 import { SignOutDialog } from './sign-out-dialog'
 
-const navigate = vi.fn()
-const reset = vi.fn()
+const mocks = vi.hoisted(() => ({
+  navigate: vi.fn(),
+  reset: vi.fn(),
+  clear: vi.fn(),
+  logout: vi.fn(),
+}))
 
 const MOCK_HREF = 'https://app.test/dashboard?tab=1'
 
-vi.mock('@/stores/auth-store', () => ({
-  useAuthStore: () => ({
-    auth: { reset },
-  }),
+vi.mock('@/lib/api/endpoints', () => ({
+  logout: mocks.logout,
 }))
+
+// Store sungguhan dipanggil dengan selector, jadi mock-nya harus fungsi yang
+// menerima selector dan mengembalikan nilai dari state tiruan.
+vi.mock('@/stores/auth-store', () => ({
+  useAuthStore: (selector: (state: { reset: () => void }) => unknown) =>
+    selector({ reset: mocks.reset }),
+}))
+
+vi.mock('@tanstack/react-query', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@tanstack/react-query')>()
+  return {
+    ...actual,
+    useQueryClient: () => ({ clear: mocks.clear }),
+  }
+})
 
 vi.mock('@tanstack/react-router', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-router')>()
   return {
     ...actual,
-    useNavigate: () => navigate,
+    useNavigate: () => mocks.navigate,
     useLocation: () => ({ href: MOCK_HREF }),
   }
 })
@@ -26,31 +43,51 @@ vi.mock('@tanstack/react-router', async (importOriginal) => {
 describe('SignOutDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.logout.mockResolvedValue(undefined)
   })
 
-  it('calls auth.reset and navigates to sign-in with current location as redirect', async () => {
+  it('menghapus sesi dan kembali ke sign-in dengan redirect halaman saat ini', async () => {
+    const onOpenChange = vi.fn()
     const { getByRole } = await render(
-      <SignOutDialog open onOpenChange={vi.fn()} />
+      <SignOutDialog open onOpenChange={onOpenChange} />
     )
 
-    await userEvent.click(getByRole('button', { name: /^Sign out$/i }))
+    await userEvent.click(getByRole('button', { name: /^Keluar$/i }))
 
-    expect(reset).toHaveBeenCalledOnce()
-    expect(navigate).toHaveBeenCalledWith({
+    await vi.waitFor(() => expect(mocks.reset).toHaveBeenCalledOnce())
+    expect(mocks.logout).toHaveBeenCalledOnce()
+    expect(mocks.clear).toHaveBeenCalledOnce()
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+    expect(mocks.navigate).toHaveBeenCalledWith({
       to: '/sign-in',
       search: { redirect: MOCK_HREF },
       replace: true,
     })
   })
 
-  it('does not call reset or navigate when Cancel is clicked', async () => {
+  it('tetap keluar walau server tidak merespons', async () => {
+    mocks.logout.mockRejectedValue(new Error('offline'))
     const { getByRole } = await render(
       <SignOutDialog open onOpenChange={vi.fn()} />
     )
 
-    await userEvent.click(getByRole('button', { name: /^Cancel$/i }))
+    await userEvent.click(getByRole('button', { name: /^Keluar$/i }))
 
-    expect(reset).not.toHaveBeenCalled()
-    expect(navigate).not.toHaveBeenCalled()
+    // Sesi lokal tetap dibersihkan: kalau tidak, pengguna terjebak di layar
+    // yang mengira dirinya masih login.
+    await vi.waitFor(() => expect(mocks.reset).toHaveBeenCalledOnce())
+    expect(mocks.navigate).toHaveBeenCalledOnce()
+  })
+
+  it('tidak melakukan apa pun saat Batal diklik', async () => {
+    const { getByRole } = await render(
+      <SignOutDialog open onOpenChange={vi.fn()} />
+    )
+
+    await userEvent.click(getByRole('button', { name: /^Batal$/i }))
+
+    expect(mocks.logout).not.toHaveBeenCalled()
+    expect(mocks.reset).not.toHaveBeenCalled()
+    expect(mocks.navigate).not.toHaveBeenCalled()
   })
 })

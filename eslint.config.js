@@ -7,7 +7,7 @@ import { defineConfig } from 'eslint/config'
 import tseslint from 'typescript-eslint'
 
 export default defineConfig(
-  { ignores: ['dist', 'src/components/ui'] },
+  { ignores: ['dist', 'server/dist', 'src/components/ui'] },
   {
     extends: [
       js.configs.recommended,
@@ -54,6 +54,24 @@ export default defineConfig(
       ],
       // Prevent duplicate imports from the same module
       'no-duplicate-imports': 'error',
+    },
+  },
+  {
+    // Berkas Node (API, seed, skrip, tes): global browser tidak berlaku, dan
+    // seed/skrip memang menulis progres ke stdout.
+    files: ['server/**/*.ts'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
+  {
+    files: [
+      'server/prisma/seed.ts',
+      'server/scripts/**/*.ts',
+      'server/test/**/*.ts',
+    ],
+    rules: {
+      'no-console': 'off',
     },
   }
 )

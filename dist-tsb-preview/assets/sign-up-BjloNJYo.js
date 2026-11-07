@@ -1,1 +1,0 @@
-import{a as e,t}from"./jsx-runtime-B-hcVAMW.js";import{n}from"./dist-CqqWtyYx.js";import{t as r}from"./skeleton-DnzdTTn1.js";var i=e(t()),a=()=>(0,i.jsx)(n,{fallback:(0,i.jsx)(r,{className:`h-120 w-100`})});export{a as component};

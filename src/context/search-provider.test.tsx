@@ -22,6 +22,20 @@ vi.mock('@/context/theme-provider', () => ({
   useTheme: () => ({ setTheme: mocks.setTheme }),
 }))
 
+// Menu pencarian dibangun dari navigasi peran, jadi tes harus memakai peran
+// nyata (di sini admin) agar daftar itemnya sama dengan yang dilihat pengguna.
+vi.mock('@/stores/auth-store', () => ({
+  useAuthStore: (selector: (state: unknown) => unknown) =>
+    selector({
+      user: {
+        id: 1,
+        name: 'Admin TSB',
+        email: 'admin@tsb.test',
+        role: 'ADMIN',
+      },
+    }),
+}))
+
 type ShortcutModifier = 'Control' | 'Meta'
 
 async function renderWithSearchProvider() {
@@ -29,8 +43,9 @@ async function renderWithSearchProvider() {
 }
 
 /**
- * Open the palette by shortcut, retrying while the keydown listener may not be mounted yet.
- * Waits between attempts so a successful toggle is not immediately undone by a second chord.
+ * Buka palette lewat shortcut, dengan percobaan ulang selama listener keydown
+ * belum terpasang. Ada jeda antar percobaan supaya toggle yang berhasil tidak
+ * langsung dibatalkan oleh chord kedua.
  */
 async function openCommandPalette(
   screen: RenderResult,
@@ -38,12 +53,12 @@ async function openCommandPalette(
 ) {
   await vi.waitFor(
     async () => {
-      const isCommandPaletteOpen =
+      const isOpen =
         document.querySelector(
           `[placeholder="${COMMAND_MENU_PLACEHOLDER}"]`
         ) !== null
 
-      if (!isCommandPaletteOpen) {
+      if (!isOpen) {
         await userEvent.keyboard(`{${modifier}>}k{/${modifier}}`)
       }
 
@@ -60,7 +75,7 @@ describe('SearchProvider and CommandMenu', () => {
     vi.clearAllMocks()
   })
 
-  it('renders the command palette when the palette is open', async () => {
+  it('menampilkan item navigasi dan pilihan tema saat palette terbuka', async () => {
     const screen = await renderWithSearchProvider()
     const { getByPlaceholder, getByText } = screen
 
@@ -74,9 +89,10 @@ describe('SearchProvider and CommandMenu', () => {
     await expect.element(getByText('Dark')).toBeInTheDocument()
     await expect.element(getByText('System')).toBeInTheDocument()
     await expect.element(getByText('Dashboard')).toBeInTheDocument()
+    await expect.element(getByText('Laporan')).toBeInTheDocument()
   })
 
-  it('does not show the dialog content when search is closed', async () => {
+  it('tidak menampilkan palette saat pencarian tertutup', async () => {
     const { getByPlaceholder } = await renderWithSearchProvider()
 
     await expect
@@ -88,7 +104,7 @@ describe('SearchProvider and CommandMenu', () => {
     ['Ctrl', 'Control'],
     ['Cmd', 'Meta'],
   ] as const)(
-    'opens the command menu when %s + K is pressed',
+    'membuka palette saat %s + K ditekan',
     async (_label, modifier) => {
       const screen = await renderWithSearchProvider()
 
@@ -104,34 +120,20 @@ describe('SearchProvider and CommandMenu', () => {
     }
   )
 
-  it('navigates to a top-level route and closes the palette when a nav item is selected', async () => {
+  it('menavigasi ke rute dan menutup palette saat item dipilih', async () => {
     const screen = await renderWithSearchProvider()
 
     await openCommandPalette(screen)
 
-    await userEvent.click(screen.getByText('Tasks'))
+    await userEvent.click(screen.getByText('Papan Dock'))
 
-    expect(mocks.navigate).toHaveBeenCalledWith({ to: '/tasks' })
+    expect(mocks.navigate).toHaveBeenCalledWith({ to: '/dock' })
     await expect
       .element(screen.getByPlaceholder(COMMAND_MENU_PLACEHOLDER))
       .not.toBeInTheDocument()
   })
 
-  it('navigates for nested sidebar items (group with sub-items)', async () => {
-    const screen = await renderWithSearchProvider()
-    const { getByPlaceholder, getByRole } = screen
-
-    await openCommandPalette(screen)
-
-    await userEvent.click(getByRole('option', { name: 'Settings Account' }))
-
-    expect(mocks.navigate).toHaveBeenCalledWith({ to: '/settings/account' })
-    await expect
-      .element(getByPlaceholder(COMMAND_MENU_PLACEHOLDER))
-      .not.toBeInTheDocument()
-  })
-
-  it('applies theme and closes the palette when a theme command is chosen', async () => {
+  it('menerapkan tema dan menutup palette saat perintah tema dipilih', async () => {
     const screen = await renderWithSearchProvider()
 
     await openCommandPalette(screen)
@@ -144,7 +146,7 @@ describe('SearchProvider and CommandMenu', () => {
       .not.toBeInTheDocument()
   })
 
-  it('shows empty state when the filter matches nothing', async () => {
+  it('menampilkan keadaan kosong saat filter tidak cocok', async () => {
     const screen = await renderWithSearchProvider()
 
     await openCommandPalette(screen)

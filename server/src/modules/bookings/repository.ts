@@ -1,0 +1,91 @@
+import type { Booking, BookingStatus, Prisma } from '@prisma/client'
+import { prisma } from '../../lib/prisma'
+
+/** Bentuk booking yang dikirim ke frontend (tiket supir, dashboard, daftar customer). */
+export const bookingSelect = {
+  id: true,
+  bookingCode: true,
+  qrToken: true,
+  activityType: true,
+  bookingDate: true,
+  startTime: true,
+  endTime: true,
+  referenceDocNo: true,
+  licensePlate: true,
+  driverName: true,
+  driverPhone: true,
+  status: true,
+  lateMinutes: true,
+  createdAt: true,
+  customer: { select: { id: true, name: true, companyName: true, phone: true } },
+  truckType: { select: { id: true, truckName: true, durationMinutes: true, blocksRequired: true } },
+  assignedDock: { select: { id: true, dockCode: true, allowedActivity: true } },
+  timeLog: {
+    select: {
+      vehicleCompletedAt: true,
+      gateInAt: true,
+      dockAssignedAt: true,
+      processStartedAt: true,
+      processCompletedAt: true,
+      gateOutAt: true,
+    },
+  },
+} satisfies Prisma.BookingSelect
+
+export type BookingDetail = Prisma.BookingGetPayload<{ select: typeof bookingSelect }>
+
+export const ACTIVE_STATUSES: BookingStatus[] = [
+  'BOOKED_INCOMPLETE',
+  'BOOKED_READY',
+  'CHECKED_IN_ON_TIME',
+  'LATE_WAITING_LIST',
+  'DOCK_ASSIGNED',
+  'IN_PROGRESS',
+]
+
+/** Status yang menandakan QR sudah tidak boleh dipindai untuk aksi apa pun. */
+export const FINAL_STATUSES: BookingStatus[] = ['CHECKED_OUT', 'CANCELLED', 'NO_SHOW']
+
+export function getBookingById(id: string) {
+  return prisma.booking.findUnique({ where: { id }, select: bookingSelect })
+}
+
+export function getBookingByQrToken(qrToken: string) {
+  return prisma.booking.findUnique({ where: { qrToken }, select: bookingSelect })
+}
+
+export function isFinalStatus(status: BookingStatus): boolean {
+  return FINAL_STATUSES.includes(status)
+}
+
+/** Booking ini sudah pernah melewati gate-in? */
+export function hasEnteredGate(booking: Pick<Booking, 'status'>): boolean {
+  return ![
+    'BOOKED_INCOMPLETE',
+    'BOOKED_READY',
+    'CANCELLED',
+    'NO_SHOW',
+  ].includes(booking.status)
+}
+
+export function hasVehicleData(booking: {
+  licensePlate: string | null
+  driverName: string | null
+}): boolean {
+  return Boolean(booking.licensePlate?.trim() && booking.driverName?.trim())
+}
+
+/** Status setelah data kendaraan diubah, tanpa menyentuh booking yang sudah masuk gate. */
+export function statusForVehicleData(
+  currentStatus: BookingStatus,
+  complete: boolean
+): BookingStatus {
+  if (currentStatus !== 'BOOKED_INCOMPLETE' && currentStatus !== 'BOOKED_READY') {
+    return currentStatus
+  }
+  return complete ? 'BOOKED_READY' : 'BOOKED_INCOMPLETE'
+}
+
+export function buildBookingCode(dateISO: string, sequence: number): string {
+  return `TSB-${dateISO.replace(/-/g, '')}-${String(sequence).padStart(3, '0')}`
+}
