@@ -48,7 +48,8 @@ export async function markNoShowBookings(now: Date = new Date()): Promise<number
         date,
         activity: booking.activityType,
         startMinute: minuteOfDayJakarta(booking.startTime),
-        blocksRequired: booking.truckType.blocksRequired,
+        // Snapshot: jenis truk bisa sudah diedit sejak booking dibuat.
+        blocksRequired: booking.blocksLocked,
         window,
       })
 

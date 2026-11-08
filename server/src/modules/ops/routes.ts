@@ -517,7 +517,8 @@ opsRouter.post('/no-show', requireRole('ADMIN'), async (req, res, next) => {
         date: utcToDateOnly(booking.bookingDate),
         activity: booking.activityType,
         startMinute: minuteOfDayJakarta(booking.startTime),
-        blocksRequired: booking.truckType.blocksRequired,
+        // Snapshot: jumlah blok yang dilepas harus sama dengan yang dikunci.
+        blocksRequired: booking.blocksLocked,
         window,
       })
 

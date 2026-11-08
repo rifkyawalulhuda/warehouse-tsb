@@ -34,11 +34,46 @@ export type TruckType = {
   sortOrder: number
 }
 
+/**
+ * Input membuat/mengedit jenis truk. `blocksRequired` sengaja tidak ikut:
+ * server menurunkannya dari `durationMinutes`, sehingga angka yang dipakai
+ * mesin kuota mustahil berbeda dari yang dikirim klien.
+ */
+export type TruckTypeInput = {
+  truckName: string
+  durationMinutes: number
+  sortOrder?: number
+  isActive?: boolean
+}
+
 export type Dock = {
   id: number
   dockCode: string
   allowedActivity: DockActivity
   currentStatus: DockStatus
+  /// Nama area di dalam gudang; null kalau belum diisi.
+  areaName: string | null
+  warehouse: { id: number; name: string }
+}
+
+/**
+ * Input membuat/mengedit dock. `warehouse` tidak ikut: kirim `warehouseId`
+ * saja, karena yang tersimpan di baris dock hanyalah rujukannya.
+ */
+export type DockInput = {
+  dockCode: string
+  allowedActivity: DockActivity
+  currentStatus?: DockStatus
+  areaName?: string | null
+  warehouseId?: number
+}
+
+export type Warehouse = {
+  id: number
+  name: string
+  isActive: boolean
+  /// Jumlah dock yang menunjuk ke gudang ini; tidak selalu ikut dikirim.
+  _count?: { docks: number }
 }
 
 export type TimeLog = {
@@ -64,6 +99,8 @@ export type Booking = {
   driverPhone: string | null
   status: BookingStatus
   lateMinutes: number
+  /// Snapshot blok 30 menit yang dikunci saat booking dibuat.
+  blocksLocked: number
   createdAt: string
   customer: {
     id: string

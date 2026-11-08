@@ -17,7 +17,7 @@ Sumber kebutuhan: `docs/prd/product_requirements_document.md`,
 
 | Topik | Keputusan | Konsekuensi |
 | :--- | :--- | :--- |
-| Cakupan | Full-stack end-to-end, satu gudang (v1) | Tidak ada `warehouse_id`; selector gudang di UI dibuang |
+| Cakupan | Full-stack end-to-end, satu gudang operasional (v1) | Kuota, booking, dan laporan tetap satu gudang. Tabel `warehouses` ada hanya sebagai metadata untuk menandai gudang tiap dock — tidak memecah kuota |
 | Backend | Express + Prisma, di dalam repo ini (`server/`) | Satu repo, dua proses dev |
 | Auth | JWT + bcrypt sendiri, role-based | Seluruh kode Clerk dicabut |
 | Kuota | **Turunan dari master dock** | `max_*_quota_per_slot` dihapus dari settings |
@@ -141,8 +141,10 @@ Mengikuti PRD dengan koreksi di atas.
 | :--- | :--- |
 | `users` | Tambah `acting_role` tidak perlu; role tetap satu |
 | `warehouse_settings` | Hapus `max_loading_quota_per_slot`, `max_unloading_quota_per_slot`; tambah `early_arrival_limit_minutes`, `booking_window_days` |
-| `truck_types` | Tetap (`duration_minutes`, `blocks_required`) |
-| `docks` | Tetap; `current_status` tetap untuk tampilan cepat, sumber kebenaran tetap `bookings.status` |
+| `truck_types` | Tetap (`duration_minutes`, `blocks_required`); `blocks_required` hanya turunan `ceil(duration/30)` dan tidak pernah diterima dari klien |
+| `bookings` | Tambah `blocks_locked` — snapshot jumlah blok saat booking dibuat |
+| `docks` | Tambah `area_name` (teks bebas, boleh kosong) dan `warehouse_id` (wajib, FK ke `warehouses`); `current_status` tetap untuk tampilan cepat, sumber kebenaran tetap `bookings.status` |
+| `warehouses` | **Baru**: `name` unik, `is_active`. Metadata pengelompokan saja — tidak dipakai mesin kuota |
 | `bookings` | Tetap |
 | `booking_time_logs` | Tetap |
 | `slot_allocations` | **Baru**: `slot_date`, `activity`, `slot_start`, `capacity`, `used`, unique `(slot_date, activity, slot_start)` |
@@ -173,6 +175,17 @@ Mengikuti `rencana_pengembangan_endpoint_api.md`, dengan tambahan:
 - `GET /api/users`, `POST /api/users`, `PATCH /api/users/:id` (Admin)
 - `GET /api/master/truck-types`, `GET /api/master/docks`, `POST/PATCH` (Admin)
 - `GET /api/health`
+
+Master jenis truk bisa diubah lewat halaman Master Data (`PATCH /api/master/truck-types/:id`):
+nama, durasi, urutan, dan status aktif. `blocks_required` **tidak** diterima dari klien — server
+menghitungnya ulang dari durasi (`ceil(duration/30)`), sehingga angka di layar tidak mungkin
+berbeda dari yang dipakai mesin kuota.
+
+Durasi boleh diubah kapan saja, tapi **jumlah blok sebuah booking sudah di-snapshot** di
+`bookings.blocks_locked` saat booking dibuat. Pembatalan, gate-out, dan cron NO_SHOW melepas
+`blocks_locked`, bukan `truckType.blocksRequired` sekarang — tanpa itu, memperpendek durasi dari
+90 ke 60 menit membuat booking lama hanya melepas 2 dari 3 blok yang terkunci, dan 1 blok bocor
+permanen dari kuota.
 
 Token: access 15 menit + refresh 7 hari, keduanya cookie `httpOnly`, `SameSite=Lax`, `Secure`
 saat produksi. Frontend memanggil `/api/auth/me` saat boot; `auth-store` hanya menyimpan profil.
@@ -317,9 +330,13 @@ Empat pertanyaan terbuka di draf awal sudah dijawab saat implementasi:
 | `npm run build` (typecheck + Vite) | lolos |
 | `npm run build:api` (tsc server) | lolos |
 | `npm run lint` | 0 error (4 warning bawaan template) |
-| `npm run test:api` | 52 tes lolos (8 berkas), termasuk konkurensi dua koneksi, kuota, auth, realtime, no-show |
+| `npm run test:api` | 67 tes lolos (9 berkas), termasuk konkurensi dua koneksi, kuota, auth, realtime, no-show, master |
 | `npm test` (Vitest browser) | 64 tes lolos |
 | Alur manual di browser | login 4 peran, booking, tiket, scan, dock, dashboard, laporan |
+| Edit jenis truk di Master Data | dialog `Ubah` tersimpan dan tabel ikut berubah; `blocks_required` dihitung server (`master.test.ts`: 403 customer, abaikan `blocksRequired` dari klien, nonaktif tetap terlihat di master tapi hilang dari `/api/settings`, durasi di luar batas ditolak) |
+| Nama Area & Warehouse dock | dialog `Ubah` dock menyimpan `areaName` (teks bebas, `null` mengosongkan) dan `warehouseId`; gudang nonaktif tetap muncul bila dock masih menunjuk ke sana; gudang yang masih berisi dock tidak bisa dimatikan (`master.test.ts`: 8 kasus) |
+| Migrasi `warehouses` pada data lama | 6 dock yang sudah ada otomatis menunjuk gudang pertama dari `warehouse_settings.warehouse_name`, sehingga nama di tiket supir tidak berubah |
+| Snapshot blok booking | `no-show.test.ts`: durasi Tronton 90 → 60 menit setelah booking dibuat, NO_SHOW tetap melepas 3 blok (bukan 2) |
 | `PUT /api/settings` tanpa `requireAuth` | diperbaiki; tes regresi di `server/test/settings.test.ts` (200 admin, 403 customer, 401 tanpa sesi) |
 | Realtime setelah perbaikan | `realtime.test.ts` (4 kasus): petugas menerima `booking.updated`, tamu tidak, tiket lewat `qr_token`, refresh token dipakai saat access token habis |
 | NO_SHOW | dihitung terhadap akhir hari operasional, bukan `end_time` booking; tes di `no-show.test.ts` |

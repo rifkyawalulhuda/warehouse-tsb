@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { MoreHorizontal, Truck } from 'lucide-react'
 import type { DockWithBooking } from '@/lib/api/types'
-import { formatTime } from '@/lib/format'
+import { bookingDurationMinutes, formatTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -54,7 +54,7 @@ function progressOf(dock: DockWithBooking) {
   const startedAt = booking.timeLog?.processStartedAt
   if (!startedAt) return 0
   const elapsed = (Date.now() - new Date(startedAt).getTime()) / 60_000
-  const total = booking.truckType.durationMinutes || 60
+  const total = bookingDurationMinutes(booking) || 60
   return Math.min(100, Math.max(0, Math.round((elapsed / total) * 100)))
 }
 
@@ -72,7 +72,7 @@ export function DockGrid({ docks }: { docks: DockWithBooking[] }) {
           {maintenance > 0 ? ` · ${maintenance} perawatan` : ''}
         </CardDescription>
       </CardHeader>
-      <CardContent className='grid gap-3 sm:grid-cols-2 xl:grid-cols-3'>
+      <CardContent className='grid min-w-0 grid-cols-2 gap-3 xl:grid-cols-3'>
         {docks.map((dock) => {
           const booking = dock.currentBooking
           const progress = progressOf(dock)
@@ -80,78 +80,76 @@ export function DockGrid({ docks }: { docks: DockWithBooking[] }) {
             <div
               key={dock.id}
               className={cn(
-                'flex flex-col gap-3 rounded-lg border p-3.5 transition-colors',
+                'flex min-w-0 flex-col gap-2.5 overflow-hidden rounded-lg border p-3 transition-colors',
                 ring[dock.currentStatus]
               )}
             >
-              <div className='flex items-start justify-between gap-2'>
-                <div className='flex items-center gap-2'>
-                  <span className='flex size-9 items-center justify-center rounded-md bg-background text-sm font-semibold tabular-nums shadow-xs'>
-                    {dock.dockCode}
-                  </span>
-                  <div className='flex flex-col'>
-                    <span className='text-sm font-semibold'>{dock.dockCode}</span>
-                    <span className='text-xs text-muted-foreground'>
-                      {activityLabel[dock.allowedActivity]}
-                    </span>
-                  </div>
-                </div>
-                <div className='flex items-center gap-1'>
-                  <Badge variant='outline' className={statusClass[dock.currentStatus]}>
-                    {statusLabel[dock.currentStatus]}
-                  </Badge>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant='ghost' size='icon' className='size-8'>
-                        <MoreHorizontal className='size-4' />
-                        <span className='sr-only'>Aksi {dock.dockCode}</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align='end'>
-                      <DropdownMenuLabel>{dock.dockCode}</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link to='/queue'>Buka antrean</Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link to='/dock'>Layar checker</Link>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+              <div className='flex items-center justify-between gap-1.5'>
+                <span className='shrink-0 font-mono text-sm font-semibold tracking-tight'>
+                  {dock.dockCode}
+                </span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant='ghost' size='icon' className='-me-1.5 size-6'>
+                      <MoreHorizontal className='size-3.5' />
+                      <span className='sr-only'>Aksi {dock.dockCode}</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align='end'>
+                    <DropdownMenuLabel>{dock.dockCode}</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link to='/queue'>Buka antrean</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to='/dock'>Layar checker</Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              <div className='flex flex-wrap items-center justify-between gap-x-1.5 gap-y-1'>
+                <span className='min-w-0 text-[11px] leading-tight text-muted-foreground'>
+                  {activityLabel[dock.allowedActivity]}
+                </span>
+                <Badge
+                  variant='outline'
+                  className={cn('shrink-0 text-[11px]', statusClass[dock.currentStatus])}
+                >
+                  {statusLabel[dock.currentStatus]}
+                </Badge>
               </div>
 
               {!booking ? (
-                <div className='flex h-[104px] flex-col items-center justify-center gap-1.5 rounded-md border border-dashed bg-background/60 px-3 text-center'>
-                  <Truck className='size-4 text-muted-foreground' />
-                  <span className='text-xs text-muted-foreground'>
-                    {dock.currentStatus === 'MAINTENANCE'
-                      ? 'Dock sedang dalam perawatan'
-                      : 'Kosong — siap truk berikutnya'}
+                <div className='flex h-[76px] flex-col items-center justify-center gap-1 rounded-md border border-dashed bg-background/60 px-2 text-center'>
+                  <Truck className='size-3.5 text-muted-foreground' />
+                  <span className='text-[11px] leading-snug text-muted-foreground'>
+                    {dock.currentStatus === 'MAINTENANCE' ? 'Perawatan' : 'Siap dipakai'}
                   </span>
                 </div>
               ) : (
-                <div className='space-y-2'>
-                  <div className='flex items-baseline justify-between gap-2'>
-                    <span className='font-mono text-sm font-semibold tabular-nums'>
+                <div className='min-w-0 space-y-1.5'>
+                  <div className='flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-2'>
+                    <span className='min-w-0 truncate font-mono text-sm font-semibold tabular-nums'>
                       {booking.licensePlate ?? 'Plat belum diisi'}
                     </span>
-                    <span className='text-xs text-muted-foreground'>
+                    <span className='min-w-0 truncate text-xs text-muted-foreground'>
                       {booking.truckType.truckName}
                     </span>
                   </div>
-                  <div className='text-xs text-muted-foreground'>
+                  <p className='truncate text-xs text-muted-foreground'>
                     {booking.driverName ?? 'Supir belum diisi'} ·{' '}
                     {booking.customer.companyName ?? booking.customer.name}
-                  </div>
+                  </p>
                   {booking.status === 'IN_PROGRESS' ? (
-                    <div className='space-y-1.5'>
+                    <div className='space-y-1 pt-0.5'>
                       <div
                         className='h-1.5 w-full overflow-hidden rounded-full bg-primary/15'
                         role='progressbar'
                         aria-valuenow={progress}
                         aria-valuemin={0}
                         aria-valuemax={100}
+                        aria-label={`Progres proses ${dock.dockCode}`}
                       >
                         <div
                           className='h-full rounded-full bg-primary transition-[width] duration-300'
@@ -166,9 +164,7 @@ export function DockGrid({ docks }: { docks: DockWithBooking[] }) {
                       </div>
                     </div>
                   ) : (
-                    <div className='text-xs text-muted-foreground'>
-                      Menunggu proses dimulai
-                    </div>
+                    <p className='text-xs text-muted-foreground'>Menunggu proses dimulai</p>
                   )}
                 </div>
               )}

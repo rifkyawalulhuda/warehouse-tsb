@@ -40,6 +40,7 @@ async function main() {
   await prisma.slotAllocation.deleteMany()
   await prisma.bookingDaySequence.deleteMany()
   await prisma.dock.deleteMany()
+  await prisma.warehouse.deleteMany()
   await prisma.truckType.deleteMany()
   await prisma.user.deleteMany()
   await prisma.warehouseSetting.deleteMany()
@@ -55,6 +56,12 @@ async function main() {
       earlyArrivalLimitMinutes: 60,
       bookingWindowDays: 7,
     },
+  })
+
+  // Gudang pertama memakai nama yang sama dengan pengaturan, karena keduanya
+  // merujuk ke gudang yang sama dan ditulis bersamaan oleh settings routes.
+  const mainWarehouse = await prisma.warehouse.create({
+    data: { name: 'Gudang TSB Cikarang' },
   })
 
   const [cddLong, fuso, tronton, container40] = await Promise.all([
@@ -80,9 +87,11 @@ async function main() {
       { dockCode: 'D4', allowedActivity: 'UNLOADING' as const },
       { dockCode: 'L1', allowedActivity: 'LOADING' as const },
       { dockCode: 'L2', allowedActivity: 'LOADING' as const },
-    ].map((data) => prisma.dock.create({ data }))
+    ].map((data) =>
+      prisma.dock.create({ data: { ...data, warehouseId: mainWarehouse.id, areaName: null } }),
+    ),
   )
-  console.log(`[seed] ${docks.length} dock, ${4} jenis truk`)
+  console.log(`[seed] ${docks.length} dock, ${4} jenis truk, 1 gudang`)
 
   const [admin, customerA, customerB, _gateA, _gateB, _checkerA, _checkerB] = await Promise.all([
     prisma.user.create({

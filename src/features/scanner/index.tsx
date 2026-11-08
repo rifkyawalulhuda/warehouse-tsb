@@ -8,6 +8,7 @@ import type { ScanResult } from '@/lib/api/types'
 import { useRealtimeSync } from '@/hooks/use-realtime'
 import {
   activityLabels,
+  bookingDurationMinutes,
   durationLabel,
   formatDate,
   formatTime,
@@ -110,7 +111,7 @@ export function ScanPage() {
               <Row label='Aktivitas'>{activityLabels[result.booking.activityType]}</Row>
               <Row label='Jenis truk'>
                 {result.booking.truckType.truckName} (
-                {durationLabel(result.booking.truckType.durationMinutes)})
+                {durationLabel(bookingDurationMinutes(result.booking))})
               </Row>
               <Row label='Jadwal'>
                 {formatDate(result.booking.bookingDate)} ·{' '}

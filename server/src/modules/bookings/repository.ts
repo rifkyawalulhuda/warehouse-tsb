@@ -14,6 +14,7 @@ export const bookingSelect = {
   licensePlate: true,
   driverName: true,
   driverPhone: true,
+  blocksLocked: true,
   status: true,
   lateMinutes: true,
   createdAt: true,

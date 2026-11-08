@@ -17,6 +17,7 @@ import { cancelBooking } from '@/lib/api/endpoints'
 import type { Booking } from '@/lib/api/types'
 import {
   activityLabels,
+  bookingDurationMinutes,
   durationLabel,
   formatDate,
   formatTime,
@@ -99,7 +100,7 @@ export function BookingCard({ booking }: { booking: Booking }) {
             <Detail icon={Clock} label='Jadwal'>
               {formatTime(booking.startTime)}–{formatTime(booking.endTime)}
               <span className='ms-1 text-xs text-muted-foreground'>
-                ({durationLabel(booking.truckType.durationMinutes)})
+                ({durationLabel(bookingDurationMinutes(booking))})
               </span>
             </Detail>
             <Detail icon={Truck} label='Kendaraan'>

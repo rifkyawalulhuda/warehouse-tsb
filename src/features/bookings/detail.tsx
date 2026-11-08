@@ -6,7 +6,13 @@ import { toast } from 'sonner'
 import { apiErrorMessage } from '@/lib/api/client'
 import { cancelBooking, fetchBooking } from '@/lib/api/endpoints'
 import { useRealtimeSync } from '@/hooks/use-realtime'
-import { activityLabels, durationLabel, formatDate, formatTime } from '@/lib/format'
+import {
+  activityLabels,
+  bookingDurationMinutes,
+  durationLabel,
+  formatDate,
+  formatTime,
+} from '@/lib/format'
 import { Main } from '@/components/layout/main'
 import { PageHeader } from '@/components/page-header'
 import { ConfirmDialog } from '@/components/confirm-dialog'
@@ -106,8 +112,7 @@ export function BookingDetail() {
               {formatTime(booking.startTime)}–{formatTime(booking.endTime)}
             </Field>
             <Field label='Durasi'>
-              {durationLabel(booking.truckType.durationMinutes)} (
-              {booking.truckType.blocksRequired} blok)
+              {durationLabel(bookingDurationMinutes(booking))} ({booking.blocksLocked} blok)
             </Field>
             <Field label='Nomor dokumen'>{booking.referenceDocNo}</Field>
             <Field label='Dock'>{booking.assignedDock?.dockCode ?? 'Belum ditentukan'}</Field>

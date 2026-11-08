@@ -171,6 +171,11 @@ bookingsRouter.post('/', requireExactRole('CUSTOMER'), async (req, res, next) =>
         `
         const sequence = seqRow[0]?.last_number ?? 1
 
+        // Angka blok yang benar-benar dikunci di sini disalin ke baris booking
+        // supaya pembatalan/NO_SHOW selalu melepas tepat sejumlah itu, walau
+        // admin mengubah durasi jenis truk di kemudian hari.
+        const blocksLocked = truckType.blocksRequired
+
         await reserveBlocks(
           tx,
           {
@@ -180,7 +185,7 @@ bookingsRouter.post('/', requireExactRole('CUSTOMER'), async (req, res, next) =>
             capacity,
           },
           body.startMinute,
-          truckType.blocksRequired
+          blocksLocked
         )
 
         const startTime = jakartaInstant(body.bookingDate, body.startMinute)
@@ -200,6 +205,7 @@ bookingsRouter.post('/', requireExactRole('CUSTOMER'), async (req, res, next) =>
             licensePlate: plate,
             driverName,
             driverPhone: body.driverPhone || null,
+            blocksLocked,
             status: complete ? 'BOOKED_READY' : 'BOOKED_INCOMPLETE',
             timeLog: {
               create: {
@@ -219,7 +225,7 @@ bookingsRouter.post('/', requireExactRole('CUSTOMER'), async (req, res, next) =>
             meta: {
               bookingCode: booking.bookingCode,
               startMinute: body.startMinute,
-              blocksRequired: truckType.blocksRequired,
+              blocksRequired: blocksLocked,
             },
           },
           tx as Tx
@@ -428,7 +434,9 @@ bookingsRouter.post('/:id/cancel', async (req, res, next) => {
         date: utcToDateOnly(booking.bookingDate),
         activity: booking.activityType,
         startMinute: minuteOfDayJakarta(booking.startTime),
-        blocksRequired: booking.truckType.blocksRequired,
+        // Pakai snapshot, bukan truckType.blocksRequired: jenis truk bisa saja
+        // sudah diedit sejak booking ini dibuat.
+        blocksRequired: booking.blocksLocked,
         window,
       })
 

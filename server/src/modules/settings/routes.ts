@@ -5,9 +5,17 @@ import { parse } from '../../lib/validate'
 import { requireAuth, requireExactRole } from '../../middleware/auth'
 import { getSettings, capacityMap, toWindow } from '../../lib/settings'
 import { listBlockStarts, minuteToLabel } from '../../lib/quota'
-import { badRequest } from '../../lib/http-error'
+import { badRequest, conflict } from '../../lib/http-error'
 
 export const settingsRouter = Router()
+
+/**
+ * `warehouse_name` di pengaturan dan nama gudang pertama di tabel `warehouses`
+ * adalah fakta yang sama — yang satu tercetak di tiket supir, yang lain yang
+ * dipilih di Master Data Dock. Disinkronkan dua arah supaya tidak pernah ada
+ * dua nama berbeda untuk gudang yang sama.
+ */
+const DEFAULT_WAREHOUSE_ID = 1
 
 /** Satu bentuk respons untuk GET dan PUT supaya UI tidak perlu dua tipe. */
 async function settingsPayload() {
@@ -75,7 +83,24 @@ settingsRouter.put('/', requireAuth, requireExactRole('ADMIN'), async (req, res,
       )
     }
 
-    await prisma.warehouseSetting.update({ where: { id: current.id }, data: body })
+    if (body.warehouseName !== undefined) {
+      const taken = await prisma.warehouse.findFirst({
+        where: { name: body.warehouseName, id: { not: DEFAULT_WAREHOUSE_ID } },
+      })
+      if (taken) throw conflict('WAREHOUSE_NAME_TAKEN', 'Nama gudang sudah dipakai')
+    }
+
+    // Dalam satu transaksi: kalau penamaan gudang gagal, pengaturan tidak
+    // boleh ikut berubah supaya kedua tempat tidak berakhir beda nama.
+    await prisma.$transaction(async (tx) => {
+      await tx.warehouseSetting.update({ where: { id: current.id }, data: body })
+      if (body.warehouseName !== undefined) {
+        await tx.warehouse.updateMany({
+          where: { id: DEFAULT_WAREHOUSE_ID },
+          data: { name: body.warehouseName },
+        })
+      }
+    })
 
     res.json({ data: await settingsPayload() })
   } catch (error) {

@@ -85,6 +85,21 @@ export function durationLabel(minutes: number) {
   return m === 0 ? `${h} jam` : `${h} jam ${m} menit`
 }
 
+/**
+ * Durasi sebuah booking diambil dari selisih `start_time` dan `end_time`,
+ * bukan dari `truck_types.duration_minutes`. `end_time` di-snapshot saat booking
+ * dibuat, jadi tampilan tidak ikut berubah ketika Admin mengedit jenis truk.
+ */
+export function bookingDurationMinutes(booking: {
+  startTime: string
+  endTime: string
+}): number {
+  const start = Date.parse(booking.startTime)
+  const end = Date.parse(booking.endTime)
+  if (Number.isNaN(start) || Number.isNaN(end)) return 0
+  return Math.max(0, Math.round((end - start) / 60_000))
+}
+
 export const statusLabels: Record<BookingStatus, string> = {
   BOOKED_INCOMPLETE: 'Menunggu data kendaraan',
   BOOKED_READY: 'Siap masuk',

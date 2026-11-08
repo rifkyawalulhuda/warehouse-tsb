@@ -22,6 +22,9 @@ import {
 /**
  * Antrean truk terlambat. Tetap dilayani, tetapi menunggu di belakang truk
  * on-time — jadi baris ini adalah daftar kerja berikutnya bagi checker.
+ *
+ * Kolom "Slot" disembunyikan di ponsel: jam mulai sudah terbaca di bawah plat,
+ * dan kekurangan menit adalah informasi yang lebih penting di layar sempit.
  */
 export function LateQueue({
   rows,
@@ -45,16 +48,16 @@ export function LateQueue({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className='ps-6'>Truk</TableHead>
-              <TableHead>Slot</TableHead>
+              <TableHead className='ps-4 sm:ps-6'>Truk</TableHead>
+              <TableHead className='hidden sm:table-cell'>Slot</TableHead>
               <TableHead className='text-right'>Telat</TableHead>
-              <TableHead className='pe-6 text-right'>Aksi</TableHead>
+              <TableHead className='pe-4 text-right sm:pe-6'>Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.map((booking) => (
               <TableRow key={booking.id}>
-                <TableCell className='ps-6'>
+                <TableCell className='ps-4 sm:ps-6'>
                   <div className='font-mono text-sm font-medium'>
                     {booking.licensePlate ?? booking.bookingCode}
                   </div>
@@ -62,8 +65,11 @@ export function LateQueue({
                     {booking.driverName ?? 'Supir belum diisi'} ·{' '}
                     {booking.truckType.truckName}
                   </div>
+                  <div className='text-xs tabular-nums text-muted-foreground sm:hidden'>
+                    Slot {formatTime(booking.startTime)}
+                  </div>
                 </TableCell>
-                <TableCell className='text-sm tabular-nums text-muted-foreground'>
+                <TableCell className='hidden text-sm tabular-nums text-muted-foreground sm:table-cell'>
                   {formatTime(booking.startTime)}
                 </TableCell>
                 <TableCell className='text-right'>
@@ -71,7 +77,7 @@ export function LateQueue({
                     +{booking.lateMinutes} mnt
                   </span>
                 </TableCell>
-                <TableCell className='pe-6 text-right'>
+                <TableCell className='pe-4 text-right sm:pe-6'>
                   {onAssign ? (
                     <Button
                       size='sm'
@@ -96,7 +102,7 @@ export function LateQueue({
               <TableRow>
                 <TableCell
                   colSpan={4}
-                  className='h-24 text-center text-sm text-muted-foreground'
+                  className='h-24 px-4 text-center text-sm whitespace-normal text-muted-foreground'
                 >
                   Tidak ada truk terlambat. Semua armada datang sesuai slot.
                 </TableCell>

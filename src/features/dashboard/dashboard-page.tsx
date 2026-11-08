@@ -27,7 +27,7 @@ import { ScheduleTable } from './components/schedule-table'
 function LiveDot() {
   return (
     <span className='relative flex size-2'>
-      <span className='absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-75' />
+      <span className='absolute inline-flex size-full animate-ping rounded-full bg-emerald-400 opacity-75 motion-reduce:animate-none' />
       <span className='relative inline-flex size-2 rounded-full bg-emerald-500' />
     </span>
   )
@@ -88,9 +88,7 @@ export function DashboardPage() {
       unit: 'booking',
       delta: `${atDockCount} sedang di dock`,
       trend: 'flat',
-      hint: dailyCapacity
-        ? `Kapasitas ${dailyCapacity} slot dock per hari`
-        : 'Seluruh booking pada tanggal ini',
+      hint: dailyCapacity ? `Kapasitas ${dailyCapacity} slot dock` : 'Seluruh booking hari ini',
       icon: 'truck',
     },
     {
@@ -99,7 +97,7 @@ export function DashboardPage() {
       unit: kpi ? '%' : undefined,
       delta: lateCount > 0 ? `${lateCount} truk terlambat` : 'Tidak ada yang terlambat',
       trend: lateCount > 0 ? 'down' : 'up',
-      hint: 'Dihitung dari truk yang sudah gate-in',
+      hint: 'Dari truk yang sudah gate-in',
       icon: 'clock',
     },
     {
@@ -108,7 +106,7 @@ export function DashboardPage() {
       unit: today.data ? '%' : undefined,
       delta: `${busyDocks}/${totalDocks} dock terpakai`,
       trend: 'flat',
-      hint: 'Jam proses terhadap jam operasional',
+      hint: 'Jam proses vs jam operasional',
       icon: 'gauge',
     },
     {
@@ -127,9 +125,24 @@ export function DashboardPage() {
   }
 
   const isBusy = queue.isPending || docks.isPending
+  const isRefreshing =
+    !isBusy &&
+    (queue.isFetching ||
+      docks.isFetching ||
+      activity.isFetching ||
+      today.isFetching ||
+      week.isFetching)
+
+  const refreshAll = () => {
+    void queue.refetch()
+    void docks.refetch()
+    void activity.refetch()
+    void today.refetch()
+    void week.refetch()
+  }
 
   return (
-    <Main className='flex flex-1 flex-col gap-6'>
+    <Main className='flex flex-1 flex-col gap-4 sm:gap-6'>
       <PageHeader
         title='Dashboard Operasional'
         description={`${formatDate(`${date}T00:00:00.000Z`)} · ${totalDocks} dock aktif · shift operasional`}
@@ -144,27 +157,24 @@ export function DashboardPage() {
             </Badge>
             <Button
               variant='outline'
-              size='sm'
-              onClick={() => {
-                void queue.refetch()
-                void docks.refetch()
-                void activity.refetch()
-                void today.refetch()
-                void week.refetch()
-              }}
+              size='icon'
+              className='size-9'
+              onClick={refreshAll}
+              disabled={isRefreshing}
+              aria-label='Muat ulang data dashboard'
+              title='Muat ulang'
             >
-              <RefreshCw className='size-3.5' />
-              Muat ulang
+              <RefreshCw className={isRefreshing ? 'size-4 animate-spin' : 'size-4'} />
             </Button>
-            <Button variant='outline' size='sm' asChild>
+            <Button variant='outline' size='sm' className='h-9' asChild>
               <Link to='/reports'>
-                <Download className='size-3.5' />
-                Laporan
+                <Download className='size-4' />
+                <span className='hidden sm:inline'>Laporan</span>
               </Link>
             </Button>
-            <Button size='sm' asChild>
+            <Button size='sm' className='h-9' asChild>
               <Link to='/queue'>
-                <CalendarDays className='size-3.5' />
+                <CalendarDays className='size-4' />
                 Buka antrean
               </Link>
             </Button>
@@ -192,23 +202,19 @@ export function DashboardPage() {
 
           <TabsContent value='ringkasan' className='space-y-4'>
             <KpiCards items={kpiItems} />
-            <div className='grid items-start gap-4 xl:grid-cols-7'>
-              <div className='xl:col-span-4'>
+            <div className='grid min-w-0 items-start gap-4 xl:grid-cols-7'>
+              <div className='min-w-0 xl:col-span-4'>
                 <DockGrid docks={docks.data ?? []} />
               </div>
-              <div className='xl:col-span-3'>
+              <div className='min-w-0 xl:col-span-3'>
                 <LateQueue rows={queue.data?.late ?? []} onAssign={goToQueue} />
               </div>
             </div>
-            <div className='grid items-start gap-4 xl:grid-cols-7'>
-              <div className='xl:col-span-4'>
-                <ScheduleTable
-                  date={date}
-                  rows={schedule}
-                  onAssign={goToQueue}
-                />
+            <div className='grid min-w-0 items-start gap-4 xl:grid-cols-7'>
+              <div className='min-w-0 xl:col-span-4'>
+                <ScheduleTable date={date} rows={schedule} onAssign={goToQueue} />
               </div>
-              <div className='xl:col-span-3'>
+              <div className='min-w-0 xl:col-span-3'>
                 <ActivityFeed items={activity.data ?? []} />
               </div>
             </div>

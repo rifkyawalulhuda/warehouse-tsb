@@ -3,6 +3,8 @@ import request from 'supertest'
 import { createApp } from '../src/app'
 import { prisma } from '../src/lib/prisma'
 import { markNoShowBookings } from '../src/jobs/no-show'
+import { capacityForActivity, getSettings, toWindow } from '../src/lib/settings'
+import { reserveBlocks } from '../src/modules/bookings/quota-service'
 import { addDaysISO, dateOnlyToUtc, jakartaInstant, todayISO, utcToDateOnly } from '../src/lib/time'
 import { loginCookie, resetDatabase, seedBase } from './helpers'
 
@@ -28,6 +30,8 @@ async function seedBooking(options: {
       bookingDate: dateOnlyToUtc(options.bookingDate ?? utcToDateOnly(options.startTime)),
       startTime: options.startTime,
       endTime: new Date(options.startTime.getTime() + duration * 60 * 1000),
+      // Snapshot blok, sama seperti yang dibuat endpoint POST /api/bookings.
+      blocksLocked: Math.ceil(duration / 30),
       status: options.status ?? 'BOOKED_READY',
       licensePlate: 'B 1234 TSB',
       driverName: 'Supir Tes',
@@ -132,5 +136,65 @@ describe('cron NO_SHOW', () => {
 
     expect(response.status).toBe(200)
     expect(response.body.data.status).toBe('LATE_WAITING_LIST')
+  })
+
+  it('mengubah durasi jenis truk tidak mengubah jumlah blok yang dilepas', async () => {
+    await resetDatabase(prisma)
+    const { admin, customer, truckTypes } = await seedBase(prisma)
+    const adminCookie = await loginCookie(app, admin.email)
+
+    // Tronton 90 menit = 3 blok.
+    const type = truckTypes[1]!
+    expect(type.blocksRequired).toBe(3)
+
+    const date = addDaysISO(todayISO(), -1)
+    const slotDate = new Date(`${date}T00:00:00.000Z`)
+
+    const booking = await seedBooking({
+      customerId: customer.id,
+      truckTypeId: type.id,
+      startTime: jakartaInstant(date, 9 * 60),
+      bookingDate: date,
+      durationMinutes: 90,
+    })
+    expect(booking.blocksLocked).toBe(3)
+
+    // Kunci kuotanya persis seperti yang dilakukan POST /api/bookings.
+    const settings = await getSettings()
+    const window = toWindow(settings)
+    const capacity = await capacityForActivity('UNLOADING')
+    await prisma.$transaction(async (tx) => {
+      await reserveBlocks(
+        tx,
+        { date, activity: 'UNLOADING', window, capacity },
+        9 * 60,
+        3
+      )
+    })
+
+    const sumUsed = async () => {
+      const rows = await prisma.slotAllocation.findMany({
+        where: { slotDate, activity: 'UNLOADING' },
+      })
+      return rows.reduce((total, row) => total + row.used, 0)
+    }
+    expect(await sumUsed()).toBe(3)
+
+    // Admin memperpendek durasi: jenis truk kini 2 blok.
+    const patched = await request(app)
+      .patch(`/api/master/truck-types/${type.id}`)
+      .set('Cookie', adminCookie)
+      .send({ durationMinutes: 60 })
+
+    expect(patched.status).toBe(200)
+    expect(patched.body.data.blocksRequired).toBe(2)
+
+    const marked = await markNoShowBookings(jakartaInstant(todayISO(), 8 * 60))
+    expect(marked).toBe(1)
+
+    const after = await prisma.booking.findUnique({ where: { id: booking.id } })
+    expect(after?.status).toBe('NO_SHOW')
+    // Harus kembali 3 blok (snapshot), bukan 2 mengikuti jenis truk yang baru.
+    expect(await sumUsed()).toBe(0)
   })
 })

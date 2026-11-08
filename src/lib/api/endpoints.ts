@@ -5,6 +5,7 @@ import type {
   AvailabilitySlot,
   Booking,
   Dock,
+  DockInput,
   DockWithBooking,
   ManagedUser,
   PublicTicket,
@@ -14,6 +15,8 @@ import type {
   SessionUser,
   Settings,
   TruckType,
+  TruckTypeInput,
+  Warehouse,
 } from './types'
 
 /* -------------------------------- auth ------------------------------- */
@@ -56,27 +59,35 @@ export function fetchDocks() {
   )
 }
 
-export function createDock(payload: {
-  dockCode: string
-  allowedActivity: Dock['allowedActivity']
-  currentStatus?: Dock['currentStatus']
-}) {
+export function createDock(payload: DockInput) {
   return postData<Dock>('/master/docks', payload)
 }
 
-export function updateDock(id: number, payload: Partial<Dock>) {
+export function updateDock(id: number, payload: Partial<DockInput>) {
   return patchData<Dock>(`/master/docks/${id}`, payload)
+}
+
+export function fetchWarehouses() {
+  return getData<Warehouse[]>('/master/warehouses')
+}
+
+export function createWarehouse(payload: { name: string }) {
+  return postData<Warehouse>('/master/warehouses', payload)
+}
+
+export function updateWarehouse(id: number, payload: Partial<Pick<Warehouse, 'name' | 'isActive'>>) {
+  return patchData<Warehouse>(`/master/warehouses/${id}`, payload)
 }
 
 export function fetchTruckTypes() {
   return getData<TruckType[]>('/master/truck-types')
 }
 
-export function createTruckType(payload: Omit<TruckType, 'id'>) {
+export function createTruckType(payload: TruckTypeInput) {
   return postData<TruckType>('/master/truck-types', payload)
 }
 
-export function updateTruckType(id: number, payload: Partial<TruckType>) {
+export function updateTruckType(id: number, payload: Partial<TruckTypeInput>) {
   return patchData<TruckType>(`/master/truck-types/${id}`, payload)
 }
 

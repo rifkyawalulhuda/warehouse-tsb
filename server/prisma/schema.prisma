@@ -103,11 +103,31 @@ model TruckType {
   @@map("truck_types")
 }
 
+/**
+ * Daftar gudang tempat dock berada. Sekadar metadata untuk Master Data —
+ * kuota, booking, dan laporan tetap dihitung untuk satu gudang seperti sebelumnya,
+ * sehingga menambah gudang baru tidak mengubah mesin kuota sama sekali.
+ */
+model Warehouse {
+  id       Int    @id @default(autoincrement())
+  name     String @unique @db.VarChar(120)
+  isActive Boolean @default(true) @map("is_active")
+
+  docks Dock[]
+
+  @@map("warehouses")
+}
+
 model Dock {
   id              Int          @id @default(autoincrement())
   dockCode        String       @unique @map("dock_code") @db.VarChar(20)
   allowedActivity DockActivity @map("allowed_activity")
   currentStatus   DockStatus   @default(AVAILABLE) @map("current_status")
+  /// Nama area di dalam gudang, mis. "Area B". Teks bebas, boleh kosong.
+  areaName        String?      @map("area_name") @db.VarChar(80)
+
+  warehouseId Int       @map("warehouse_id")
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
 
   bookings Booking[] @relation("AssignedDock")
 
@@ -133,6 +153,11 @@ model Booking {
   licensePlate   String? @map("license_plate") @db.VarChar(20)
   driverName     String? @map("driver_name") @db.VarChar(120)
   driverPhone    String? @map("driver_phone") @db.VarChar(24)
+
+  /// Snapshot jumlah blok 30 menit yang dikunci saat booking dibuat.
+  /// Tanpa kolom ini, mengubah `truck_types.blocks_required` akan mengubah
+  /// jumlah blok yang dilepas saat pembatalan/NO_SHOW dan membuat kuota bocor.
+  blocksLocked Int @map("blocks_locked")
 
   assignedDockId Int?   @map("assigned_dock_id")
   status         BookingStatus

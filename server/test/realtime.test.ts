@@ -85,6 +85,7 @@ describe('realtime', () => {
         bookingDate: new Date('2030-01-01T00:00:00.000Z'),
         startTime: new Date('2030-01-01T02:00:00.000Z'),
         endTime: new Date('2030-01-01T03:00:00.000Z'),
+        blocksLocked: 2,
         status: 'BOOKED_READY',
       },
     })
@@ -123,6 +124,7 @@ describe('realtime', () => {
         bookingDate: new Date('2030-01-01T00:00:00.000Z'),
         startTime: new Date('2030-01-01T02:00:00.000Z'),
         endTime: new Date('2030-01-01T03:00:00.000Z'),
+        blocksLocked: 2,
         status: 'BOOKED_READY',
       },
     })
@@ -177,6 +179,7 @@ describe('realtime', () => {
         bookingDate: new Date('2030-01-01T00:00:00.000Z'),
         startTime: new Date('2030-01-01T02:00:00.000Z'),
         endTime: new Date('2030-01-01T03:00:00.000Z'),
+        blocksLocked: 2,
         status: 'BOOKED_READY',
       },
     })
@@ -225,6 +228,7 @@ describe('realtime', () => {
         bookingDate: new Date('2030-01-01T00:00:00.000Z'),
         startTime: new Date('2030-01-01T02:00:00.000Z'),
         endTime: new Date('2030-01-01T03:00:00.000Z'),
+        blocksLocked: 2,
         status: 'BOOKED_READY',
       },
     })

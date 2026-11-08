@@ -25,6 +25,10 @@ import { StatusBadge } from '@/components/status-badge'
 /**
  * Jadwal satu hari. Baris yang sudah gate-in tetapi belum punya dock diberi
  * tombol assign, karena itulah aksi yang dibutuhkan admin saat itu.
+ *
+ * Di layar kecil kolom Slot, Customer, Aktivitas, dan Dock disembunyikan agar
+ * tabel tidak memaksa geser horizontal; slot tetap terbaca sebagai baris kedua
+ * di bawah plat nomor.
  */
 export function ScheduleTable({
   date,
@@ -38,9 +42,9 @@ export function ScheduleTable({
   return (
     <Card className='gap-4'>
       <CardHeader className='flex-row items-start justify-between gap-3 space-y-0'>
-        <div className='space-y-1.5'>
+        <div className='min-w-0 space-y-1.5'>
           <CardTitle className='flex items-center gap-2'>
-            <CalendarClock className='size-4 text-muted-foreground' />
+            <CalendarClock className='size-4 shrink-0 text-muted-foreground' />
             Jadwal Hari Ini
           </CardTitle>
           <CardDescription>
@@ -49,31 +53,31 @@ export function ScheduleTable({
         </div>
         <div className='flex shrink-0 items-center gap-2'>
           <Button variant='outline' size='sm' asChild>
-            <a href={reportExportUrl(date, date)}>
+            <a href={reportExportUrl(date, date)} aria-label='Ekspor jadwal hari ini'>
               <Download className='size-3.5' />
-              Export
+              <span className='hidden sm:inline'>Export</span>
             </a>
           </Button>
           <Button size='sm' asChild>
-            <Link to='/queue'>
+            <Link to='/queue' aria-label='Buka antrean'>
               <Plus className='size-3.5' />
-              Buka antrean
+              <span className='hidden sm:inline'>Buka antrean</span>
             </Link>
           </Button>
         </div>
       </CardHeader>
       <CardContent className='px-0'>
         <div className='w-full overflow-x-auto'>
-          <Table className='min-w-[640px]'>
+          <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className='ps-6'>Slot</TableHead>
-                <TableHead>Truk</TableHead>
+                <TableHead className='hidden ps-6 sm:table-cell'>Slot</TableHead>
+                <TableHead className='ps-4 sm:ps-2'>Truk</TableHead>
                 <TableHead className='hidden 2xl:table-cell'>Customer</TableHead>
                 <TableHead className='hidden xl:table-cell'>Aktivitas</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className='hidden lg:table-cell'>Dock</TableHead>
-                <TableHead className='pe-6 text-right'>Aksi</TableHead>
+                <TableHead className='hidden md:table-cell'>Status</TableHead>
+                <TableHead className='hidden md:table-cell'>Dock</TableHead>
+                <TableHead className='pe-4 text-right sm:pe-6'>Aksi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -83,15 +87,21 @@ export function ScheduleTable({
                   booking.status === 'LATE_WAITING_LIST'
                 return (
                   <TableRow key={booking.id}>
-                    <TableCell className='ps-6 text-sm whitespace-nowrap tabular-nums text-muted-foreground'>
+                    <TableCell className='hidden text-sm whitespace-nowrap tabular-nums text-muted-foreground sm:table-cell sm:ps-6'>
                       {formatTime(booking.startTime)} – {formatTime(booking.endTime)}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className='ps-4 sm:ps-2'>
                       <div className='font-mono text-sm font-medium'>
                         {booking.licensePlate ?? booking.bookingCode}
                       </div>
                       <div className='text-xs text-muted-foreground'>
                         {booking.driverName ?? 'Supir belum diisi'}
+                      </div>
+                      <div className='text-xs tabular-nums text-muted-foreground sm:hidden'>
+                        {formatTime(booking.startTime)} – {formatTime(booking.endTime)}
+                      </div>
+                      <div className='pt-1 md:hidden'>
+                        <StatusBadge status={booking.status} />
                       </div>
                     </TableCell>
                     <TableCell className='hidden text-sm 2xl:table-cell'>
@@ -103,10 +113,10 @@ export function ScheduleTable({
                         {booking.truckType.truckName}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className='hidden md:table-cell'>
                       <StatusBadge status={booking.status} />
                     </TableCell>
-                    <TableCell className='hidden text-sm lg:table-cell'>
+                    <TableCell className='hidden text-sm md:table-cell'>
                       {booking.assignedDock ? (
                         <Badge variant='secondary' className='font-normal'>
                           {booking.assignedDock.dockCode}
@@ -115,7 +125,7 @@ export function ScheduleTable({
                         <span className='text-muted-foreground'>—</span>
                       )}
                     </TableCell>
-                    <TableCell className='pe-6 text-right'>
+                    <TableCell className='pe-4 text-right sm:pe-6'>
                       {needsDock ? (
                         onAssign ? (
                           <Button
@@ -123,11 +133,11 @@ export function ScheduleTable({
                             variant='outline'
                             onClick={() => onAssign(booking)}
                           >
-                            Assign dock
+                            Assign
                           </Button>
                         ) : (
                           <Button size='sm' variant='outline' asChild>
-                            <Link to='/queue'>Assign dock</Link>
+                            <Link to='/queue'>Assign</Link>
                           </Button>
                         )
                       ) : (

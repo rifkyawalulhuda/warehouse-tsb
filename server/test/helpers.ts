@@ -24,6 +24,7 @@ export async function resetDatabase(prisma: PrismaClient) {
       slot_allocations,
       booking_day_sequences,
       docks,
+      warehouses,
       truck_types,
       users,
       warehouse_settings
@@ -62,6 +63,11 @@ export async function seedBase(prisma: PrismaClient, options: SeedOptions = {}) 
     },
   })
 
+  // Satu gudang, sama seperti pengaturan — dock selalu menunjuk ke sesuatu.
+  const warehouse = await prisma.warehouse.create({
+    data: { name: 'Gudang Tes' },
+  })
+
   const truckTypes = await Promise.all(
     (
       options.truckTypes ?? [
@@ -73,7 +79,7 @@ export async function seedBase(prisma: PrismaClient, options: SeedOptions = {}) 
 
   const docks = await Promise.all(
     (options.docks ?? [{ dockCode: 'D1', allowedActivity: 'UNLOADING' as const }]).map((data) =>
-      prisma.dock.create({ data })
+      prisma.dock.create({ data: { ...data, warehouseId: warehouse.id } })
     )
   )
 
