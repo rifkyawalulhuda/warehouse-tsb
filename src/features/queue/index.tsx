@@ -47,6 +47,21 @@ export function QueuePage() {
   const [date, setDate] = useState(todayISO())
   const [tab, setTab] = useState<'queue' | 'approvals'>('queue')
   const [noShowTarget, setNoShowTarget] = useState<Booking | null>(null)
+  /**
+   * Penugasan dock menunggu konfirmasi. Memilih dock di dropdown langsung
+   * mengirim permintaan, padahal salah pilih berarti truk menempati dock yang
+   * salah dan harus ditugaskan ulang — jadi pilihan ditahan dulu di sini.
+   */
+  const [assignTarget, setAssignTarget] = useState<{
+    booking: Booking
+    dock: DockWithBooking
+  } | null>(null)
+  /**
+   * Dinaikkan setiap dialog dock ditutup, supaya `<Select>` per baris kembali
+   * ke placeholder. Tanpa ini pilihan yang dibatalkan tetap terlihat, dan
+   * petugas bisa mengira truk sudah punya dock padahal belum.
+   */
+  const [assignReset, setAssignReset] = useState(0)
 
   // Server tetap menolak sendiri (403). Ini hanya agar tab yang pasti gagal
   // tidak ditawarkan — Checker tanpa flag tidak punya hak menyetujui.
@@ -64,6 +79,8 @@ export function QueuePage() {
       assignDock(bookingId, dockId),
     onSuccess: () => {
       toast.success('Dock ditugaskan')
+      setAssignTarget(null)
+      setAssignReset((n) => n + 1)
       void queryClient.invalidateQueries({ queryKey: ['ops'] })
     },
     onError: (error) => toast.error(apiErrorMessage(error)),
@@ -128,9 +145,10 @@ export function QueuePage() {
             description='Sudah gate-in melewati masa tenggang. Dahulukan kelompok ini.'
             bookings={queue.data.late}
             docks={availableDocks}
-            onAssign={(bookingId, dockId) => assign.mutate({ bookingId, dockId })}
+            onAssign={(booking, dock) => setAssignTarget({ booking, dock })}
             onNoShow={setNoShowTarget}
             assigning={assign.isPending}
+            assignReset={assignReset}
             highlight
           />
 
@@ -139,9 +157,10 @@ export function QueuePage() {
             description='Sudah gate-in sesuai jadwal dan menunggu dock kosong.'
             bookings={queue.data.onTime}
             docks={availableDocks}
-            onAssign={(bookingId, dockId) => assign.mutate({ bookingId, dockId })}
+            onAssign={(booking, dock) => setAssignTarget({ booking, dock })}
             onNoShow={setNoShowTarget}
             assigning={assign.isPending}
+            assignReset={assignReset}
           />
 
           <QueueSection
@@ -163,9 +182,57 @@ export function QueuePage() {
             : ''
         }
         confirmText='Ya, tandai no-show'
+        cancelBtnText='Batal'
         destructive
         isLoading={noShow.isPending}
         handleConfirm={() => noShowTarget && noShow.mutate(noShowTarget.id)}
+      />
+
+      <ConfirmDialog
+        open={assignTarget !== null}
+        onOpenChange={(open) => {
+          if (open) return
+          setAssignTarget(null)
+          setAssignReset((n) => n + 1)
+        }}
+        title='Tugaskan truk ke dock ini?'
+        desc={
+          assignTarget ? (
+            <div className='space-y-2'>
+              <p>
+                Truk menempati dock dan checker bisa memulai bongkar/muat dari
+                Papan Dock.
+              </p>
+              <div className='rounded-md border bg-muted/50 p-3 text-xs'>
+                <p className='font-mono text-sm font-semibold text-foreground'>
+                  {assignTarget.booking.bookingCode}
+                </p>
+                <p className='mt-1 text-foreground'>
+                  {assignTarget.dock.dockCode}
+                  {assignTarget.booking.licensePlate
+                    ? ` · ${assignTarget.booking.licensePlate}`
+                    : ' · plat belum diisi'}
+                </p>
+                <p className='mt-0.5'>
+                  {assignTarget.booking.customer.name} ·{' '}
+                  {activityLabels[assignTarget.booking.activityType]}
+                </p>
+              </div>
+            </div>
+          ) : (
+            ''
+          )
+        }
+        confirmText='Ya, tugaskan'
+        cancelBtnText='Batal'
+        isLoading={assign.isPending}
+        handleConfirm={() =>
+          assignTarget &&
+          assign.mutate({
+            bookingId: assignTarget.booking.id,
+            dockId: assignTarget.dock.id,
+          })
+        }
       />
     </Main>
   )
@@ -206,15 +273,17 @@ function QueueSection({
   onAssign,
   onNoShow,
   assigning,
+  assignReset,
   highlight,
 }: {
   title: string
   description: string
   bookings: Booking[]
   docks?: DockWithBooking[]
-  onAssign?: (bookingId: string, dockId: number) => void
+  onAssign?: (booking: Booking, dock: DockWithBooking) => void
   onNoShow?: (booking: Booking) => void
   assigning?: boolean
+  assignReset?: number
   highlight?: boolean
 }) {
   return (
@@ -296,10 +365,18 @@ function QueueSection({
                             booking.approvalStatus !== 'PENDING' &&
                             (compatible.length > 0 ? (
                               <Select
+                                // Dropdown ini uncontrolled: setelah dialog
+                                // dibatalkan, pilihan yang batal tetap tampil
+                                // seolah dock sudah dipakai. Ganti key supaya
+                                // kembali ke "Pilih dock".
+                                key={`${booking.id}-${assignReset}`}
                                 disabled={assigning}
-                                onValueChange={(value) =>
-                                  onAssign(booking.id, Number(value))
-                                }
+                                onValueChange={(value) => {
+                                  const dock = compatible.find(
+                                    (item) => item.id === Number(value)
+                                  )
+                                  if (dock) onAssign(booking, dock)
+                                }}
                               >
                                 <SelectTrigger className='h-8 w-32'>
                                   <SelectValue placeholder='Pilih dock' />

@@ -43,6 +43,8 @@ async function main() {
   await prisma.warehouse.deleteMany()
   await prisma.truckType.deleteMany()
   await prisma.user.deleteMany()
+  // Customer dihapus setelah user: `users.customer_id` memakai onDelete: Restrict.
+  await prisma.customer.deleteMany()
   await prisma.warehouseSetting.deleteMany()
 
   await prisma.warehouseSetting.create({
@@ -93,12 +95,36 @@ async function main() {
   )
   console.log(`[seed] ${docks.length} dock, ${4} jenis truk, 1 gudang`)
 
-  const [admin, customerA, customerB, _gateA, _gateB, _checkerA, _checkerB] = await Promise.all([
+  // Perusahaan harus ada lebih dulu: akun CUSTOMER merujuk `customerId`.
+  // Sejak skema customer dipisah dari user, `companyName` di `users` tidak ada lagi.
+  const [customerA, customerB] = await Promise.all([
+    prisma.customer.create({
+      data: {
+        code: 'CUST-001',
+        name: 'PT Sinar Jaya Logistik',
+        city: 'Cikarang',
+        picName: 'Budi Santoso',
+        phone: '081200000002',
+        email: 'ops@sinarjaya.test',
+      },
+    }),
+    prisma.customer.create({
+      data: {
+        code: 'CUST-002',
+        name: 'CV Mitra Niaga',
+        city: 'Bekasi',
+        picName: 'Siti Rahayu',
+        phone: '081200000003',
+        email: 'ops@mitraniaga.test',
+      },
+    }),
+  ])
+
+  const [admin, _custA, _custB, _gateA, _gateB, _checkerA, _checkerB] = await Promise.all([
     prisma.user.create({
       data: {
         name: 'Rina Kusuma',
         email: 'admin@tsb.test',
-        companyName: 'TSB Warehouse',
         phone: '081200000001',
         role: 'ADMIN',
         passwordHash: hash,
@@ -108,9 +134,9 @@ async function main() {
       data: {
         name: 'Budi Santoso',
         email: 'customer@tsb.test',
-        companyName: 'PT Sinar Jaya Logistik',
         phone: '081200000002',
         role: 'CUSTOMER',
+        customerId: customerA.id,
         passwordHash: hash,
       },
     }),
@@ -118,9 +144,9 @@ async function main() {
       data: {
         name: 'Siti Rahayu',
         email: 'customer2@tsb.test',
-        companyName: 'CV Mitra Niaga',
         phone: '081200000003',
         role: 'CUSTOMER',
+        customerId: customerB.id,
         passwordHash: hash,
       },
     }),
@@ -395,6 +421,7 @@ async function main() {
         bookingCode: `TSB-${item.date.replace(/-/g, '')}-${String(next).padStart(3, '0')}`,
         qrToken: qr(),
         customerId: item.customerId,
+        createdById: admin.id,
         activityType: item.activity,
         truckTypeId: item.truckTypeId,
         bookingDate: dateOnly(item.date),
@@ -404,6 +431,9 @@ async function main() {
         licensePlate: item.plate ?? null,
         driverName: item.driver ?? null,
         driverPhone: item.plate ? '081299998888' : null,
+        // Snapshot blok saat booking dibuat — inilah yang dipakai melepas kuota,
+        // bukan `truck_types.blocks_required` yang bisa berubah belakangan.
+        blocksLocked: item.blocks,
         assignedDockId: item.dockId ?? null,
         status: item.status,
         lateMinutes: item.lateMinutes ?? 0,

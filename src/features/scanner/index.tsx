@@ -18,6 +18,7 @@ import { PageHeader } from '@/components/page-header'
 import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { QrScanner } from './qr-scanner'
 
 export function ScanPage() {
@@ -25,6 +26,13 @@ export function ScanPage() {
   const queryClient = useQueryClient()
   const [result, setResult] = useState<ScanResult | null>(null)
   const [scanning, setScanning] = useState(false)
+  /**
+   * Aksi gate yang menunggu konfirmasi. Tiket hasil pindai mudah tertukar saat
+   * antrean ramai, dan gate-out menutup tiket secara permanen — jadi aksi baru
+   * dikirim setelah petugas memastikan kode tiket di layar memang tiket truk
+   * yang sedang di depannya.
+   */
+  const [confirm, setConfirm] = useState<'gate-in' | 'gate-out' | null>(null)
 
   const scan = useMutation({
     mutationFn: (token: string) => scanQr(token),
@@ -50,6 +58,7 @@ export function ScanPage() {
     mutationFn: (token: string) => gateIn(token),
     onSuccess: (booking) => {
       toast.success('Gate-in berhasil')
+      setConfirm(null)
       refresh(booking.qrToken)
     },
     onError: (error) => toast.error(apiErrorMessage(error)),
@@ -59,6 +68,7 @@ export function ScanPage() {
     mutationFn: (token: string) => gateOut(token),
     onSuccess: (booking) => {
       toast.success('Gate-out berhasil')
+      setConfirm(null)
       refresh(booking.qrToken)
     },
     onError: (error) => toast.error(apiErrorMessage(error)),
@@ -178,18 +188,12 @@ export function ScanPage() {
 
             <div className='flex flex-wrap gap-2'>
               {result.canGateIn && (
-                <Button
-                  disabled={busy}
-                  onClick={() => doGateIn.mutate(result.booking.qrToken)}
-                >
+                <Button disabled={busy} onClick={() => setConfirm('gate-in')}>
                   <LogIn /> Gate-In
                 </Button>
               )}
               {result.booking.status === 'COMPLETED' && (
-                <Button
-                  disabled={busy}
-                  onClick={() => doGateOut.mutate(result.booking.qrToken)}
-                >
+                <Button disabled={busy} onClick={() => setConfirm('gate-out')}>
                   <LogOut /> Gate-Out
                 </Button>
               )}
@@ -208,6 +212,54 @@ export function ScanPage() {
           </CardContent>
         </Card>
       )}
+
+      <ConfirmDialog
+        open={confirm !== null}
+        onOpenChange={(open) => !open && setConfirm(null)}
+        title={
+          confirm === 'gate-in' ? 'Konfirmasi gate-in?' : 'Konfirmasi gate-out?'
+        }
+        desc={
+          result ? (
+            <div className='space-y-2'>
+              <p>
+                {confirm === 'gate-in'
+                  ? result.projectedStatus === 'LATE_WAITING_LIST'
+                    ? 'Waktu masuk dicatat, dan karena sudah melewati masa tenggang truk masuk waiting list sampai ada dock kosong.'
+                    : 'Waktu masuk dicatat dan truk masuk daftar tunggu dock.'
+                  : 'Tiket ditutup dan slotnya dilepas. Tindakan ini tidak bisa dibatalkan.'}
+              </p>
+              <div className='rounded-md border bg-muted/50 p-3 text-xs'>
+                <p className='font-mono text-sm font-semibold text-foreground'>
+                  {result.booking.bookingCode}
+                </p>
+                <p className='mt-1 text-foreground'>
+                  {result.booking.licensePlate ?? 'Plat belum diisi'}
+                  {result.booking.driverName
+                    ? ` · ${result.booking.driverName}`
+                    : ''}
+                </p>
+                <p className='mt-0.5'>
+                  {result.booking.customer.name} ·{' '}
+                  {activityLabels[result.booking.activityType]} ·{' '}
+                  {formatTime(result.booking.startTime)}–
+                  {formatTime(result.booking.endTime)}
+                </p>
+              </div>
+            </div>
+          ) : (
+            ''
+          )
+        }
+        confirmText={confirm === 'gate-in' ? 'Ya, gate-in' : 'Ya, gate-out'}
+        cancelBtnText='Batal'
+        isLoading={busy}
+        handleConfirm={() => {
+          if (!result) return
+          if (confirm === 'gate-in') doGateIn.mutate(result.booking.qrToken)
+          else doGateOut.mutate(result.booking.qrToken)
+        }}
+      />
     </Main>
   )
 }

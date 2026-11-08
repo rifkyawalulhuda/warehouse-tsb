@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CheckCircle2, PlayCircle, Truck } from 'lucide-react'
 import { toast } from 'sonner'
@@ -7,9 +8,11 @@ import {
   finishProcess,
   startProcess,
 } from '@/lib/api/endpoints'
+import type { Booking, DockWithBooking } from '@/lib/api/types'
 import { useRealtimeSync } from '@/hooks/use-realtime'
-import { formatTime } from '@/lib/format'
+import { activityLabels, formatTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Main } from '@/components/layout/main'
 import { PageHeader } from '@/components/page-header'
 import { ErrorBlock, LoadingBlock } from '@/components/query-state'
@@ -28,6 +31,18 @@ export function DockBoard() {
 
   const docks = useQuery({ queryKey: ['ops', 'docks'], queryFn: fetchOpsDocks })
 
+  /**
+   * Aksi yang menunggu konfirmasi. Memulai proses mengunci dock untuk satu
+   * truk, dan menyelesaikannya membebaskan dock untuk truk berikutnya —
+   * keduanya mengubah siapa yang boleh masuk, jadi tidak dijalankan dari satu
+   * klik yang bisa meleset di layar sentuh.
+   */
+  const [pending, setPending] = useState<{
+    kind: 'start' | 'finish'
+    booking: Booking
+    dock: DockWithBooking
+  } | null>(null)
+
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ['ops'] })
     void queryClient.invalidateQueries({ queryKey: ['bookings'] })
@@ -37,6 +52,7 @@ export function DockBoard() {
     mutationFn: (bookingId: string) => startProcess(bookingId),
     onSuccess: () => {
       toast.success('Proses dimulai')
+      setPending(null)
       invalidate()
     },
     onError: (error) => toast.error(apiErrorMessage(error)),
@@ -46,6 +62,7 @@ export function DockBoard() {
     mutationFn: (bookingId: string) => finishProcess(bookingId),
     onSuccess: () => {
       toast.success('Proses selesai, dock kembali tersedia')
+      setPending(null)
       invalidate()
     },
     onError: (error) => toast.error(apiErrorMessage(error)),
@@ -131,7 +148,9 @@ export function DockBoard() {
                           size='sm'
                           className='w-full'
                           disabled={start.isPending}
-                          onClick={() => start.mutate(booking.id)}
+                          onClick={() =>
+                            setPending({ kind: 'start', booking, dock })
+                          }
                         >
                           <PlayCircle /> Mulai proses
                         </Button>
@@ -141,7 +160,9 @@ export function DockBoard() {
                           size='sm'
                           className='w-full'
                           disabled={finish.isPending}
-                          onClick={() => finish.mutate(booking.id)}
+                          onClick={() =>
+                            setPending({ kind: 'finish', booking, dock })
+                          }
                         >
                           <CheckCircle2 /> Selesaikan proses
                         </Button>
@@ -158,6 +179,54 @@ export function DockBoard() {
           })}
         </div>
       )}
+
+      <ConfirmDialog
+        open={pending !== null}
+        onOpenChange={(open) => !open && setPending(null)}
+        title={
+          pending?.kind === 'start'
+            ? 'Mulai proses di dock ini?'
+            : 'Selesaikan proses ini?'
+        }
+        desc={
+          pending ? (
+            <div className='space-y-2'>
+              <p>
+                {pending.kind === 'start'
+                  ? 'Waktu mulai proses dicatat sebagai sekarang dan dock ditandai sedang dipakai.'
+                  : 'Waktu selesai dicatat dan dock langsung dibebaskan untuk truk berikutnya.'}
+              </p>
+              <div className='rounded-md border bg-muted/50 p-3 text-xs'>
+                <p className='font-mono text-sm font-semibold text-foreground'>
+                  {pending.booking.bookingCode}
+                </p>
+                <p className='mt-1 text-foreground'>
+                  {pending.dock.dockCode}
+                  {pending.booking.licensePlate
+                    ? ` · ${pending.booking.licensePlate}`
+                    : ' · plat belum diisi'}
+                </p>
+                <p className='mt-0.5'>
+                  {pending.booking.customer.name} ·{' '}
+                  {activityLabels[pending.booking.activityType]}
+                </p>
+              </div>
+            </div>
+          ) : (
+            ''
+          )
+        }
+        confirmText={
+          pending?.kind === 'start' ? 'Ya, mulai proses' : 'Ya, selesaikan'
+        }
+        cancelBtnText='Batal'
+        isLoading={start.isPending || finish.isPending}
+        handleConfirm={() => {
+          if (!pending) return
+          if (pending.kind === 'start') start.mutate(pending.booking.id)
+          else finish.mutate(pending.booking.id)
+        }}
+      />
     </Main>
   )
 }
