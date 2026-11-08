@@ -1,7 +1,6 @@
 import { Check, Monitor, Moon, Sun } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/context/theme-provider'
-import { Badge } from '@/components/ui/badge'
 
 const OPTIONS = [
   {
@@ -43,9 +42,11 @@ const OPTIONS = [
 ] as const
 
 /**
- * Pemilih tema berbentuk kartu pratinjau, dipakai di halaman Pengaturan.
+ * Pemilih tema berbentuk kartu pratinjau.
+ *
  * Perubahan langsung diterapkan tanpa tombol simpan karena sifatnya preferensi
- * peramban, bukan data server.
+ * peramban (cookie), bukan data server — karena itu seksi ini tidak punya status
+ * kotor dan tidak ikut terkirim saat seksi lain disimpan.
  */
 export function AppearancePicker() {
   const { theme, setTheme, resolvedTheme } = useTheme()
@@ -55,11 +56,12 @@ export function AppearancePicker() {
       <div
         role='radiogroup'
         aria-label='Tema tampilan'
-        className='grid gap-3 sm:grid-cols-3'
+        className='grid gap-2.5 sm:grid-cols-3'
       >
         {OPTIONS.map((option) => {
           const Icon = option.icon
           const active = theme === option.value
+
           return (
             <button
               key={option.value}
@@ -68,26 +70,45 @@ export function AppearancePicker() {
               aria-checked={active}
               onClick={() => setTheme(option.value)}
               className={cn(
-                'group relative rounded-lg border p-3 text-start transition-colors',
-                'hover:border-foreground/30 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none',
-                active ? 'border-primary ring-1 ring-primary' : 'border-border'
+                'group relative rounded-lg border p-2.5 text-start transition-[border-color,box-shadow,background-color] duration-200 outline-none',
+                'hover:border-foreground/25 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 motion-reduce:transition-none',
+                active
+                  ? 'border-primary bg-primary/3 shadow-xs'
+                  : 'border-border bg-transparent'
               )}
             >
-              <span className='mb-3 flex h-16 w-full overflow-hidden rounded-md border'>
+              <span className='mb-2.5 flex h-14 w-full overflow-hidden rounded-md border ring-1 ring-black/5'>
                 <span className={cn('h-full w-1/4', option.preview.sidebar)} />
-                <span className={cn('flex h-full flex-1 flex-col gap-1.5 p-1.5', option.preview.shell)}>
-                  <span className={cn('h-1.5 w-2/3 rounded-full', option.preview.bar)} />
-                  <span className={cn('h-4 flex-1 rounded', option.preview.card)} />
+                <span
+                  className={cn(
+                    'flex h-full flex-1 flex-col gap-1 p-1.5',
+                    option.preview.shell
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'h-1.5 w-2/3 rounded-full',
+                      option.preview.bar
+                    )}
+                  />
+                  <span
+                    className={cn('h-3 flex-1 rounded', option.preview.card)}
+                  />
                 </span>
               </span>
-              <span className='flex items-center gap-2 text-sm font-medium'>
-                <Icon className='size-4' />
+
+              <span className='flex items-center gap-1.5 text-sm font-medium'>
+                <Icon className='size-3.5 text-muted-foreground' aria-hidden />
                 {option.label}
-                {active && (
-                  <Check className='ms-auto size-4 text-primary' aria-hidden />
-                )}
+                <Check
+                  className={cn(
+                    'ms-auto size-3.5 text-primary transition-opacity duration-150',
+                    active ? 'opacity-100' : 'opacity-0'
+                  )}
+                  aria-hidden
+                />
               </span>
-              <span className='mt-1 block text-xs text-muted-foreground'>
+              <span className='mt-0.5 block text-[11px] leading-snug text-muted-foreground'>
                 {option.description}
               </span>
             </button>
@@ -96,11 +117,11 @@ export function AppearancePicker() {
       </div>
 
       <p className='text-xs text-muted-foreground'>
-        Tema aktif saat ini:{' '}
-        <Badge variant='secondary' className='align-middle'>
+        Aktif sekarang{' '}
+        <span className='font-medium text-foreground'>
           {resolvedTheme === 'dark' ? 'Gelap' : 'Terang'}
-        </Badge>
-        {theme === 'system' && ' (mengikuti perangkat)'}
+        </span>
+        {theme === 'system' && ' — mengikuti perangkat'}
       </p>
     </div>
   )
