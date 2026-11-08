@@ -105,7 +105,7 @@ export function ScheduleTable({
                       </div>
                     </TableCell>
                     <TableCell className='hidden text-sm 2xl:table-cell'>
-                      {booking.customer.companyName ?? booking.customer.name}
+                      {booking.customer.name}
                     </TableCell>
                     <TableCell className='hidden xl:table-cell'>
                       <div className='text-sm'>{activityLabels[booking.activityType]}</div>

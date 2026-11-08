@@ -114,7 +114,7 @@ export function DockBoard() {
                           {booking.licensePlate ?? 'Plat belum diisi'}
                         </p>
                         <p className='text-xs text-muted-foreground'>
-                          {booking.customer.companyName ?? booking.customer.name}
+                          {booking.customer.name}
                           {booking.driverName ? ` · ${booking.driverName}` : ''}
                         </p>
                         <p className='text-xs text-muted-foreground'>

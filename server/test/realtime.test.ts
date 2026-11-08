@@ -5,7 +5,7 @@ import { io as ioClient, type Socket } from 'socket.io-client'
 import request from 'supertest'
 import { createApp } from '../src/app'
 import { prisma } from '../src/lib/prisma'
-import { closeRealtime, emitBookingUpdated, initRealtime } from '../src/realtime'
+import { closeRealtime, emitBookingUpdated, initRealtime, rooms } from '../src/realtime'
 import { cookieNames } from '../src/lib/auth'
 import { loginCookie, resetDatabase, seedBase } from './helpers'
 
@@ -35,26 +35,30 @@ function connect(cookie?: string): Socket {
   })
 }
 
-/** Tunggu event pertama yang cocok, atau gagal setelah batas waktu. */
-function waitFor(socket: Socket, event: string, timeoutMs = 3000): Promise<unknown> {
+function waitFor(socket: Socket, event: string, windowMs = 3_000) {
   // `connect` bisa sudah terjadi sebelum listener terpasang.
   if (event === 'connect' && socket.connected) return Promise.resolve()
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`timeout menunggu ${event}`)), timeoutMs)
-    socket.once(event, (payload) => {
+  return new Promise<unknown>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      socket.off(event, handler)
+      reject(new Error(`Tidak menerima ${event} dalam ${windowMs}ms`))
+    }, windowMs)
+    const handler = (payload: unknown) => {
       clearTimeout(timer)
+      socket.off(event, handler)
       resolve(payload)
-    })
+    }
+    socket.on(event, handler)
   })
 }
 
-/** Tunggu sebentar untuk memastikan TIDAK ada event yang datang. */
-function expectSilence(socket: Socket, event: string, windowMs = 600): Promise<void> {
-  return new Promise((resolve, reject) => {
+/** Memastikan sebuah event TIDAK datang dalam jendela waktu tertentu. */
+function expectSilence(socket: Socket, event: string, windowMs = 600) {
+  return new Promise<void>((resolve, reject) => {
     const handler = () => {
       clearTimeout(timer)
       socket.off(event, handler)
-      reject(new Error(`seharusnya tidak menerima ${event}`))
+      reject(new Error(`Seharusnya tidak menerima ${event}`))
     }
     const timer = setTimeout(() => {
       socket.off(event, handler)
@@ -67,10 +71,9 @@ function expectSilence(socket: Socket, event: string, windowMs = 600): Promise<v
 describe('realtime', () => {
   it('petugas yang login menerima booking.updated, tamu tidak', async () => {
     await resetDatabase(prisma)
-    const { admin } = await seedBase(prisma)
-    const cookie = await loginCookie(app, admin.email)
+    const seeded = await seedBase(prisma)
 
-    const staff = connect(cookie)
+    const staff = connect(await loginCookie(app, seeded.admin.email))
     const guest = connect()
     await Promise.all([waitFor(staff, 'connect'), waitFor(guest, 'connect')])
 
@@ -79,9 +82,10 @@ describe('realtime', () => {
         bookingCode: 'RT-1',
         referenceDocNo: 'REF-TEST',
         qrToken: 'realtime-token-1',
-        customerId: admin.id,
+        customerId: seeded.customerA.id,
+        createdById: seeded.customer.id,
         activityType: 'UNLOADING',
-        truckTypeId: (await prisma.truckType.findFirstOrThrow()).id,
+        truckTypeId: seeded.truckTypes[0]!.id,
         bookingDate: new Date('2030-01-01T00:00:00.000Z'),
         startTime: new Date('2030-01-01T02:00:00.000Z'),
         endTime: new Date('2030-01-01T03:00:00.000Z'),
@@ -111,16 +115,17 @@ describe('realtime', () => {
 
   it('tiket supir tanpa login menerima perubahan booking-nya sendiri', async () => {
     await resetDatabase(prisma)
-    const { admin } = await seedBase(prisma)
+    const seeded = await seedBase(prisma)
 
     const booking = await prisma.booking.create({
       data: {
         bookingCode: 'RT-2',
         referenceDocNo: 'REF-TEST',
         qrToken: 'realtime-token-2',
-        customerId: admin.id,
+        customerId: seeded.customerA.id,
+        createdById: seeded.customer.id,
         activityType: 'UNLOADING',
-        truckTypeId: (await prisma.truckType.findFirstOrThrow()).id,
+        truckTypeId: seeded.truckTypes[0]!.id,
         bookingDate: new Date('2030-01-01T00:00:00.000Z'),
         startTime: new Date('2030-01-01T02:00:00.000Z'),
         endTime: new Date('2030-01-01T03:00:00.000Z'),
@@ -159,23 +164,41 @@ describe('realtime', () => {
     other.close()
   })
 
-  it('pemilik booking menerima update meski bukan petugas', async () => {
+  it('rekan seperusahaan menerima update walau bukan pembuat booking', async () => {
     await resetDatabase(prisma)
-    const { customer } = await seedBase(prisma)
-    const cookie = await loginCookie(app, customer.email)
+    const seeded = await seedBase(prisma)
 
-    const owner = connect(cookie)
-    const stranger = connect(await loginCookie(app, (await prisma.user.findFirstOrThrow({ where: { role: 'CUSTOMER', id: { not: customer.id } } })).email))
-    await Promise.all([waitFor(owner, 'connect'), waitFor(stranger, 'connect')])
+    // Rekan satu perusahaan: akun baru di customer yang sama.
+    const colleague = await prisma.user.create({
+      data: {
+        name: 'Rekan Seperusahaan',
+        email: 'customer3@test.local',
+        role: 'CUSTOMER',
+        customerId: seeded.customerA.id,
+        passwordHash: (await prisma.user.findUniqueOrThrow({ where: { id: seeded.customer.id } }))
+          .passwordHash,
+      },
+    })
+    expect(colleague.customerId).toBe(seeded.customerA.id)
+
+    const owner = connect(await loginCookie(app, seeded.customer.email))
+    const mate = connect(await loginCookie(app, colleague.email))
+    const stranger = connect(await loginCookie(app, seeded.customer2.email))
+    await Promise.all([
+      waitFor(owner, 'connect'),
+      waitFor(mate, 'connect'),
+      waitFor(stranger, 'connect'),
+    ])
 
     const booking = await prisma.booking.create({
       data: {
         bookingCode: 'RT-3',
         referenceDocNo: 'REF-TEST',
         qrToken: 'realtime-token-3',
-        customerId: customer.id,
+        customerId: seeded.customerA.id,
+        createdById: seeded.customer.id,
         activityType: 'UNLOADING',
-        truckTypeId: (await prisma.truckType.findFirstOrThrow()).id,
+        truckTypeId: seeded.truckTypes[0]!.id,
         bookingDate: new Date('2030-01-01T00:00:00.000Z'),
         startTime: new Date('2030-01-01T02:00:00.000Z'),
         endTime: new Date('2030-01-01T03:00:00.000Z'),
@@ -185,26 +208,31 @@ describe('realtime', () => {
     })
 
     const ownerEvent = waitFor(owner, 'booking.updated')
+    const mateEvent = waitFor(mate, 'booking.updated')
     const strangerSilence = expectSilence(stranger, 'booking.updated')
 
     emitBookingUpdated({
       bookingId: booking.id,
       qrToken: booking.qrToken,
       status: 'CHECKED_IN_ON_TIME',
-      userId: customer.id,
+      customerId: seeded.customerA.id,
+      userId: seeded.customer.id,
     })
 
     await expect(ownerEvent).resolves.toMatchObject({ bookingId: booking.id })
+    // Inilah yang berubah: sebelumnya hanya pembuat yang diberi tahu.
+    await expect(mateEvent).resolves.toMatchObject({ bookingId: booking.id })
     await strangerSilence
 
     owner.close()
+    mate.close()
     stranger.close()
   })
 
   it('cookie kedaluwarsa tetap dikenali lewat refresh token', async () => {
     await resetDatabase(prisma)
-    const { gate } = await seedBase(prisma)
-    const cookie = await loginCookie(app, gate.email)
+    const seeded = await seedBase(prisma)
+    const cookie = await loginCookie(app, seeded.gate.email)
 
     // Buang access token, sisakan refresh token — persis kondisi setelah
     // 15 menit tanpa /auth/refresh.
@@ -222,9 +250,10 @@ describe('realtime', () => {
         bookingCode: 'RT-4',
         referenceDocNo: 'REF-TEST',
         qrToken: 'realtime-token-4',
-        customerId: gate.id,
+        customerId: seeded.customerA.id,
+        createdById: seeded.customer.id,
         activityType: 'UNLOADING',
-        truckTypeId: (await prisma.truckType.findFirstOrThrow()).id,
+        truckTypeId: seeded.truckTypes[0]!.id,
         bookingDate: new Date('2030-01-01T00:00:00.000Z'),
         startTime: new Date('2030-01-01T02:00:00.000Z'),
         endTime: new Date('2030-01-01T03:00:00.000Z'),
@@ -239,9 +268,12 @@ describe('realtime', () => {
 
     socket.close()
   })
+
+  it('room customer memakai id perusahaan, bukan id akun', () => {
+    expect(rooms.customer('abc')).toBe('customer:abc')
+    expect(rooms.user('abc')).toBe('user:abc')
+  })
 })
 
 // Dipakai agar `request` tidak dianggap import tak terpakai saat tes berubah.
 void request
-
-

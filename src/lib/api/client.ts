@@ -108,3 +108,8 @@ export async function putData<T>(url: string, body?: unknown) {
   const { data } = await api.put<Envelope<T>>(url, body)
   return data.data
 }
+
+export async function deleteData<T>(url: string) {
+  const { data } = await api.delete<Envelope<T>>(url)
+  return data.data
+}

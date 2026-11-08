@@ -146,6 +146,11 @@ describe('kuota booking PENDING', () => {
   it('job NO_SHOW tidak menyentuh booking PENDING', async () => {
     await setMode('MANUAL')
 
+    const owner = await prisma.user.findUniqueOrThrow({
+      where: { email: 'customer1@test.local' },
+      select: { id: true, customerId: true },
+    })
+
     // Booking untuk kemarin, masih PENDING dan tenggatnya belum lewat.
     const yesterday = addDaysISO(todayISO(), -1)
     const created = await prisma.booking.create({
@@ -153,7 +158,8 @@ describe('kuota booking PENDING', () => {
         bookingCode: 'TSB-PENDING-001',
         qrToken: 'qr-pending-0000000000000000000001',
         referenceDocNo: 'DO-PENDING',
-        customerId: (await prisma.user.findUnique({ where: { email: 'customer1@test.local' } }))!.id,
+        createdById: owner.id,
+        customerId: owner.customerId!,
         activityType: 'UNLOADING',
         truckTypeId,
         bookingDate: dateOnlyToUtc(yesterday),
@@ -216,7 +222,8 @@ describe('finalizeRelease', () => {
           bookingCode: 'TSB-REL-001',
           qrToken: 'qr-release-000000000000000000001',
           referenceDocNo: 'DO-REL',
-          customerId: customer!.id,
+          customerId: customer!.customerId!,
+          createdById: customer!.id,
           activityType: 'UNLOADING',
           truckTypeId,
           bookingDate: dateOnlyToUtc(date),
@@ -295,12 +302,18 @@ describe('gate-in diblokir saat PENDING', () => {
       Math.max(9 * 60 + 30, Math.ceil((now.getHours() * 60 + now.getMinutes()) / 30) * 30 + 60)
     )
 
+    const owner = await prisma.user.findUniqueOrThrow({
+      where: { email: 'customer1@test.local' },
+      select: { id: true, customerId: true },
+    })
+
     const created = await prisma.booking.create({
       data: {
         bookingCode: 'TSB-GATE-001',
         qrToken: 'qr-gate-00000000000000000000001',
         referenceDocNo: 'DO-GATE',
-        customerId: (await prisma.user.findUnique({ where: { email: 'customer1@test.local' } }))!.id,
+        createdById: owner.id,
+        customerId: owner.customerId!,
         activityType: 'UNLOADING',
         truckTypeId,
         bookingDate: dateOnlyToUtc(date),

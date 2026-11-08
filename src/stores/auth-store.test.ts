@@ -11,8 +11,7 @@ const sampleUser: SessionUser = {
   name: 'Budi',
   email: 'budi@example.com',
   role: 'CUSTOMER',
-  companyName: 'PT Contoh',
-  autoApproveBooking: false,
+  customerId: 'c1',
   canApproveBooking: false,
 }
 

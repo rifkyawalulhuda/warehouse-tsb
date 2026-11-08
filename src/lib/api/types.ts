@@ -36,8 +36,7 @@ export type SessionUser = {
   name: string
   email: string
   role: Role
-  companyName: string | null
-  autoApproveBooking: boolean
+  customerId: string | null
   canApproveBooking: boolean
 }
 
@@ -125,8 +124,12 @@ export type Booking = {
   customer: {
     id: string
     name: string
-    companyName: string | null
-    phone: string | null
+    code: string
+  }
+  /// Akun yang menekan tombol booking. Jejak, bukan pemilik.
+  createdBy: {
+    id: string
+    name: string
   }
   truckType: {
     id: number
@@ -296,12 +299,46 @@ export type ManagedUser = {
   name: string
   email: string
   phone: string | null
-  companyName: string | null
   role: Role
   isActive: boolean
-  autoApproveBooking: boolean
+  customerId: string | null
   canApproveBooking: boolean
   createdAt: string
+}
+
+/** Perusahaan customer. Pemilik bisnis booking. */
+export type Customer = {
+  id: string
+  code: string
+  name: string
+  address: string | null
+  city: string | null
+  picName: string | null
+  phone: string | null
+  email: string | null
+  taxId: string | null
+  note: string | null
+  isActive: boolean
+  autoApproveBooking: boolean
+  createdAt: string
+  updatedAt: string
+  _count?: { users: number; bookings: number }
+}
+
+/** Akun login milik satu customer. */
+export type CustomerAccount = {
+  id: string
+  name: string
+  email: string
+  phone: string | null
+  isActive: boolean
+  canApproveBooking: boolean
+  createdAt: string
+}
+
+export type CustomerDetail = Customer & {
+  users: CustomerAccount[]
+  _count: { bookings: number }
 }
 
 /** Satu baris audit log, dipakai feed aktivitas dashboard. */

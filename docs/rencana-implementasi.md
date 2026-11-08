@@ -139,13 +139,13 @@ Mengikuti PRD dengan koreksi di atas.
 
 | Tabel | Perubahan dari PRD |
 | :--- | :--- |
-| `users` | Tambah `acting_role` tidak perlu; role tetap satu |
-| `warehouse_settings` | Hapus `max_loading_quota_per_slot`, `max_unloading_quota_per_slot`; tambah `early_arrival_limit_minutes`, `booking_window_days` |
+| `users` | `company_name` **dihapus** → `customer_id` (FK `customers`, wajib untuk CUSTOMER). `auto_approve_booking` pindah ke `customers`. Tidak ada `acting_role`; role tetap satu |
+| `warehouse_settings` | Hapus `max_loading_quota_per_slot`, `max_unloading_quota_per_slot`; tambah `early_arrival_limit_minutes`, `booking_window_days`, dan empat kolom kebijakan approval |
 | `truck_types` | Tetap (`duration_minutes`, `blocks_required`); `blocks_required` hanya turunan `ceil(duration/30)` dan tidak pernah diterima dari klien |
-| `bookings` | Tambah `blocks_locked` — snapshot jumlah blok saat booking dibuat |
+| `customers` | **Baru**: perusahaan customer (`name` unik case-insensitive, `code`, kontak, `auto_approve_booking`). Pemilik bisnis booking |
+| `bookings` | `customer_id` **di-rename** → `created_by_id` (akun pembuat) + `customer_id` baru (perusahaan); `blocks_locked` snapshot; tujuh kolom approval. Lihat `docs/rencana-master-customer.md` dan `docs/rencana-approval-booking.md` |
 | `docks` | Tambah `area_name` (teks bebas, boleh kosong) dan `warehouse_id` (wajib, FK ke `warehouses`); `current_status` tetap untuk tampilan cepat, sumber kebenaran tetap `bookings.status` |
 | `warehouses` | **Baru**: `name` unik, `is_active`. Metadata pengelompokan saja — tidak dipakai mesin kuota |
-| `bookings` | Tetap |
 | `booking_time_logs` | Tetap |
 | `slot_allocations` | **Baru**: `slot_date`, `activity`, `slot_start`, `capacity`, `used`, unique `(slot_date, activity, slot_start)` |
 | `audit_logs` | **Baru**: `user_id`, `user_role`, `acting_as_role`, `action`, `booking_id`, `meta`, `created_at` |
@@ -342,7 +342,7 @@ Empat pertanyaan terbuka di draf awal sudah dijawab saat implementasi:
 | `npm run build` (typecheck + Vite) | lolos |
 | `npm run build:api` (tsc server) | lolos |
 | `npm run lint` | 0 error (4 warning bawaan template) |
-| `npm run test:api` | 97 tes lolos (12 berkas), termasuk konkurensi dua koneksi, kuota, auth, realtime, no-show, master, approval (3 berkas baru) |
+| `npm run test:api` | 122 tes lolos (14 berkas), termasuk konkurensi dua koneksi, kuota, auth, realtime, no-show, master, approval, dan customer |
 | `npm test` (Vitest browser) | 64 tes lolos |
 | Alur manual di browser | login 4 peran, booking, tiket, scan, dock, dashboard, laporan |
 | Edit jenis truk di Master Data | dialog `Ubah` tersimpan dan tabel ikut berubah; `blocks_required` dihitung server (`master.test.ts`: 403 customer, abaikan `blocksRequired` dari klien, nonaktif tetap terlihat di master tapi hilang dari `/api/settings`, durasi di luar batas ditolak) |
@@ -356,4 +356,5 @@ Empat pertanyaan terbuka di draf awal sudah dijawab saat implementasi:
 | Nonaktifkan akun sendiri | ditolak server (`CANNOT_DEACTIVATE_SELF`, `LAST_ADMIN`); switch-nya dimatikan di UI |
 | Mode terang/gelap | pemilih tema di sidebar, header, dan Pengaturan; `resolvedTheme` diperbaiki agar ikut berubah saat OS berganti tema |
 | Approval booking (fitur baru) | `approval.test.ts` (19), `approval-quota.test.ts` (8), `approval-concurrency.test.ts` (3): mode AUTO/MANUAL, whitelist, tenggat MAX, approve/reject/batch, kuota rilis tepat sekali, race approve vs expire, gate-in ditolak saat PENDING, KPI `expiredPending`. Rincian: `docs/rencana-approval-booking.md` |
+| Master Data Customer (fitur baru) | `customer.test.ts` (13), `customer-ownership.test.ts` (11): CRUD, nama unik case-insensitive, kode `CUST-NNN`, akun di dalam customer, `POST /users` menolak CUSTOMER, dua akun seperusahaan berbagi booking, perusahaan lain 403, whitelist approval per perusahaan, filter laporan. Migrasi: 11 booking + 2 customer ter-backfill tanpa kehilangan data. Rincian: `docs/rencana-master-customer.md` |
 

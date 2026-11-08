@@ -11,15 +11,27 @@ export const rooms = {
   /** Semua petugas: Admin, Checker, Security. */
   staff: 'staff',
   admin: 'admin',
-  /** Room pribadi pemilik booking — halaman "Jadwal Saya" / detail booking. */
+  /** Room pribadi satu akun — halaman "Jadwal Saya" / detail booking. */
   user: (userId: string) => `user:${userId}`,
+  /**
+   * Room perusahaan. Booking dimiliki customer, bukan akun, sehingga semua
+   * staf seperusahaan harus menerima perubahan yang sama. Tanpa room ini,
+   * rekan kerja pembuat booking melihat data basi tanpa error apa pun.
+   */
+  customer: (customerId: string) => `customer:${customerId}`,
   ticket: (qrToken: string) => `ticket:${qrToken}`,
 }
 
 const STAFF_ROLES: Role[] = ['ADMIN', 'CHECKER', 'GATE_OFFICER']
 
 export type RealtimeEvent =
-  | { type: 'booking.updated'; bookingId: string; qrToken: string; status: string }
+  | {
+      type: 'booking.updated'
+      bookingId: string
+      qrToken: string
+      status: string
+      customerId: string | null
+    }
   | { type: 'dock.updated'; dockId: number }
   | { type: 'queue.updated' }
 
@@ -47,12 +59,19 @@ function readCookie(header: string | undefined, name: string): string | undefine
  */
 async function resolveIdentity(
   cookies: string | undefined
-): Promise<{ userId: string; role: Role } | null> {
+): Promise<{ userId: string; role: Role; customerId: string | null } | null> {
   const access = readCookie(cookies, cookieNames.access)
   if (access) {
     try {
       const claims = verifyAccessToken(access)
-      return { userId: claims.sub, role: claims.role }
+      // Token hanya membawa role; customerId dibaca dari DB karena bisa berubah
+      // (akun dipindahkan ke perusahaan lain) tanpa menunggu token kedaluwarsa.
+      const user = await prisma.user.findUnique({
+        where: { id: claims.sub },
+        select: { id: true, role: true, isActive: true, customerId: true },
+      })
+      if (!user || !user.isActive) return null
+      return { userId: user.id, role: user.role, customerId: user.customerId }
     } catch {
       // lanjut ke refresh token
     }
@@ -65,10 +84,10 @@ async function resolveIdentity(
     const claims = verifyRefreshToken(refresh)
     const user = await prisma.user.findUnique({
       where: { id: claims.sub },
-      select: { id: true, role: true, isActive: true },
+      select: { id: true, role: true, isActive: true, customerId: true },
     })
     if (!user || !user.isActive) return null
-    return { userId: user.id, role: user.role }
+    return { userId: user.id, role: user.role, customerId: user.customerId }
   } catch {
     return null
   }
@@ -90,6 +109,7 @@ export function initRealtime(httpServer: HttpServer): Server {
     if (STAFF_ROLES.includes(identity.role)) socket.join(rooms.staff)
     if (identity.role === 'ADMIN') socket.join(rooms.admin)
     socket.join(rooms.user(identity.userId))
+    if (identity.customerId) socket.join(rooms.customer(identity.customerId))
   })
 
   return io
@@ -99,6 +119,8 @@ export function emitBookingUpdated(payload: {
   bookingId: string
   qrToken: string
   status: string
+  customerId?: string | null
+  /** Dipertahankan untuk klien yang masih memakai room per-akun. */
   userId?: string | null
 }) {
   if (!io) return
@@ -107,10 +129,15 @@ export function emitBookingUpdated(payload: {
     bookingId: payload.bookingId,
     qrToken: payload.qrToken,
     status: payload.status,
+    customerId: payload.customerId ?? null,
   }
 
   io.to(rooms.staff).emit('booking.updated', event)
   io.to(rooms.ticket(payload.qrToken)).emit('booking.updated', event)
+  // Perusahaan penerima: semua staf customer yang sama, bukan hanya pembuat.
+  if (payload.customerId) {
+    io.to(rooms.customer(payload.customerId)).emit('booking.updated', event)
+  }
   if (payload.userId) io.to(rooms.user(payload.userId)).emit('booking.updated', event)
 
   // Ping global tanpa isi: klien yang tidak punya room sendiri (mis. daftar

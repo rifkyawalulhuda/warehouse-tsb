@@ -258,7 +258,7 @@ function QueueSection({
                         {booking.bookingCode}
                       </TableCell>
                       <TableCell className='text-sm'>
-                        {booking.customer.companyName ?? booking.customer.name}
+                        {booking.customer.name}
                         <span className='block text-xs text-muted-foreground'>
                           {activityLabels[booking.activityType]}
                         </span>

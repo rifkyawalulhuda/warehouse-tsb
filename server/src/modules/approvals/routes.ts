@@ -144,7 +144,7 @@ approvalsRouter.post('/:id/approve', async (req, res, next) => {
       bookingId: updated.id,
       qrToken: updated.qrToken,
       status: updated.status,
-      userId: updated.customer.id,
+      customerId: updated.customer.id,
     })
 
     res.json({ data: updated })
@@ -236,7 +236,7 @@ approvalsRouter.post('/:id/reject', async (req, res, next) => {
       bookingId: updated.id,
       qrToken: updated.qrToken,
       status: updated.status,
-      userId: updated.customer.id,
+      customerId: updated.customer.id,
     })
 
     res.json({ data: updated })
@@ -296,7 +296,7 @@ approvalsRouter.post('/batch-approve', async (req, res, next) => {
         bookingId: updated.id,
         qrToken: updated.qrToken,
         status: updated.status,
-        userId: updated.customer.id,
+        customerId: updated.customer.id,
       })
     }
 

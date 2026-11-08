@@ -69,23 +69,60 @@ enum ApprovalStatus {
   EXPIRED
 }
 
+/// Perusahaan customer. Akun login (`User` ber-role CUSTOMER) menempel ke satu
+/// customer; booking dimiliki customer, bukan akun.
+model Customer {
+  id   String @id @default(uuid()) @db.Uuid
+  /// Kode tampilan berurutan, mis. CUST-001. Tidak dipakai ulang setelah hapus.
+  code String @unique @db.VarChar(24)
+  /// Nama perusahaan. Unik — dijaga juga oleh indeks `lower(name)` di migrasi,
+  /// karena `@unique` saja tidak case-insensitive.
+  name String @unique @db.VarChar(160)
+
+  address String? @db.VarChar(240)
+  city    String? @db.VarChar(80)
+  picName String? @map("pic_name") @db.VarChar(120)
+  phone   String? @db.VarChar(24)
+  /// Email perusahaan. BUKAN identitas login — login memakai `users.email`.
+  email   String? @db.VarChar(160)
+  taxId   String? @map("tax_id") @db.VarChar(40)
+  note    String? @db.VarChar(240)
+
+  isActive Boolean @default(true) @map("is_active")
+  /// Whitelist approval: saat approval_mode = MANUAL, booking perusahaan ini
+  /// tidak perlu antre. Pindah dari `users` (lihat rencana §1 keputusan 5).
+  autoApproveBooking Boolean @default(false) @map("auto_approve_booking")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  users    User[]
+  bookings Booking[] @relation("CustomerBookings")
+
+  @@map("customers")
+}
+
 model User {
   id           String   @id @default(uuid()) @db.Uuid
   name         String   @db.VarChar(120)
-  companyName  String?  @map("company_name") @db.VarChar(160)
   email        String   @unique @db.VarChar(160)
   phone        String?  @db.VarChar(24)
   passwordHash String   @map("password_hash") @db.VarChar(120)
   role         Role
   isActive     Boolean  @default(true) @map("is_active")
-  /// Whitelist customer: saat approval_mode = MANUAL, booking-nya tidak perlu antre.
-  autoApproveBooking Boolean @default(false) @map("auto_approve_booking")
   /// Memberi hak approve ke non-ADMIN. Role ADMIN selalu berhak tanpa flag ini.
   canApproveBooking  Boolean @default(false) @map("can_approve_booking")
+
+  /// Perusahaan tempat akun CUSTOMER ini bekerja. Wajib untuk CUSTOMER,
+  /// NULL untuk Admin/Security/Checker.
+  customerId String?  @map("customer_id") @db.Uuid
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: Restrict)
+
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  bookings          Booking[]      @relation("CustomerBookings")
+  /// Booking yang DIBUAT akun ini. Kepemilikan bisnis ada di `Booking.customer`.
+  createdBookings   Booking[]      @relation("BookingCreator")
   approvals         Booking[]      @relation("BookingApprovals")
   gateInLogs        BookingTimeLog[] @relation("GateInBy")
   dockAssignLogs    BookingTimeLog[] @relation("DockAssignedBy")
@@ -94,6 +131,7 @@ model User {
   gateOutLogs       BookingTimeLog[] @relation("GateOutBy")
   auditLogs         AuditLog[]
 
+  @@index([customerId])
   @@map("users")
 }
 
@@ -172,7 +210,10 @@ model Booking {
   bookingCode String   @unique @map("booking_code") @db.VarChar(24)
   qrToken     String   @unique @map("qr_token") @db.VarChar(64)
 
-  customerId   String       @map("customer_id") @db.Uuid
+  /// Pemilik bisnis booking: perusahaan customer.
+  customerId    String       @map("customer_id") @db.Uuid
+  /// Akun yang menekan tombol booking. Dipakai untuk jejak, bukan kepemilikan.
+  createdById   String       @map("created_by_id") @db.Uuid
   activityType ActivityType @map("activity_type")
   truckTypeId  Int          @map("truck_type_id")
 
@@ -211,7 +252,8 @@ model Booking {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  customer     User            @relation("CustomerBookings", fields: [customerId], references: [id])
+  customer     Customer        @relation("CustomerBookings", fields: [customerId], references: [id], onDelete: Restrict)
+  createdBy    User            @relation("BookingCreator", fields: [createdById], references: [id], onDelete: Restrict)
   truckType    TruckType       @relation(fields: [truckTypeId], references: [id])
   assignedDock Dock?           @relation("AssignedDock", fields: [assignedDockId], references: [id])
   approvedBy   User?           @relation("BookingApprovals", fields: [approvedById], references: [id], onDelete: SetNull)
@@ -220,6 +262,7 @@ model Booking {
 
   @@index([bookingDate, status])
   @@index([customerId, bookingDate])
+  @@index([createdById])
   @@index([status, startTime])
   @@index([approvalStatus, approvalDeadline])
   @@index([approvalStatus, bookingDate])

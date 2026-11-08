@@ -11,7 +11,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { fetchKpi, reportExportUrl } from '@/lib/api/endpoints'
+import { fetchCustomerOptions, fetchKpi, reportExportUrl } from '@/lib/api/endpoints'
 import { useRealtimeSync } from '@/hooks/use-realtime'
 import { addDaysISO, formatDateShort, todayISO } from '@/lib/format'
 import { Main } from '@/components/layout/main'
@@ -28,6 +28,13 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   Table,
   TableBody,
   TableCell,
@@ -40,10 +47,16 @@ export function ReportsPage() {
   useRealtimeSync()
   const [from, setFrom] = useState(addDaysISO(todayISO(), -6))
   const [to, setTo] = useState(todayISO())
+  const [customerId, setCustomerId] = useState('ALL')
+
+  const customers = useQuery({
+    queryKey: ['customers', 'options'],
+    queryFn: fetchCustomerOptions,
+  })
 
   const report = useQuery({
-    queryKey: ['reports', from, to],
-    queryFn: () => fetchKpi(from, to),
+    queryKey: ['reports', from, to, customerId],
+    queryFn: () => fetchKpi(from, to, customerId === 'ALL' ? undefined : customerId),
     enabled: from <= to,
   })
 
@@ -69,8 +82,28 @@ export function ReportsPage() {
               onChange={(event) => setTo(event.target.value)}
               className='h-9 w-auto'
             />
+            <Select value={customerId} onValueChange={setCustomerId}>
+              <SelectTrigger className='h-9 w-48'>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='ALL'>Semua customer</SelectItem>
+                {(customers.data ?? []).map((customer) => (
+                  <SelectItem key={customer.id} value={customer.id}>
+                    {customer.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button asChild variant='outline' disabled={!report.data}>
-              <a href={reportExportUrl(from, to)} download>
+              <a
+                href={reportExportUrl(
+                  from,
+                  to,
+                  customerId === 'ALL' ? undefined : customerId
+                )}
+                download
+              >
                 <Download /> Ekspor Excel
               </a>
             </Button>

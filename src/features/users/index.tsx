@@ -46,7 +46,15 @@ import {
   TableRow,
 } from '@/components/ui/table'
 
-const ROLES: Role[] = ['ADMIN', 'CUSTOMER', 'GATE_OFFICER', 'CHECKER']
+/**
+ * Halaman ini mengelola akun STAF (Admin, Security, Checker).
+ *
+ * Akun Customer sengaja tidak ada di sini: akun customer selalu menempel ke
+ * satu perusahaan, dan perusahaan dikelola di Master Data Customer. Membuat
+ * akun customer di sini akan menghasilkan akun tanpa perusahaan yang tidak
+ * bisa booking sama sekali.
+ */
+const ROLES: Role[] = ['ADMIN', 'GATE_OFFICER', 'CHECKER']
 
 export function UsersPage() {
   const currentUser = useAuthStore((state) => state.user)
@@ -73,12 +81,9 @@ export function UsersPage() {
     onError: (error) => toast.error(apiErrorMessage(error)),
   })
 
-  const toggleFlag = useMutation({
-    mutationFn: (params: {
-      id: string
-      autoApproveBooking?: boolean
-      canApproveBooking?: boolean
-    }) => updateUser(params.id, params),
+  const toggleApprove = useMutation({
+    mutationFn: ({ id, canApproveBooking }: { id: string; canApproveBooking: boolean }) =>
+      updateUser(id, { canApproveBooking }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['users'] })
     },
@@ -89,7 +94,7 @@ export function UsersPage() {
     <Main className='flex flex-1 flex-col gap-6'>
       <PageHeader
         title='Manajemen Pengguna'
-        description='Akun Security, Checker, dan Customer hanya bisa dibuat dari sini. Atur juga siapa yang boleh melewati antrean persetujuan booking.'
+        description='Akun Admin, Security, dan Checker. Akun Customer dikelola di Master Data Customer.'
         actions={
           <Button size='sm' onClick={() => setCreateOpen(true)}>
             <Plus /> Tambah pengguna
@@ -99,7 +104,7 @@ export function UsersPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className='text-base'>Daftar akun</CardTitle>
+          <CardTitle className='text-base'>Daftar akun staf</CardTitle>
           <CardDescription>
             {users.data ? `${users.data.length} akun terdaftar.` : 'Memuat...'}
           </CardDescription>
@@ -111,7 +116,7 @@ export function UsersPage() {
               <Input
                 value={q}
                 onChange={(event) => setQ(event.target.value)}
-                placeholder='Cari nama, email, perusahaan'
+                placeholder='Cari nama atau email'
                 className='ps-8'
               />
             </div>
@@ -142,90 +147,76 @@ export function UsersPage() {
                     <TableHead>Nama</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Peran</TableHead>
-                    <TableHead>Perusahaan</TableHead>
-                    <TableHead className='text-center'>Booking otomatis</TableHead>
                     <TableHead className='text-center'>Boleh menyetujui</TableHead>
                     <TableHead>Dibuat</TableHead>
                     <TableHead className='text-end'>Aktif</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.data.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell className='font-medium'>
-                        {user.name}
-                        {user.id === currentUser?.id && (
-                          <Badge variant='secondary' className='ms-2'>
-                            Anda
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className='text-sm text-muted-foreground'>
-                        {user.email}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant='outline'>{roleLabels[user.role]}</Badge>
-                      </TableCell>
-                      <TableCell className='text-sm'>
-                        {user.companyName ?? '-'}
-                      </TableCell>
-                      <TableCell className='text-center'>
-                        {user.role === 'CUSTOMER' ? (
-                          <Switch
-                            checked={user.autoApproveBooking}
-                            disabled={toggleFlag.isPending}
-                            title='Saat mode Manual, booking customer ini tidak perlu antre'
-                            onCheckedChange={(checked) =>
-                              toggleFlag.mutate({
-                                id: user.id,
-                                autoApproveBooking: checked,
-                              })
-                            }
-                          />
-                        ) : (
-                          <span className='text-xs text-muted-foreground'>-</span>
-                        )}
-                      </TableCell>
-                      <TableCell className='text-center'>
-                        {user.role === 'ADMIN' ? (
-                          // Admin selalu berhak; switch-nya dimatikan agar tidak
-                          // terlihat seolah masih bisa dicabut.
-                          <span className='text-xs text-muted-foreground'>Otomatis</span>
-                        ) : (
-                          <Switch
-                            checked={user.canApproveBooking}
-                            disabled={toggleFlag.isPending}
-                            title='Izinkan pengguna ini menyetujui booking'
-                            onCheckedChange={(checked) =>
-                              toggleFlag.mutate({
-                                id: user.id,
-                                canApproveBooking: checked,
-                              })
-                            }
-                          />
-                        )}
-                      </TableCell>
-                      <TableCell className='text-sm text-muted-foreground'>
-                        {formatDate(user.createdAt)}
-                      </TableCell>
-                      <TableCell className='text-end'>
-                        <Switch
-                          checked={user.isActive}
-                          disabled={
-                            toggleActive.isPending || user.id === currentUser?.id
-                          }
-                          title={
-                            user.id === currentUser?.id
-                              ? 'Akun Anda sendiri tidak bisa dinonaktifkan'
-                              : undefined
-                          }
-                          onCheckedChange={(checked) =>
-                            toggleActive.mutate({ id: user.id, isActive: checked })
-                          }
-                        />
+                  {users.data.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className='py-8 text-center text-sm text-muted-foreground'>
+                        Tidak ada akun staf. Tambah pengguna untuk memulai.
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    users.data.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell className='font-medium'>
+                          {user.name}
+                          {user.id === currentUser?.id && (
+                            <Badge variant='secondary' className='ms-2'>
+                              Anda
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className='text-sm text-muted-foreground'>
+                          {user.email}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant='outline'>{roleLabels[user.role]}</Badge>
+                        </TableCell>
+                        <TableCell className='text-center'>
+                          {user.role === 'ADMIN' ? (
+                            // Admin selalu berhak; switch dimatikan agar tidak
+                            // terlihat seolah masih bisa dicabut.
+                            <span className='text-xs text-muted-foreground'>Otomatis</span>
+                          ) : (
+                            <Switch
+                              checked={user.canApproveBooking}
+                              disabled={toggleApprove.isPending}
+                              title='Izinkan pengguna ini menyetujui booking'
+                              onCheckedChange={(checked) =>
+                                toggleApprove.mutate({
+                                  id: user.id,
+                                  canApproveBooking: checked,
+                                })
+                              }
+                            />
+                          )}
+                        </TableCell>
+                        <TableCell className='text-sm text-muted-foreground'>
+                          {formatDate(user.createdAt)}
+                        </TableCell>
+                        <TableCell className='text-end'>
+                          <Switch
+                            checked={user.isActive}
+                            disabled={
+                              toggleActive.isPending || user.id === currentUser?.id
+                            }
+                            title={
+                              user.id === currentUser?.id
+                                ? 'Akun Anda sendiri tidak bisa dinonaktifkan'
+                                : undefined
+                            }
+                            onCheckedChange={(checked) =>
+                              toggleActive.mutate({ id: user.id, isActive: checked })
+                            }
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </div>
@@ -250,8 +241,7 @@ function CreateUserDialog({
     name: '',
     email: '',
     phone: '',
-    companyName: '',
-    role: 'CUSTOMER' as Role,
+    role: 'CHECKER' as Role,
     password: '',
   })
 
@@ -260,8 +250,7 @@ function CreateUserDialog({
       name: '',
       email: '',
       phone: '',
-      companyName: '',
-      role: 'CUSTOMER',
+      role: 'CHECKER',
       password: '',
     })
 
@@ -273,7 +262,6 @@ function CreateUserDialog({
         role: form.role,
         password: form.password,
         phone: form.phone.trim() || undefined,
-        companyName: form.companyName.trim() || undefined,
       }),
     onSuccess: (user: ManagedUser) => {
       toast.success(`Akun ${user.email} dibuat`)
@@ -284,12 +272,10 @@ function CreateUserDialog({
     onError: (error) => toast.error(apiErrorMessage(error)),
   })
 
-  const needsCompany = form.role === 'CUSTOMER'
   const valid =
     form.name.trim().length >= 2 &&
     /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email.trim()) &&
-    form.password.length >= 7 &&
-    (!needsCompany || form.companyName.trim().length >= 2)
+    form.password.length >= 7
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -297,7 +283,7 @@ function CreateUserDialog({
         <DialogHeader>
           <DialogTitle>Tambah pengguna</DialogTitle>
           <DialogDescription>
-            Password awal harus diganti pengguna setelah login pertama.
+            Akun staf gudang. Untuk akun Customer, buka Master Data → Customer.
           </DialogDescription>
         </DialogHeader>
 
@@ -329,37 +315,23 @@ function CreateUserDialog({
               />
             </div>
           </div>
-          <div className='grid gap-3 sm:grid-cols-2'>
-            <div className='space-y-1'>
-              <Label>Peran</Label>
-              <Select
-                value={form.role}
-                onValueChange={(value) => setForm({ ...form, role: value as Role })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ROLES.map((item) => (
-                    <SelectItem key={item} value={item}>
-                      {roleLabels[item]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className='space-y-1'>
-              <Label htmlFor='new-company'>
-                Perusahaan {needsCompany ? '' : '(opsional)'}
-              </Label>
-              <Input
-                id='new-company'
-                value={form.companyName}
-                onChange={(event) =>
-                  setForm({ ...form, companyName: event.target.value })
-                }
-              />
-            </div>
+          <div className='space-y-1'>
+            <Label>Peran</Label>
+            <Select
+              value={form.role}
+              onValueChange={(value) => setForm({ ...form, role: value as Role })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ROLES.map((item) => (
+                  <SelectItem key={item} value={item}>
+                    {roleLabels[item]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className='space-y-1'>
             <Label htmlFor='new-password'>Password awal</Label>

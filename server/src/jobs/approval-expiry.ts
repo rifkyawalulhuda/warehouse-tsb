@@ -86,7 +86,7 @@ export async function expirePendingApprovals(now: Date = new Date()): Promise<nu
       bookingId: booking.id,
       qrToken: booking.qrToken,
       status: 'CANCELLED',
-      userId: booking.customerId,
+      customerId: booking.customerId,
     })
     expired += 1
   }

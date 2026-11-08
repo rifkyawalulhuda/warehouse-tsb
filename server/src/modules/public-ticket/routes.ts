@@ -41,7 +41,7 @@ publicTicketRouter.get('/:qrToken', async (req, res, next) => {
         referenceDocNo: booking.referenceDocNo,
         licensePlate: booking.licensePlate,
         driverName: booking.driverName,
-        customerName: booking.customer.companyName ?? booking.customer.name,
+        customerName: booking.customer.name,
         truckType: booking.truckType,
         dockCode: booking.assignedDock?.dockCode ?? null,
         lateMinutes: booking.lateMinutes,
@@ -135,7 +135,7 @@ publicTicketRouter.patch('/:qrToken/vehicle-info', async (req, res, next) => {
       bookingId: updated.id,
       qrToken: updated.qrToken,
       status: updated.status,
-      userId: updated.customer.id,
+      customerId: updated.customer.id,
     })
 
     res.json({ data: { status: updated.status, licensePlate: updated.licensePlate } })

@@ -11,7 +11,9 @@ import { loginCookie, resetDatabase, seedBase } from './helpers'
 const app = createApp()
 
 async function seedBooking(options: {
+  /** Akun pembuat. Customer perusahaannya diturunkan dari akun ini. */
   customerId: string
+  customerCompanyId?: string
   truckTypeId: number
   startTime: Date
   bookingDate?: string
@@ -19,12 +21,25 @@ async function seedBooking(options: {
   status?: 'BOOKED_INCOMPLETE' | 'BOOKED_READY'
 }) {
   const duration = options.durationMinutes ?? 60
+
+  // Booking dimiliki perusahaan, bukan akun. Kalau perusahaan tidak diberikan
+  // eksplisit, ambil dari akun pembuatnya.
+  const companyId =
+    options.customerCompanyId ??
+    (
+      await prisma.user.findUniqueOrThrow({
+        where: { id: options.customerId },
+        select: { customerId: true },
+      })
+    ).customerId
+
   return prisma.booking.create({
     data: {
       bookingCode: `T-${Math.random().toString(36).slice(2, 8)}`,
       referenceDocNo: 'REF-TEST',
       qrToken: Math.random().toString(36).slice(2).padEnd(32, '0'),
-      customerId: options.customerId,
+      customerId: companyId!,
+      createdById: options.customerId,
       activityType: 'UNLOADING',
       truckTypeId: options.truckTypeId,
       bookingDate: dateOnlyToUtc(options.bookingDate ?? utcToDateOnly(options.startTime)),

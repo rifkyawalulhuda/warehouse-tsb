@@ -30,14 +30,15 @@ usersRouter.get('/', async (req, res, next) => {
 
     const users = await prisma.user.findMany({
       where: {
-        ...(query.role ? { role: query.role as Role } : {}),
+        // Akun customer dikelola di Master Data Customer. Menampilkannya di sini
+        // membuat dua tempat mengedit hal yang sama.
+        role: query.role ? (query.role as Role) : { not: 'CUSTOMER' },
         ...(query.isActive ? { isActive: query.isActive === 'true' } : {}),
         ...(query.q
           ? {
               OR: [
                 { name: { contains: query.q, mode: 'insensitive' } },
                 { email: { contains: query.q, mode: 'insensitive' } },
-                { companyName: { contains: query.q, mode: 'insensitive' } },
               ],
             }
           : {}),
@@ -47,10 +48,9 @@ usersRouter.get('/', async (req, res, next) => {
         name: true,
         email: true,
         phone: true,
-        companyName: true,
         role: true,
         isActive: true,
-        autoApproveBooking: true,
+        customerId: true,
         canApproveBooking: true,
         createdAt: true,
       },
@@ -67,7 +67,6 @@ const createSchema = z.object({
   name: z.string().trim().min(2, 'Nama wajib diisi'),
   email: z.email('Format email tidak valid').transform((v) => v.trim().toLowerCase()),
   phone: z.string().trim().max(24).optional(),
-  companyName: z.string().trim().max(160).optional(),
   role: roleSchema,
   password: z.string().min(7, 'Password minimal 7 karakter'),
 })
@@ -75,8 +74,14 @@ const createSchema = z.object({
 usersRouter.post('/', async (req, res, next) => {
   try {
     const body = parse(createSchema, req.body, 'Data pengguna')
-    if (body.role === 'CUSTOMER' && !body.companyName) {
-      throw badRequest('COMPANY_REQUIRED', 'Nama perusahaan wajib untuk akun Customer')
+
+    // Satu pintu pembuatan akun customer. Kalau dibuat di sini, akun bisa
+    // berakhir tanpa perusahaan dan tidak bisa booking sama sekali.
+    if (body.role === 'CUSTOMER') {
+      throw conflict(
+        'CUSTOMER_VIA_MASTER',
+        'Akun Customer dibuat dari Master Data Customer, bukan dari halaman Pengguna.'
+      )
     }
 
     const exists = await prisma.user.findUnique({ where: { email: body.email } })
@@ -87,7 +92,6 @@ usersRouter.post('/', async (req, res, next) => {
         name: body.name,
         email: body.email,
         phone: body.phone,
-        companyName: body.companyName,
         role: body.role,
         passwordHash: await hashPassword(body.password),
       },
@@ -96,10 +100,9 @@ usersRouter.post('/', async (req, res, next) => {
         name: true,
         email: true,
         phone: true,
-        companyName: true,
         role: true,
         isActive: true,
-        autoApproveBooking: true,
+        customerId: true,
         canApproveBooking: true,
         createdAt: true,
       },
@@ -115,11 +118,8 @@ const updateSchema = z
   .object({
     name: z.string().trim().min(2).optional(),
     phone: z.string().trim().max(24).nullable().optional(),
-    companyName: z.string().trim().max(160).nullable().optional(),
     isActive: z.boolean().optional(),
     password: z.string().min(7, 'Password minimal 7 karakter').optional(),
-    /// Whitelist approval. Hanya bermakna untuk akun CUSTOMER.
-    autoApproveBooking: z.boolean().optional(),
     /// Hak approve untuk non-ADMIN. Role ADMIN selalu berhak tanpa flag ini.
     canApproveBooking: z.boolean().optional(),
   })
@@ -159,15 +159,8 @@ usersRouter.patch('/:id', async (req, res, next) => {
       }
     }
 
-    // Flag approval hanya bermakna pada peran tertentu. Menerimanya diam-diam
-    // di peran lain akan membuat Admin mengira sudah mengatur sesuatu padahal
-    // tidak ada efeknya.
-    if (body.autoApproveBooking !== undefined && exists.role !== 'CUSTOMER') {
-      throw badRequest(
-        'FLAG_NOT_APPLICABLE',
-        'Whitelist approval hanya berlaku untuk akun Customer'
-      )
-    }
+    // Whitelist approval kini milik customer, bukan akun. Menerimanya di sini
+    // akan membuat Admin mengira sudah mengatur sesuatu padahal tidak ada efeknya.
     if (body.canApproveBooking !== undefined && exists.role === 'ADMIN') {
       throw badRequest(
         'FLAG_NOT_APPLICABLE',
@@ -176,10 +169,8 @@ usersRouter.patch('/:id', async (req, res, next) => {
     }
 
     const flagsChanged =
-      (body.autoApproveBooking !== undefined &&
-        body.autoApproveBooking !== exists.autoApproveBooking) ||
-      (body.canApproveBooking !== undefined &&
-        body.canApproveBooking !== exists.canApproveBooking)
+      body.canApproveBooking !== undefined &&
+      body.canApproveBooking !== exists.canApproveBooking
 
     const user = await prisma.$transaction(async (tx) => {
       const updated = await tx.user.update({
@@ -187,12 +178,8 @@ usersRouter.patch('/:id', async (req, res, next) => {
         data: {
           ...(body.name !== undefined ? { name: body.name } : {}),
           ...(body.phone !== undefined ? { phone: body.phone } : {}),
-          ...(body.companyName !== undefined ? { companyName: body.companyName } : {}),
           ...(body.isActive !== undefined ? { isActive: body.isActive } : {}),
           ...(body.password ? { passwordHash: await hashPassword(body.password) } : {}),
-          ...(body.autoApproveBooking !== undefined
-            ? { autoApproveBooking: body.autoApproveBooking }
-            : {}),
           ...(body.canApproveBooking !== undefined
             ? { canApproveBooking: body.canApproveBooking }
             : {}),
@@ -202,17 +189,16 @@ usersRouter.patch('/:id', async (req, res, next) => {
           name: true,
           email: true,
           phone: true,
-          companyName: true,
           role: true,
           isActive: true,
-          autoApproveBooking: true,
+          customerId: true,
           canApproveBooking: true,
           createdAt: true,
         },
       })
 
-      // Memberi/mencabut hak approve atau whitelist mengubah siapa yang boleh
-      // melewati antrean. Itu perubahan wewenang, bukan sekadar data profil.
+      // Memberi/mencabut hak approve mengubah siapa yang boleh melewati
+      // antrean. Itu perubahan wewenang, bukan sekadar data profil.
       if (flagsChanged) {
         await writeAudit(
           {
@@ -221,7 +207,6 @@ usersRouter.patch('/:id', async (req, res, next) => {
             action: 'USER_APPROVAL_FLAGS_CHANGED',
             meta: {
               targetUserId: id,
-              autoApproveBooking: updated.autoApproveBooking,
               canApproveBooking: updated.canApproveBooking,
             },
           },

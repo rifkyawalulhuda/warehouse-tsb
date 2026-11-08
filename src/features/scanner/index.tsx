@@ -103,7 +103,7 @@ export function ScanPage() {
               <StatusBadge status={result.booking.status} />
             </div>
             <CardDescription>
-              {result.booking.customer.companyName ?? result.booking.customer.name}
+              {result.booking.customer.name}
             </CardDescription>
           </CardHeader>
           <CardContent className='space-y-4'>

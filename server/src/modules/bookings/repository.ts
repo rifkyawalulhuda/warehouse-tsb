@@ -22,7 +22,9 @@ export const bookingSelect = {
   approvedAt: true,
   rejectionReason: true,
   createdAt: true,
-  customer: { select: { id: true, name: true, companyName: true, phone: true } },
+  customer: { select: { id: true, name: true, code: true } },
+  /// Akun yang menekan tombol booking. Jejak, bukan pemilik.
+  createdBy: { select: { id: true, name: true } },
   truckType: { select: { id: true, truckName: true, durationMinutes: true, blocksRequired: true } },
   assignedDock: { select: { id: true, dockCode: true, allowedActivity: true } },
   timeLog: {

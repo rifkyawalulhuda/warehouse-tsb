@@ -21,6 +21,7 @@ let customer: SeededUser
 let truckTypeId: number
 let cookie: string
 let cookie2: string
+let seededCustomerAId: string
 
 beforeEach(async () => {
   await resetDatabase(prisma)
@@ -33,6 +34,7 @@ beforeEach(async () => {
     ],
   })
   customer = seeded.customer
+  seededCustomerAId = seeded.customerA.id
   truckTypeId = seeded.truckTypes[0]!.id
   cookie = await loginCookie(app, 'customer1@test.local')
   cookie2 = await loginCookie(app, 'customer2@test.local')
@@ -193,7 +195,7 @@ describe('kuota per blok', () => {
 })
 
 describe('GET /api/bookings/my-list', () => {
-  it('hanya menampilkan booking milik customer yang login', async () => {
+  it('hanya menampilkan booking milik perusahaan customer yang login', async () => {
     await request(app).post('/api/bookings').set('Cookie', cookie).send(createPayload())
     await request(app)
       .post('/api/bookings')
@@ -203,7 +205,9 @@ describe('GET /api/bookings/my-list', () => {
     const mine = await request(app).get('/api/bookings/my-list').set('Cookie', cookie)
     expect(mine.status).toBe(200)
     expect(mine.body.data).toHaveLength(1)
-    expect(mine.body.data[0].customer.id).toBe(customer.id)
+    // Pemilik bisnis kini perusahaan, bukan akun.
+    expect(mine.body.data[0].customer.id).toBe(seededCustomerAId)
+    expect(mine.body.data[0].createdBy.id).toBe(customer.id)
   })
 })
 

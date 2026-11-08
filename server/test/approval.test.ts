@@ -149,15 +149,16 @@ describe('POST /api/bookings dengan kebijakan approval', () => {
     expect(response.body.data.approvalDeadline).not.toBeNull()
   })
 
-  it('mode MANUAL tidak menahan booking customer yang di-whitelist', async () => {
+  it('mode MANUAL tidak menahan booking customer yang perusahaannya di-whitelist', async () => {
     await setMode('MANUAL')
 
-    const users = await prisma.user.findMany({
+    // Whitelist kini milik CUSTOMER (perusahaan), bukan akun.
+    const user = await prisma.user.findFirstOrThrow({
       where: { email: 'customer1@test.local' },
-      select: { id: true },
+      select: { customerId: true },
     })
-    await prisma.user.update({
-      where: { id: users[0]!.id },
+    await prisma.customer.update({
+      where: { id: user.customerId! },
       data: { autoApproveBooking: true },
     })
 

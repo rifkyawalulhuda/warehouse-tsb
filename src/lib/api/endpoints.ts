@@ -1,4 +1,4 @@
-import { api, getData, patchData, postData, putData } from './client'
+import { api, deleteData, getData, patchData, postData, putData } from './client'
 import type {
   ActivityItem,
   ActivityType,
@@ -6,6 +6,9 @@ import type {
   ApprovalStatus,
   AvailabilitySlot,
   Booking,
+  Customer,
+  CustomerDetail,
+  CustomerAccount,
   Dock,
   DockInput,
   DockWithBooking,
@@ -244,12 +247,14 @@ export function fetchActivity(limit = 12) {
 
 /* ------------------------------ reports ------------------------------ */
 
-export function fetchKpi(from: string, to: string) {
-  return getData<ReportResponse>('/reports/kpi', { params: { from, to } })
+export function fetchKpi(from: string, to: string, customerId?: string) {
+  return getData<ReportResponse>('/reports/kpi', { params: { from, to, customerId } })
 }
 
-export function reportExportUrl(from: string, to: string) {
-  return `${api.defaults.baseURL}/reports/export.xlsx?from=${from}&to=${to}`
+export function reportExportUrl(from: string, to: string, customerId?: string) {
+  const params = new URLSearchParams({ from, to })
+  if (customerId) params.set('customerId', customerId)
+  return `${api.defaults.baseURL}/reports/export.xlsx?${params.toString()}`
 }
 
 /* -------------------------------- users ------------------------------ */
@@ -264,7 +269,6 @@ export function createUser(payload: {
   role: ManagedUser['role']
   password: string
   phone?: string
-  companyName?: string
 }) {
   return postData<ManagedUser>('/users', payload)
 }
@@ -272,11 +276,68 @@ export function createUser(payload: {
 export function updateUser(
   id: string,
   payload: Partial<
-    Pick<
-      ManagedUser,
-      'name' | 'phone' | 'companyName' | 'isActive' | 'autoApproveBooking' | 'canApproveBooking'
-    >
+    Pick<ManagedUser, 'name' | 'phone' | 'isActive' | 'canApproveBooking'>
   > & { password?: string }
 ) {
   return patchData<ManagedUser>(`/users/${id}`, payload)
+}
+
+/* ------------------------------ customers ---------------------------- */
+
+export function fetchCustomers(params?: { q?: string; isActive?: 'true' | 'false' }) {
+  return getData<Customer[]>('/customers', { params })
+}
+
+export function fetchCustomerOptions() {
+  return getData<Pick<Customer, 'id' | 'code' | 'name'>[]>('/customers/options')
+}
+
+export function fetchCustomer(id: string) {
+  return getData<CustomerDetail>(`/customers/${id}`)
+}
+
+export type CustomerProfileInput = {
+  name: string
+  address?: string | null
+  city?: string | null
+  picName?: string | null
+  phone?: string | null
+  email?: string | null
+  taxId?: string | null
+  note?: string | null
+  isActive?: boolean
+  autoApproveBooking?: boolean
+}
+
+export function createCustomer(payload: CustomerProfileInput) {
+  return postData<Customer>('/customers', payload)
+}
+
+export function updateCustomer(id: string, payload: Partial<CustomerProfileInput>) {
+  return patchData<Customer>(`/customers/${id}`, payload)
+}
+
+export function deleteCustomer(id: string) {
+  return deleteData<{ id: string; deleted: boolean }>(`/customers/${id}`)
+}
+
+export function createCustomerAccount(
+  customerId: string,
+  payload: { name: string; email: string; password: string; phone?: string }
+) {
+  return postData<CustomerAccount>(`/customers/${customerId}/users`, payload)
+}
+
+export function updateCustomerAccount(
+  customerId: string,
+  userId: string,
+  payload: Partial<{
+    name: string
+    phone: string | null
+    isActive: boolean
+    password: string
+    canApproveBooking: boolean
+  }>
+) {
+  return patchData<CustomerAccount>(`/customers/${customerId}/users/${userId}`, payload)
 }

@@ -79,7 +79,7 @@ export async function markNoShowBookings(now: Date = new Date()): Promise<number
       bookingId: booking.id,
       qrToken: booking.qrToken,
       status: 'NO_SHOW',
-      userId: booking.customerId,
+      customerId: booking.customerId,
     })
     marked += 1
   }

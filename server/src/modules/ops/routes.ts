@@ -188,7 +188,7 @@ opsRouter.post(
         bookingId: updated.id,
         qrToken: updated.qrToken,
         status: updated.status,
-      userId: updated.customer.id,
+      customerId: updated.customer.id,
       })
 
       res.json({ data: updated })
@@ -307,7 +307,7 @@ opsRouter.post(
         bookingId: updated.id,
         qrToken: updated.qrToken,
         status: updated.status,
-      userId: updated.customer.id,
+      customerId: updated.customer.id,
       })
       emitDockUpdated(dock.id)
 
@@ -374,7 +374,7 @@ opsRouter.post(
         bookingId: updated.id,
         qrToken: updated.qrToken,
         status: updated.status,
-      userId: updated.customer.id,
+      customerId: updated.customer.id,
       })
 
       res.json({ data: updated })
@@ -441,7 +441,7 @@ opsRouter.post(
         bookingId: updated.id,
         qrToken: updated.qrToken,
         status: updated.status,
-      userId: updated.customer.id,
+      customerId: updated.customer.id,
       })
       if (booking.assignedDockId) emitDockUpdated(booking.assignedDockId)
 
@@ -500,7 +500,7 @@ opsRouter.post('/gate-out', requireRole('GATE_OFFICER'), async (req, res, next) 
       bookingId: updated.id,
       qrToken: updated.qrToken,
       status: updated.status,
-      userId: updated.customer.id,
+      customerId: updated.customer.id,
     })
 
     res.json({ data: updated })
@@ -573,7 +573,7 @@ opsRouter.post('/no-show', requireRole('ADMIN'), async (req, res, next) => {
       bookingId: updated.id,
       qrToken: updated.qrToken,
       status: updated.status,
-      userId: updated.customer.id,
+      customerId: updated.customer.id,
     })
 
     res.json({ data: updated })

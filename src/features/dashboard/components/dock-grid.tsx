@@ -139,7 +139,7 @@ export function DockGrid({ docks }: { docks: DockWithBooking[] }) {
                   </div>
                   <p className='truncate text-xs text-muted-foreground'>
                     {booking.driverName ?? 'Supir belum diisi'} ·{' '}
-                    {booking.customer.companyName ?? booking.customer.name}
+                    {booking.customer.name}
                   </p>
                   {booking.status === 'IN_PROGRESS' ? (
                     <div className='space-y-1 pt-0.5'>

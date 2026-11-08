@@ -10,13 +10,7 @@ declare global {
     interface Request {
       user?: Pick<
         User,
-        | 'id'
-        | 'name'
-        | 'email'
-        | 'role'
-        | 'companyName'
-        | 'autoApproveBooking'
-        | 'canApproveBooking'
+        'id' | 'name' | 'email' | 'role' | 'customerId' | 'canApproveBooking'
       >
       actingAsRole?: Role
     }
@@ -36,9 +30,8 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
         name: true,
         email: true,
         role: true,
-        companyName: true,
+        customerId: true,
         isActive: true,
-        autoApproveBooking: true,
         canApproveBooking: true,
       },
     })
@@ -49,8 +42,7 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
       name: user.name,
       email: user.email,
       role: user.role,
-      companyName: user.companyName,
-      autoApproveBooking: user.autoApproveBooking,
+      customerId: user.customerId,
       canApproveBooking: user.canApproveBooking,
     }
     next()

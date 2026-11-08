@@ -14,6 +14,8 @@ reportsRouter.use(requireAuth, requireExactRole('ADMIN', 'CHECKER'))
 const rangeSchema = z.object({
   from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  /// Kosong = semua customer.
+  customerId: z.uuid().optional(),
 })
 
 type ReportRow = {
@@ -41,13 +43,14 @@ function formatInstant(value: Date | null): string | null {
   return value.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', hour12: false })
 }
 
-async function buildReport(from: string, to: string) {
+async function buildReport(from: string, to: string, customerId?: string) {
   const bookings = await prisma.booking.findMany({
     where: {
       bookingDate: {
         gte: new Date(`${from}T00:00:00.000Z`),
         lte: new Date(`${to}T00:00:00.000Z`),
       },
+      ...(customerId ? { customerId } : {}),
     },
     select: {
       bookingCode: true,
@@ -57,7 +60,7 @@ async function buildReport(from: string, to: string) {
       approvalStatus: true,
       startTime: true,
       lateMinutes: true,
-      customer: { select: { name: true, companyName: true } },
+      customer: { select: { name: true } },
       truckType: { select: { truckName: true } },
       assignedDock: { select: { dockCode: true } },
       timeLog: true,
@@ -71,7 +74,7 @@ async function buildReport(from: string, to: string) {
       bookingCode: booking.bookingCode,
       bookingDate: utcToDateOnly(booking.bookingDate),
       activityType: booking.activityType,
-      customer: booking.customer.companyName ?? booking.customer.name,
+      customer: booking.customer.name,
       truckType: booking.truckType.truckName,
       dockCode: booking.assignedDock?.dockCode ?? null,
       status: booking.status,
@@ -282,7 +285,7 @@ async function buildReport(from: string, to: string) {
 reportsRouter.get('/kpi', async (req, res, next) => {
   try {
     const query = parse(rangeSchema, req.query, 'Rentang tanggal')
-    const report = await buildReport(query.from, query.to)
+    const report = await buildReport(query.from, query.to, query.customerId)
     res.json({ data: report })
   } catch (error) {
     next(error)
@@ -292,7 +295,7 @@ reportsRouter.get('/kpi', async (req, res, next) => {
 reportsRouter.get('/export.xlsx', async (req, res, next) => {
   try {
     const query = parse(rangeSchema, req.query, 'Rentang tanggal')
-    const { rows, kpi } = await buildReport(query.from, query.to)
+    const { rows, kpi } = await buildReport(query.from, query.to, query.customerId)
 
     const workbook = new ExcelJS.Workbook()
     workbook.creator = 'Warehouse TSB'

@@ -27,6 +27,7 @@ export async function resetDatabase(prisma: PrismaClient) {
       warehouses,
       truck_types,
       users,
+      customers,
       warehouse_settings
     RESTART IDENTITY CASCADE
   `)
@@ -43,11 +44,22 @@ export type SeedOptions = {
   bookingWindowDays?: number
 }
 
-export type SeededUser = { id: string; email: string; role: Role }
+export type SeededUser = {
+  id: string
+  email: string
+  role: Role
+  customerId: string | null
+}
+
+export type SeededCustomer = { id: string; name: string; code: string }
 
 /**
  * Data minimum untuk menguji alur booking: satu setelan gudang, jenis truk,
  * dock, dan akun untuk tiap peran.
+ *
+ * Dua customer dengan perusahaan BERBEDA sengaja dibuat, karena kepemilikan
+ * booking kini per-perusahaan — tes yang butuh "customer lain" harus benar-benar
+ * berada di perusahaan lain.
  */
 export async function seedBase(prisma: PrismaClient, options: SeedOptions = {}) {
   await prisma.warehouseSetting.create({
@@ -83,19 +95,39 @@ export async function seedBase(prisma: PrismaClient, options: SeedOptions = {}) 
     )
   )
 
-  const hash = await passwordHash()
-  const account = (name: string, email: string, role: Role) =>
-    prisma.user.create({ data: { name, email, role, passwordHash: hash } })
-
-  const [admin, customer, customer2, gate, checker] = await Promise.all([
-    account('Admin Tes', 'admin@test.local', 'ADMIN'),
-    account('Customer Satu', 'customer1@test.local', 'CUSTOMER'),
-    account('Customer Dua', 'customer2@test.local', 'CUSTOMER'),
-    account('Gate Tes', 'gate@test.local', 'GATE_OFFICER'),
-    account('Checker Tes', 'checker@test.local', 'CHECKER'),
+  const [customerA, customerB] = await Promise.all([
+    prisma.customer.create({
+      data: { code: 'CUST-001', name: 'PT Alpha Logistik' },
+    }),
+    prisma.customer.create({
+      data: { code: 'CUST-002', name: 'CV Beta Niaga' },
+    }),
   ])
 
-  return { truckTypes, docks, admin, customer, customer2, gate, checker }
+  const hash = await passwordHash()
+  const account = (name: string, email: string, role: Role, customerId: string | null) =>
+    prisma.user.create({ data: { name, email, role, customerId, passwordHash: hash } })
+
+  const [admin, customer, customer2, gate, checker] = await Promise.all([
+    account('Admin Tes', 'admin@test.local', 'ADMIN', null),
+    account('Customer Satu', 'customer1@test.local', 'CUSTOMER', customerA.id),
+    account('Customer Dua', 'customer2@test.local', 'CUSTOMER', customerB.id),
+    account('Gate Tes', 'gate@test.local', 'GATE_OFFICER', null),
+    account('Checker Tes', 'checker@test.local', 'CHECKER', null),
+  ])
+
+  return {
+    truckTypes,
+    docks,
+    customers: { a: customerA, b: customerB },
+    customerA,
+    customerB,
+    admin,
+    customer,
+    customer2,
+    gate,
+    checker,
+  }
 }
 
 /** Login lewat API dan kembalikan header Cookie yang bisa dipakai supertest. */

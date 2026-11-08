@@ -9,6 +9,7 @@ import {
   ArrowDownUp,
   Building2,
   ClipboardList,
+  Factory,
   Loader2,
   PencilLine,
   Plus,
@@ -23,6 +24,7 @@ import {
   createDock,
   createTruckType,
   createWarehouse,
+  fetchCustomers,
   fetchDocks,
   fetchSettings,
   fetchTruckTypes,
@@ -31,7 +33,7 @@ import {
   updateTruckType,
   updateWarehouse,
 } from '@/lib/api/endpoints'
-import type { Dock, TruckType, Warehouse } from '@/lib/api/types'
+import type { Customer, Dock, TruckType, Warehouse } from '@/lib/api/types'
 import { useRealtimeSync } from '@/hooks/use-realtime'
 import { durationLabel } from '@/lib/format'
 import { Main } from '@/components/layout/main'
@@ -74,6 +76,7 @@ import {
 } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
+import { CustomerDialog, CustomerSection } from './customer-section'
 
 /**
  * Kapasitas kuota tidak diatur manual di sini. Kuota per slot adalah jumlah dock
@@ -95,6 +98,10 @@ export function MasterData() {
     queryKey: ['master', 'truck-types'],
     queryFn: fetchTruckTypes,
   })
+  const customers = useQuery({
+    queryKey: ['master', 'customers'],
+    queryFn: () => fetchCustomers(),
+  })
 
   const [editingDock, setEditingDock] = useState<Dock | null>(null)
   const [creatingDock, setCreatingDock] = useState(false)
@@ -102,6 +109,8 @@ export function MasterData() {
   const [creatingWarehouse, setCreatingWarehouse] = useState(false)
   const [editingTruckType, setEditingTruckType] = useState<TruckType | null>(null)
   const [creatingTruckType, setCreatingTruckType] = useState(false)
+  // `undefined` = dialog tertutup; `null` = membuat baru; objek = mengubah.
+  const [customerDialog, setCustomerDialog] = useState<Customer | null | undefined>(undefined)
 
   const refreshMaster = () => {
     void queryClient.invalidateQueries({ queryKey: ['master'] })
@@ -136,8 +145,10 @@ export function MasterData() {
       truckTypesActive: truckTypes.data?.filter((type) => type.isActive).length ?? 0,
       truckTypesTotal: truckTypes.data?.length ?? 0,
       warehouseCount: warehouses.data?.length ?? 0,
+      customersActive: customers.data?.filter((customer) => customer.isActive).length ?? 0,
+      customersTotal: customers.data?.length ?? 0,
     }
-  }, [docks.data, truckTypes.data, warehouses.data])
+  }, [docks.data, truckTypes.data, warehouses.data, customers.data])
 
   const slotUnitMinutes = settings.data?.slotUnitMinutes ?? 30
 
@@ -214,6 +225,13 @@ export function MasterData() {
               {summary.truckTypesTotal}
             </Badge>
           </TabsTrigger>
+          <TabsTrigger value='customers'>
+            <Factory />
+            Customer
+            <Badge variant='secondary' className='ml-1 h-5 px-1.5 tabular-nums'>
+              {summary.customersTotal}
+            </Badge>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value='docks'>
@@ -242,7 +260,22 @@ export function MasterData() {
             onCreate={() => setCreatingTruckType(true)}
           />
         </TabsContent>
+
+        <TabsContent value='customers'>
+          <CustomerSection
+            onEdit={(customer) => setCustomerDialog(customer)}
+            onCreate={() => setCustomerDialog(null)}
+          />
+        </TabsContent>
       </Tabs>
+
+      {customerDialog !== undefined && (
+        <CustomerDialog
+          key={customerDialog?.id ?? 'new'}
+          customer={customerDialog}
+          onDone={() => setCustomerDialog(undefined)}
+        />
+      )}
 
       {(editingDock || creatingDock) && (
         <DockDialog

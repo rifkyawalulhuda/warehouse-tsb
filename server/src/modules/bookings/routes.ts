@@ -31,6 +31,7 @@ import {
   statusForVehicleData,
 } from './repository'
 import { getAvailability, finalizeRelease, reserveBlocks } from './quota-service'
+import { assertActiveCustomer } from '../customers/routes'
 import { generateQrToken } from '../../lib/auth'
 
 export const bookingsRouter = Router()
@@ -155,13 +156,22 @@ bookingsRouter.post('/', requireExactRole('CUSTOMER'), async (req, res, next) =>
     const driverName = body.driverName?.trim() ? body.driverName : null
     const complete = Boolean(plate && driverName)
 
+    // Booking dimiliki perusahaan, bukan akun. Akun tanpa customer (mestinya
+    // tidak ada setelah migrasi) ditolak dengan pesan jelas, bukan error FK.
+    await assertActiveCustomer(user.customerId)
+    const customer = await prisma.customer.findUniqueOrThrow({
+      where: { id: user.customerId! },
+      select: { autoApproveBooking: true },
+    })
+
     // Keputusan approval dievaluasi SEKALI di sini dan disimpan. Job berkala
     // tidak pernah mengevaluasi ulang, sehingga status booking tidak berubah
     // tanpa ada yang meminta (keputusan grilling 3.3).
+    // Whitelist dibaca dari CUSTOMER, bukan user (rencana §4.2).
     const approvalRequired = needsApproval({
       approvalMode: settings.approvalMode,
       role: user.role,
-      autoApproveBooking: user.autoApproveBooking,
+      autoApproveBooking: customer.autoApproveBooking,
     })
 
     const created = await prisma.$transaction(
@@ -218,7 +228,9 @@ bookingsRouter.post('/', requireExactRole('CUSTOMER'), async (req, res, next) =>
           data: {
             bookingCode: buildBookingCode(body.bookingDate, sequence),
             qrToken: generateQrToken(),
-            customerId: user.id,
+            // Dua kolom dengan arti berbeda: pemilik bisnis vs akun pembuat.
+            customerId: user.customerId!,
+            createdById: user.id,
             activityType: body.activityType,
             truckTypeId: truckType.id,
             bookingDate: new Date(`${body.bookingDate}T00:00:00.000Z`),
@@ -267,7 +279,7 @@ bookingsRouter.post('/', requireExactRole('CUSTOMER'), async (req, res, next) =>
       bookingId: created.id,
       qrToken: created.qrToken,
       status: created.status,
-      userId: created.customer.id,
+      customerId: created.customer.id,
     })
 
     res.status(201).json({ data: created })
@@ -300,7 +312,12 @@ bookingsRouter.get('/my-list', requireExactRole('CUSTOMER'), async (req, res, ne
       'IN_PROGRESS',
     ]
 
-    const where: Prisma.BookingWhereInput = { customerId: user.id }
+    // Booking milik PERUSAHAAN, bukan akun: semua staf customer yang sama
+    // melihat daftar yang sama. `user.id` di sini akan menghasilkan daftar
+    // kosong tanpa error, jadi ini bukan sekadar penggantian nama.
+    if (!user.customerId) throw forbidden('Akun ini belum terhubung ke customer')
+
+    const where: Prisma.BookingWhereInput = { customerId: user.customerId }
     if (query.scope === 'active') where.status = { in: activeStatuses }
     if (query.scope === 'past') {
       where.status = { in: ['COMPLETED', 'CHECKED_OUT', 'CANCELLED', 'NO_SHOW'] }
@@ -327,7 +344,7 @@ bookingsRouter.get('/:id', async (req, res, next) => {
     if (!booking) throw notFound('Booking tidak ditemukan')
 
     const user = req.user!
-    if (user.role === 'CUSTOMER' && booking.customer.id !== user.id) {
+    if (user.role === 'CUSTOMER' && booking.customer.id !== user.customerId) {
       throw forbidden()
     }
 
@@ -360,7 +377,7 @@ bookingsRouter.patch('/:id/vehicle-info', async (req, res, next) => {
     if (!booking) throw notFound('Booking tidak ditemukan')
 
     const user = req.user!
-    const isOwner = booking.customerId === user.id
+    const isOwner = booking.customerId === user.customerId
     if (user.role === 'CUSTOMER' && !isOwner) throw forbidden()
 
     // Data kendaraan hanya bermakna sebelum truk masuk gerbang.
@@ -418,7 +435,7 @@ bookingsRouter.patch('/:id/vehicle-info', async (req, res, next) => {
       bookingId: updated.id,
       qrToken: updated.qrToken,
       status: updated.status,
-      userId: updated.customer.id,
+      customerId: updated.customer.id,
     })
 
     res.json({ data: updated })
@@ -443,7 +460,7 @@ bookingsRouter.post('/:id/cancel', async (req, res, next) => {
     if (!booking) throw notFound('Booking tidak ditemukan')
 
     const user = req.user!
-    if (user.role === 'CUSTOMER' && booking.customerId !== user.id) throw forbidden()
+    if (user.role === 'CUSTOMER' && booking.customerId !== user.customerId) throw forbidden()
 
     // Setelah gate-in, satu-satunya jalan keluar adalah NO_SHOW.
     if (!['BOOKED_INCOMPLETE', 'BOOKED_READY'].includes(booking.status)) {
@@ -488,7 +505,7 @@ bookingsRouter.post('/:id/cancel', async (req, res, next) => {
       bookingId: booking.id,
       qrToken: booking.qrToken,
       status: 'CANCELLED',
-      userId: booking.customerId,
+      customerId: booking.customerId,
     })
 
     res.json({ data: { id, status: 'CANCELLED' as BookingStatus } })
