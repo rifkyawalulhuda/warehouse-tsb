@@ -32,6 +32,8 @@ publicTicketRouter.get('/:qrToken', async (req, res, next) => {
         bookingCode: booking.bookingCode,
         qrToken: booking.qrToken,
         status: booking.status,
+        approvalStatus: booking.approvalStatus,
+        rejectionReason: booking.rejectionReason,
         activityType: booking.activityType,
         bookingDate: utcToDateOnly(booking.bookingDate),
         startTime: booking.startTime,

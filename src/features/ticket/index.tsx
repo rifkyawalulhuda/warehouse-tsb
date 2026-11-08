@@ -10,6 +10,7 @@ import { closeTicketSocket, getTicketSocket } from '@/lib/socket'
 import { activityLabels, formatDate, formatTime, waNumber } from '@/lib/format'
 import { ErrorBlock, LoadingBlock } from '@/components/query-state'
 import { StatusBadge } from '@/components/status-badge'
+import { ApprovalBadge } from '@/components/approval-badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -64,6 +65,12 @@ export function TicketPage() {
   const ticket = data
   const finished = ['CHECKED_OUT', 'CANCELLED', 'NO_SHOW'].includes(ticket.status)
 
+  // Dua syarat, bukan satu: kendaraan lengkap DAN sudah disetujui.
+  // Keduanya bisa gagal bersamaan, jadi pesannya harus dibedakan — kalau
+  // digabung, supir tidak tahu apa yang harus dilakukan.
+  const approvalBlocked = ticket.approvalStatus === 'PENDING'
+  const qrVisible = ticket.vehicleComplete && !approvalBlocked
+
   return (
     <div className='mx-auto max-w-md space-y-4 p-4 pb-10 sm:p-6'>
       <div className='space-y-1 text-center'>
@@ -73,15 +80,33 @@ export function TicketPage() {
         <h1 className='text-xl font-semibold'>Tiket Truk</h1>
       </div>
 
+      {(ticket.approvalStatus === 'REJECTED' || ticket.approvalStatus === 'EXPIRED') && (
+        <div className='rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm'>
+          <p className='font-medium text-destructive'>
+            {ticket.approvalStatus === 'REJECTED'
+              ? 'Booking ditolak Admin'
+              : 'Booking kedaluwarsa'}
+          </p>
+          <p className='mt-1 text-muted-foreground'>
+            {ticket.approvalStatus === 'REJECTED'
+              ? ticket.rejectionReason ?? 'Tidak ada alasan yang dicatat.'
+              : 'Booking tidak diputuskan sampai tenggat, jadi dibatalkan otomatis. Silakan buat booking baru.'}
+          </p>
+        </div>
+      )}
+
       <Card>
         <CardContent className='space-y-5 pt-6'>
           <div className='space-y-2 text-center'>
             <p className='font-mono text-lg font-semibold'>{ticket.bookingCode}</p>
-            <StatusBadge status={ticket.status} />
+            <div className='flex flex-wrap items-center justify-center gap-2'>
+              <StatusBadge status={ticket.status} />
+              <ApprovalBadge status={ticket.approvalStatus} />
+            </div>
           </div>
 
           <div className='flex justify-center'>
-            {ticket.vehicleComplete ? (
+            {qrVisible ? (
               <div className='rounded-xl border bg-white p-4' id='qr-sheet'>
                 <QRCodeCanvas
                   id='ticket-qr'
@@ -96,8 +121,15 @@ export function TicketPage() {
                 <Lock className='size-6 text-muted-foreground' />
                 <p className='text-sm font-medium'>QR terkunci</p>
                 <p className='text-xs text-muted-foreground'>
-                  Lengkapi plat nomor dan nama supir untuk membuka QR gate-in.
+                  {approvalBlocked
+                    ? 'Booking masih menunggu persetujuan Admin gudang. QR aktif setelah disetujui.'
+                    : 'Lengkapi plat nomor dan nama supir untuk membuka QR gate-in.'}
                 </p>
+                {approvalBlocked && !ticket.vehicleComplete && (
+                  <p className='text-xs text-amber-600 dark:text-amber-400'>
+                    Data kendaraan juga belum lengkap.
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -122,7 +154,7 @@ export function TicketPage() {
 
           {!finished && (
             <div className='flex flex-wrap gap-2 border-t pt-4'>
-              {ticket.vehicleComplete && (
+              {qrVisible && (
                 <>
                   <Button variant='outline' size='sm' onClick={() => downloadQr(ticket.bookingCode)}>
                     <Download /> Unduh QR
@@ -148,7 +180,7 @@ export function TicketPage() {
         </CardContent>
       </Card>
 
-      {!ticket.vehicleComplete && (
+      {!ticket.vehicleComplete && !finished && (
         <VehicleForm
           qrToken={ticket.qrToken}
           onSaved={() => {

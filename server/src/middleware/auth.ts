@@ -8,7 +8,16 @@ declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
-      user?: Pick<User, 'id' | 'name' | 'email' | 'role' | 'companyName'>
+      user?: Pick<
+        User,
+        | 'id'
+        | 'name'
+        | 'email'
+        | 'role'
+        | 'companyName'
+        | 'autoApproveBooking'
+        | 'canApproveBooking'
+      >
       actingAsRole?: Role
     }
   }
@@ -22,7 +31,16 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
     const claims = verifyAccessToken(token)
     const user = await prisma.user.findUnique({
       where: { id: claims.sub },
-      select: { id: true, name: true, email: true, role: true, companyName: true, isActive: true },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        companyName: true,
+        isActive: true,
+        autoApproveBooking: true,
+        canApproveBooking: true,
+      },
     })
     if (!user || !user.isActive) throw unauthorized('Akun tidak aktif')
 
@@ -32,6 +50,8 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
       email: user.email,
       role: user.role,
       companyName: user.companyName,
+      autoApproveBooking: user.autoApproveBooking,
+      canApproveBooking: user.canApproveBooking,
     }
     next()
   } catch (error) {
@@ -63,4 +83,18 @@ export function requireExactRole(...roles: Role[]) {
     if (!roles.includes(req.user.role)) return next(forbidden())
     next()
   }
+}
+
+/**
+ * Hak menyetujui booking.
+ *
+ * Role ADMIN selalu berhak tanpa flag, sehingga gudang tidak kehilangan
+ * kemampuan memutuskan hanya karena lupa menyalakan flag. Flag
+ * `can_approve_booking` hanya MENAMBAH hak ke peran lain (mis. satu Gate
+ * Officer tepercaya sebagai backup saat Admin tidak masuk).
+ */
+export function requireApprover(req: Request, _res: Response, next: NextFunction) {
+  if (!req.user) return next(unauthorized())
+  if (req.user.role === 'ADMIN' || req.user.canApproveBooking) return next()
+  next(forbidden())
 }

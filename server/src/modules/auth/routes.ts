@@ -41,6 +41,8 @@ function publicUser(user: {
   email: string
   role: Role
   companyName: string | null
+  autoApproveBooking: boolean
+  canApproveBooking: boolean
 }) {
   return {
     id: user.id,
@@ -48,6 +50,11 @@ function publicUser(user: {
     email: user.email,
     role: user.role,
     companyName: user.companyName,
+    // Frontend memakainya untuk menyembunyikan tab Persetujuan dari pengguna
+    // yang memang tidak berhak. Server tetap menolak sendiri (403), ini hanya
+    // agar tidak menawarkan tombol yang pasti gagal.
+    autoApproveBooking: user.autoApproveBooking,
+    canApproveBooking: user.canApproveBooking,
   }
 }
 

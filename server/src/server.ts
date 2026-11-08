@@ -4,6 +4,7 @@ import { env } from './config/env'
 import { prisma } from './lib/prisma'
 import { initRealtime } from './realtime'
 import { startNoShowJob } from './jobs/no-show'
+import { startApprovalExpiryJob } from './jobs/approval-expiry'
 
 async function main() {
   const app = createApp()
@@ -11,6 +12,7 @@ async function main() {
 
   initRealtime(server)
   startNoShowJob()
+  startApprovalExpiryJob()
 
   server.listen(env.port, () => {
     // eslint-disable-next-line no-console

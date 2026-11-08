@@ -1,4 +1,4 @@
-import type { Booking, BookingStatus, Prisma } from '@prisma/client'
+import type { ApprovalMode, Booking, BookingStatus, Prisma, Role } from '@prisma/client'
 import { prisma } from '../../lib/prisma'
 
 /** Bentuk booking yang dikirim ke frontend (tiket supir, dashboard, daftar customer). */
@@ -17,6 +17,10 @@ export const bookingSelect = {
   blocksLocked: true,
   status: true,
   lateMinutes: true,
+  approvalStatus: true,
+  approvalDeadline: true,
+  approvedAt: true,
+  rejectionReason: true,
   createdAt: true,
   customer: { select: { id: true, name: true, companyName: true, phone: true } },
   truckType: { select: { id: true, truckName: true, durationMinutes: true, blocksRequired: true } },
@@ -89,4 +93,43 @@ export function statusForVehicleData(
 
 export function buildBookingCode(dateISO: string, sequence: number): string {
   return `TSB-${dateISO.replace(/-/g, '')}-${String(sequence).padStart(3, '0')}`
+}
+
+/**
+ * Apakah booking ini harus masuk antrean persetujuan Admin?
+ *
+ * Hanya tiga syarat, sesuai docs/rencana-approval-booking.md §4.1:
+ * mode global MANUAL, pelaku adalah CUSTOMER, dan customer tidak di-whitelist.
+ * Admin bertindak atas nama customer tidak pernah masuk antrean.
+ */
+export function needsApproval(params: {
+  approvalMode: ApprovalMode
+  role: Role
+  autoApproveBooking: boolean
+}): boolean {
+  if (params.approvalMode !== 'MANUAL') return false
+  if (params.role !== 'CUSTOMER') return false
+  return !params.autoApproveBooking
+}
+
+/**
+ * Tenggat keputusan Admin.
+ *
+ * `max`, bukan `min` (koreksi atas label sesi grilling 6.1): dengan `min`,
+ * booking yang dibuat mendesak akan mendapat tenggat yang sudah lewat saat
+ * booking dibuat, sehingga langsung expire sebelum Admin sempat melihatnya.
+ *
+ * Konsekuensi yang diterima: booking 5 menit sebelum jadwal mendapat tenggat
+ * `createdAt + minDecisionMinutes`, yaitu setelah `startTime`. Disengaja agar
+ * Admin selalu punya jendela keputusan minimum.
+ */
+export function computeApprovalDeadline(params: {
+  startTime: Date
+  createdAt: Date
+  leadMinutes: number
+  minDecisionMinutes: number
+}): Date {
+  const beforeStart = new Date(params.startTime.getTime() - params.leadMinutes * 60_000)
+  const afterCreated = new Date(params.createdAt.getTime() + params.minDecisionMinutes * 60_000)
+  return new Date(Math.max(beforeStart.getTime(), afterCreated.getTime()))
 }

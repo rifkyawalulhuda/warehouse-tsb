@@ -109,6 +109,11 @@ export function ReportsPage() {
             <Kpi label='Dibatalkan' value={report.data.kpi.cancelled} />
             <Kpi label='No-show' value={report.data.kpi.noShow} />
             <Kpi
+              label='Kedaluwarsa'
+              value={report.data.kpi.expiredPending}
+              hint='Tidak diputuskan Admin'
+            />
+            <Kpi
               label='Rata-rata proses'
               value={`${report.data.kpi.averageProcessingMinutes} mnt`}
               hint='Mulai → selesai proses'

@@ -17,12 +17,28 @@ export type BookingStatus =
 export type DockActivity = 'LOADING' | 'UNLOADING' | 'BOTH'
 export type DockStatus = 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE'
 
+/** Kebijakan persetujuan booking di tingkat gudang. */
+export type ApprovalMode = 'AUTO' | 'MANUAL'
+
+/**
+ * Sumbu persetujuan, ortogonal terhadap `BookingStatus`.
+ * NOT_REQUIRED = booking tidak pernah masuk antrean (mode AUTO / whitelist / data lama).
+ */
+export type ApprovalStatus =
+  | 'NOT_REQUIRED'
+  | 'PENDING'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'EXPIRED'
+
 export type SessionUser = {
   id: string
   name: string
   email: string
   role: Role
   companyName: string | null
+  autoApproveBooking: boolean
+  canApproveBooking: boolean
 }
 
 export type TruckType = {
@@ -101,6 +117,10 @@ export type Booking = {
   lateMinutes: number
   /// Snapshot blok 30 menit yang dikunci saat booking dibuat.
   blocksLocked: number
+  approvalStatus: ApprovalStatus
+  approvalDeadline: string | null
+  approvedAt: string | null
+  rejectionReason: string | null
   createdAt: string
   customer: {
     id: string
@@ -145,6 +165,10 @@ export type Settings = {
   gracePeriodMinutes: number
   earlyArrivalLimitMinutes: number
   bookingWindowDays: number
+  approvalMode: ApprovalMode
+  approvalLeadMinutes: number
+  approvalMinDecisionMinutes: number
+  approvalUrgentBufferMinutes: number
   capacity: Record<ActivityType, number>
   blocksPerDay: number
   truckTypes: TruckType[]
@@ -169,6 +193,7 @@ export type ScanResult = {
     message: string
   } | null
   vehicleIncomplete: boolean
+  approvalPending: boolean
   projectedStatus: 'CHECKED_IN_ON_TIME' | 'LATE_WAITING_LIST'
   lateMinutes: number
   gracePeriodMinutes: number
@@ -178,6 +203,8 @@ export type PublicTicket = {
   bookingCode: string
   qrToken: string
   status: BookingStatus
+  approvalStatus: ApprovalStatus
+  rejectionReason: string | null
   activityType: ActivityType
   bookingDate: string
   startTime: string
@@ -203,6 +230,7 @@ export type ReportRow = {
   truckType: string
   dockCode: string | null
   status: BookingStatus
+  approvalStatus: ApprovalStatus
   scheduledStart: string
   gateInAt: string | null
   processStartedAt: string | null
@@ -219,6 +247,7 @@ export type ReportKpi = {
   completed: number
   cancelled: number
   noShow: number
+  expiredPending: number
   onTimeRate: number
   averageWaitingMinutes: number
   averageProcessingMinutes: number
@@ -270,6 +299,8 @@ export type ManagedUser = {
   companyName: string | null
   role: Role
   isActive: boolean
+  autoApproveBooking: boolean
+  canApproveBooking: boolean
   createdAt: string
 }
 

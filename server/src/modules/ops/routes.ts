@@ -11,7 +11,7 @@ import { utcToDateOnly, minuteOfDayJakarta, todayISO } from '../../lib/time'
 import { emitBookingUpdated, emitDockUpdated } from '../../realtime'
 import { writeAudit } from '../../lib/audit'
 import { bookingSelect, ACTIVE_STATUSES, getBookingByQrToken } from '../bookings/repository'
-import { releaseBlocks } from '../bookings/quota-service'
+import { finalizeRelease } from '../bookings/quota-service'
 
 export const opsRouter = Router()
 
@@ -72,6 +72,7 @@ opsRouter.get('/scan/:qrToken', requireRole('GATE_OFFICER', 'CHECKER'), async (r
         booking,
         canGateIn:
           ['BOOKED_INCOMPLETE', 'BOOKED_READY'].includes(booking.status) &&
+          booking.approvalStatus !== 'PENDING' &&
           earlyMinutes <= settings.earlyArrivalLimitMinutes,
         earlyArrival:
           earlyMinutes > settings.earlyArrivalLimitMinutes
@@ -82,6 +83,7 @@ opsRouter.get('/scan/:qrToken', requireRole('GATE_OFFICER', 'CHECKER'), async (r
               }
             : null,
         vehicleIncomplete: !(booking.licensePlate && booking.driverName),
+        approvalPending: booking.approvalStatus === 'PENDING',
         projectedStatus:
           lateMinutes <= settings.gracePeriodMinutes
             ? ('CHECKED_IN_ON_TIME' as const)
@@ -114,6 +116,15 @@ opsRouter.post(
         ['BOOKED_INCOMPLETE', 'BOOKED_READY'],
         'melakukan gate-in'
       )
+
+      // Dua lapis: layar Security sudah menonaktifkan tombol, tetapi server
+      // tetap menolak. Booking yang belum disetujui tidak boleh masuk gudang.
+      if (booking.approvalStatus === 'PENDING') {
+        throw conflict(
+          'APPROVAL_PENDING',
+          'Booking belum disetujui Admin. Hubungi Admin gudang.'
+        )
+      }
 
       if (!booking.licensePlate || !booking.driverName) {
         throw conflict(
@@ -211,6 +222,15 @@ opsRouter.post(
         include: { truckType: true },
       })
       if (!booking) throw notFound('Booking tidak ditemukan')
+
+      // Pesan khusus sebelum assertStatus: booking yang belum disetujui bukan
+      // "transisi tidak valid", melainkan menunggu keputusan Admin.
+      if (booking.approvalStatus === 'PENDING') {
+        throw conflict(
+          'APPROVAL_PENDING',
+          'Booking belum disetujui Admin, belum bisa ditugaskan ke dock'
+        )
+      }
 
       assertStatus(
         booking,
@@ -513,7 +533,8 @@ opsRouter.post('/no-show', requireRole('ADMIN'), async (req, res, next) => {
     const window = toWindow(settings)
 
     const updated = await prisma.$transaction(async (tx) => {
-      await releaseBlocks(tx, {
+      await finalizeRelease(tx, {
+        bookingId: booking.id,
         date: utcToDateOnly(booking.bookingDate),
         activity: booking.activityType,
         startMinute: minuteOfDayJakarta(booking.startTime),

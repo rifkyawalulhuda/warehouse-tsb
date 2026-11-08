@@ -115,6 +115,9 @@ export async function reserveBlocks(
 /**
  * Mengembalikan kuota satu booking (pembatalan atau NO_SHOW).
  * GREATEST(0, used - 1) menjaga kuota tidak negatif bila dipanggil dua kali.
+ *
+ * JANGAN panggil fungsi ini langsung dari route/job baru. Gunakan
+ * `finalizeRelease`, yang menjaga agar kuota dirilis tepat sekali.
  */
 export async function releaseBlocks(
   tx: Tx,
@@ -135,4 +138,53 @@ export async function releaseBlocks(
       AND activity = ${params.activity}::"ActivityType"
       AND slot_start_minute = ANY(${[...blocks]}::int[])
   `
+}
+
+/**
+ * Satu-satunya pintu pelepasan kuota.
+ *
+ * Ada lima jalur yang bisa mengakhiri booking dan mengembalikan slot: cancel
+ * customer, reject Admin, job expire, NO_SHOW manual, dan job NO_SHOW. Kalau
+ * masing-masing memanggil `releaseBlocks` sendiri, dua jalur yang berjalan
+ * berdekatan (mis. Admin approve tepat saat job expire) akan melepas kuota dua
+ * kali dan slot milik booking lain ikut terpakai. `GREATEST(0, ...)` menyembunyikan
+ * kerusakannya, jadi gejala barunya adalah "slot penuh padahal kosong" berbulan
+ * kemudian.
+ *
+ * Guard-nya adalah UPDATE bersyarat pada `quota_released_at`. Hanya satu
+ * transaksi yang bisa menang, tanpa perlu lock eksplisit.
+ *
+ * @returns true bila kuota benar-benar dilepas oleh pemanggil ini; false bila
+ * sebelumnya sudah pernah dilepas (atau booking tidak ada).
+ */
+export async function finalizeRelease(
+  tx: Tx,
+  params: {
+    bookingId: string
+    date: DateISO
+    activity: ActivityType
+    startMinute: number
+    blocksRequired: number
+    window: OperatingWindow
+  }
+): Promise<boolean> {
+  const claimed = await tx.$queryRaw<Array<{ id: string }>>`
+    UPDATE bookings
+    SET quota_released_at = now()
+    WHERE id = ${params.bookingId}::uuid
+      AND quota_released_at IS NULL
+    RETURNING id
+  `
+
+  if (claimed.length === 0) return false
+
+  await releaseBlocks(tx, {
+    date: params.date,
+    activity: params.activity,
+    startMinute: params.startMinute,
+    blocksRequired: params.blocksRequired,
+    window: params.window,
+  })
+
+  return true
 }

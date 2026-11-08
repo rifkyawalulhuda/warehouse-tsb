@@ -19,6 +19,13 @@ import {
 } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { AppearancePicker } from './appearance-picker'
 
@@ -30,6 +37,10 @@ type FormState = {
   gracePeriodMinutes: string
   earlyArrivalLimitMinutes: string
   bookingWindowDays: string
+  approvalMode: 'AUTO' | 'MANUAL'
+  approvalLeadMinutes: string
+  approvalMinDecisionMinutes: string
+  approvalUrgentBufferMinutes: string
 }
 
 export function SettingsPage() {
@@ -56,6 +67,10 @@ function SettingsForm({ settings }: { settings: Settings }) {
     gracePeriodMinutes: String(settings.gracePeriodMinutes),
     earlyArrivalLimitMinutes: String(settings.earlyArrivalLimitMinutes),
     bookingWindowDays: String(settings.bookingWindowDays),
+    approvalMode: settings.approvalMode,
+    approvalLeadMinutes: String(settings.approvalLeadMinutes),
+    approvalMinDecisionMinutes: String(settings.approvalMinDecisionMinutes),
+    approvalUrgentBufferMinutes: String(settings.approvalUrgentBufferMinutes),
   }))
 
   const save = useMutation({
@@ -68,6 +83,10 @@ function SettingsForm({ settings }: { settings: Settings }) {
         gracePeriodMinutes: Number(payload.gracePeriodMinutes),
         earlyArrivalLimitMinutes: Number(payload.earlyArrivalLimitMinutes),
         bookingWindowDays: Number(payload.bookingWindowDays),
+        approvalMode: payload.approvalMode,
+        approvalLeadMinutes: Number(payload.approvalLeadMinutes),
+        approvalMinDecisionMinutes: Number(payload.approvalMinDecisionMinutes),
+        approvalUrgentBufferMinutes: Number(payload.approvalUrgentBufferMinutes),
       }),
     onSuccess: () => {
       toast.success('Pengaturan disimpan')
@@ -236,6 +255,87 @@ function SettingsForm({ settings }: { settings: Settings }) {
                 setForm({ ...form, bookingWindowDays: event.target.value })
               }
             />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className='text-base'>Kebijakan persetujuan booking</CardTitle>
+          <CardDescription>
+            Otomatis: setiap booking langsung sah. Manual: hanya customer yang ditandai
+            "booking otomatis" di halaman Pengguna yang lolos; sisanya menunggu keputusan
+            Admin.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className='space-y-4'>
+          <div className='max-w-xs space-y-1'>
+            <Label htmlFor='approval-mode'>Mode</Label>
+            <Select
+              value={form.approvalMode}
+              onValueChange={(value) =>
+                setForm({ ...form, approvalMode: value as 'AUTO' | 'MANUAL' })
+              }
+            >
+              <SelectTrigger id='approval-mode'>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='AUTO'>Otomatis (semua langsung disetujui)</SelectItem>
+                <SelectItem value='MANUAL'>Manual (perlu persetujuan Admin)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className='grid gap-4 sm:grid-cols-3'>
+            <div className='space-y-1'>
+              <Label htmlFor='approval-lead'>Tenggat sebelum kedatangan (menit)</Label>
+              <Input
+                id='approval-lead'
+                type='number'
+                min={5}
+                max={2880}
+                value={form.approvalLeadMinutes}
+                onChange={(event) =>
+                  setForm({ ...form, approvalLeadMinutes: event.target.value })
+                }
+              />
+              <p className='text-xs text-muted-foreground'>
+                Keputusan harus selesai sekian menit sebelum jam kedatangan.
+              </p>
+            </div>
+            <div className='space-y-1'>
+              <Label htmlFor='approval-min'>Jendela keputusan minimum (menit)</Label>
+              <Input
+                id='approval-min'
+                type='number'
+                min={5}
+                max={1440}
+                value={form.approvalMinDecisionMinutes}
+                onChange={(event) =>
+                  setForm({ ...form, approvalMinDecisionMinutes: event.target.value })
+                }
+              />
+              <p className='text-xs text-muted-foreground'>
+                Booking mendesak tetap punya sekian menit untuk diputuskan.
+              </p>
+            </div>
+            <div className='space-y-1'>
+              <Label htmlFor='approval-urgent'>Ambang label mendesak (menit)</Label>
+              <Input
+                id='approval-urgent'
+                type='number'
+                min={0}
+                max={14400}
+                value={form.approvalUrgentBufferMinutes}
+                onChange={(event) =>
+                  setForm({ ...form, approvalUrgentBufferMinutes: event.target.value })
+                }
+              />
+              <p className='text-xs text-muted-foreground'>
+                Hanya memengaruhi penanda di antrean, bukan keputusan.
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>

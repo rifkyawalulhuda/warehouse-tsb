@@ -5,16 +5,20 @@ import { apiErrorMessage } from '@/lib/api/client'
 import { assignDock, fetchOpsDocks, fetchQueue, markNoShow } from '@/lib/api/endpoints'
 import type { Booking, DockWithBooking } from '@/lib/api/types'
 import { useRealtimeSync } from '@/hooks/use-realtime'
+import { useAuthStore } from '@/stores/auth-store'
 import { activityLabels, formatTime, todayISO } from '@/lib/format'
 import { Main } from '@/components/layout/main'
 import { PageHeader } from '@/components/page-header'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { ErrorBlock, LoadingBlock } from '@/components/query-state'
 import { StatusBadge } from '@/components/status-badge'
+import { ApprovalBadge } from '@/components/approval-badge'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ApprovalsPanel } from '@/features/approvals'
 import {
   Select,
   SelectContent,
@@ -39,8 +43,15 @@ import {
 export function QueuePage() {
   useRealtimeSync()
   const queryClient = useQueryClient()
+  const currentUser = useAuthStore((state) => state.user)
   const [date, setDate] = useState(todayISO())
+  const [tab, setTab] = useState<'queue' | 'approvals'>('queue')
   const [noShowTarget, setNoShowTarget] = useState<Booking | null>(null)
+
+  // Server tetap menolak sendiri (403). Ini hanya agar tab yang pasti gagal
+  // tidak ditawarkan — Checker tanpa flag tidak punya hak menyetujui.
+  const canApprove =
+    currentUser?.role === 'ADMIN' || currentUser?.canApproveBooking === true
 
   const queue = useQuery({
     queryKey: ['ops', 'queue', date],
@@ -79,16 +90,27 @@ export function QueuePage() {
         title='Antrean Hari Ini'
         description='Truk yang menunggu di area staging, dikelompokkan menurut status masuk.'
         actions={
-          <Input
-            type='date'
-            value={date}
-            onChange={(event) => setDate(event.target.value)}
-            className='h-9 w-auto'
-          />
+          tab === 'queue' ? (
+            <Input
+              type='date'
+              value={date}
+              onChange={(event) => setDate(event.target.value)}
+              className='h-9 w-auto'
+            />
+          ) : undefined
         }
       />
 
-      {queue.isPending ? (
+      <Tabs value={tab} onValueChange={(value) => setTab(value as 'queue' | 'approvals')}>
+        <TabsList>
+          <TabsTrigger value='queue'>Antrean</TabsTrigger>
+          {canApprove && <TabsTrigger value='approvals'>Persetujuan</TabsTrigger>}
+        </TabsList>
+      </Tabs>
+
+      {tab === 'approvals' ? (
+        <ApprovalsPanel />
+      ) : queue.isPending ? (
         <LoadingBlock label='Memuat antrean...' />
       ) : queue.isError ? (
         <ErrorBlock error={queue.error} onRetry={() => void queue.refetch()} />
@@ -230,7 +252,7 @@ function QueueSection({
                       dock.allowedActivity === booking.activityType
                   )
 
-                  return (
+  return (
                     <TableRow key={booking.id}>
                       <TableCell className='font-mono text-xs'>
                         {booking.bookingCode}
@@ -258,11 +280,20 @@ function QueueSection({
                         )}
                       </TableCell>
                       <TableCell>
-                        <StatusBadge status={booking.status} />
+                        <div className='flex flex-col items-start gap-1'>
+                          <StatusBadge status={booking.status} />
+                          <ApprovalBadge status={booking.approvalStatus} />
+                        </div>
                       </TableCell>
                       <TableCell className='text-end'>
                         <div className='flex items-center justify-end gap-2'>
+                          {booking.approvalStatus === 'PENDING' && (
+                            <span className='text-xs text-muted-foreground'>
+                              Menunggu persetujuan
+                            </span>
+                          )}
                           {onAssign &&
+                            booking.approvalStatus !== 'PENDING' &&
                             (compatible.length > 0 ? (
                               <Select
                                 disabled={assigning}

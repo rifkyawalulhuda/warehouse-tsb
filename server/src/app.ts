@@ -8,6 +8,7 @@ import { usersRouter } from './modules/users/routes'
 import { settingsRouter } from './modules/settings/routes'
 import { masterRouter } from './modules/master/routes'
 import { bookingsRouter } from './modules/bookings/routes'
+import { approvalsRouter } from './modules/approvals/routes'
 import { publicTicketRouter } from './modules/public-ticket/routes'
 import { opsRouter } from './modules/ops/routes'
 import { reportsRouter } from './modules/reports/routes'
@@ -38,6 +39,7 @@ export function createApp() {
   app.use('/api/settings', settingsRouter)
   app.use('/api/master', masterRouter)
   app.use('/api/bookings', bookingsRouter)
+  app.use('/api/approvals', approvalsRouter)
   app.use('/api/tickets', publicTicketRouter)
   app.use('/api/ops', opsRouter)
   app.use('/api/reports', reportsRouter)

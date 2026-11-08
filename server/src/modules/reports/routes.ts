@@ -24,6 +24,7 @@ type ReportRow = {
   truckType: string
   dockCode: string | null
   status: string
+  approvalStatus: string
   scheduledStart: string
   gateInAt: string | null
   processStartedAt: string | null
@@ -53,6 +54,7 @@ async function buildReport(from: string, to: string) {
       bookingDate: true,
       activityType: true,
       status: true,
+      approvalStatus: true,
       startTime: true,
       lateMinutes: true,
       customer: { select: { name: true, companyName: true } },
@@ -73,6 +75,7 @@ async function buildReport(from: string, to: string) {
       truckType: booking.truckType.truckName,
       dockCode: booking.assignedDock?.dockCode ?? null,
       status: booking.status,
+      approvalStatus: booking.approvalStatus,
       scheduledStart: formatInstant(booking.startTime) ?? '',
       gateInAt: formatInstant(log?.gateInAt ?? null),
       processStartedAt: formatInstant(log?.processStartedAt ?? null),
@@ -96,6 +99,10 @@ async function buildReport(from: string, to: string) {
     completed: rows.filter((row) => row.status === 'CHECKED_OUT').length,
     cancelled: rows.filter((row) => row.status === 'CANCELLED').length,
     noShow: rows.filter((row) => row.status === 'NO_SHOW').length,
+    // Booking ini berakhir CANCELLED, tetapi penyebabnya bukan customer:
+    // Admin tidak memutuskan sampai tenggat. Dihitung dari sumbu approval
+    // supaya tidak tercampur dengan pembatalan biasa.
+    expiredPending: rows.filter((row) => row.approvalStatus === 'EXPIRED').length,
     onTimeRate:
       rows.length === 0
         ? 0
@@ -302,6 +309,7 @@ reportsRouter.get('/export.xlsx', async (req, res, next) => {
       { metric: 'Selesai (gate-out)', value: kpi.completed },
       { metric: 'Dibatalkan', value: kpi.cancelled },
       { metric: 'No-show', value: kpi.noShow },
+      { metric: 'Kedaluwarsa (tidak disetujui)', value: kpi.expiredPending },
       { metric: 'Tingkat on-time (%)', value: kpi.onTimeRate },
       { metric: 'Rata-rata waktu tunggu (menit)', value: kpi.averageWaitingMinutes },
       { metric: 'Rata-rata waktu proses (menit)', value: kpi.averageProcessingMinutes },

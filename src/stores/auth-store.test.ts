@@ -12,6 +12,8 @@ const sampleUser: SessionUser = {
   email: 'budi@example.com',
   role: 'CUSTOMER',
   companyName: 'PT Contoh',
+  autoApproveBooking: false,
+  canApproveBooking: false,
 }
 
 describe('useAuthStore', () => {

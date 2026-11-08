@@ -136,6 +136,15 @@ export function ScanPage() {
               />
             )}
 
+            {result.approvalPending && (
+              <Notice
+                tone='warning'
+                icon={AlertTriangle}
+                title='Menunggu persetujuan Admin'
+                body='Booking ini belum disetujui Admin gudang, jadi truk belum boleh masuk.'
+              />
+            )}
+
             {result.vehicleIncomplete && (
               <Notice
                 tone='warning'
@@ -145,7 +154,10 @@ export function ScanPage() {
               />
             )}
 
-            {!result.earlyArrival && !result.vehicleIncomplete && result.canGateIn && (
+            {!result.earlyArrival &&
+              !result.vehicleIncomplete &&
+              !result.approvalPending &&
+              result.canGateIn && (
               <Notice
                 tone={
                   result.projectedStatus === 'LATE_WAITING_LIST' ? 'warning' : 'success'

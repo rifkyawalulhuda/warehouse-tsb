@@ -1,11 +1,12 @@
 import { Router } from 'express'
 import { z } from 'zod'
-import { prisma } from '../../lib/prisma'
+import { prisma, type Tx } from '../../lib/prisma'
 import { parse } from '../../lib/validate'
 import { requireAuth, requireExactRole } from '../../middleware/auth'
 import { hashPassword } from '../../lib/auth'
 import { badRequest, conflict, notFound } from '../../lib/http-error'
 import { pathParam } from '../../lib/params'
+import { writeAudit } from '../../lib/audit'
 import type { Role } from '@prisma/client'
 
 export const usersRouter = Router()
@@ -49,6 +50,8 @@ usersRouter.get('/', async (req, res, next) => {
         companyName: true,
         role: true,
         isActive: true,
+        autoApproveBooking: true,
+        canApproveBooking: true,
         createdAt: true,
       },
       orderBy: [{ role: 'asc' }, { name: 'asc' }],
@@ -96,6 +99,8 @@ usersRouter.post('/', async (req, res, next) => {
         companyName: true,
         role: true,
         isActive: true,
+        autoApproveBooking: true,
+        canApproveBooking: true,
         createdAt: true,
       },
     })
@@ -113,6 +118,10 @@ const updateSchema = z
     companyName: z.string().trim().max(160).nullable().optional(),
     isActive: z.boolean().optional(),
     password: z.string().min(7, 'Password minimal 7 karakter').optional(),
+    /// Whitelist approval. Hanya bermakna untuk akun CUSTOMER.
+    autoApproveBooking: z.boolean().optional(),
+    /// Hak approve untuk non-ADMIN. Role ADMIN selalu berhak tanpa flag ini.
+    canApproveBooking: z.boolean().optional(),
   })
   .refine((v) => Object.keys(v).length > 0, 'Tidak ada perubahan')
 
@@ -150,25 +159,77 @@ usersRouter.patch('/:id', async (req, res, next) => {
       }
     }
 
-    const user = await prisma.user.update({
-      where: { id },
-      data: {
-        ...(body.name !== undefined ? { name: body.name } : {}),
-        ...(body.phone !== undefined ? { phone: body.phone } : {}),
-        ...(body.companyName !== undefined ? { companyName: body.companyName } : {}),
-        ...(body.isActive !== undefined ? { isActive: body.isActive } : {}),
-        ...(body.password ? { passwordHash: await hashPassword(body.password) } : {}),
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        companyName: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-      },
+    // Flag approval hanya bermakna pada peran tertentu. Menerimanya diam-diam
+    // di peran lain akan membuat Admin mengira sudah mengatur sesuatu padahal
+    // tidak ada efeknya.
+    if (body.autoApproveBooking !== undefined && exists.role !== 'CUSTOMER') {
+      throw badRequest(
+        'FLAG_NOT_APPLICABLE',
+        'Whitelist approval hanya berlaku untuk akun Customer'
+      )
+    }
+    if (body.canApproveBooking !== undefined && exists.role === 'ADMIN') {
+      throw badRequest(
+        'FLAG_NOT_APPLICABLE',
+        'Admin sudah otomatis berhak menyetujui; flag tidak diperlukan'
+      )
+    }
+
+    const flagsChanged =
+      (body.autoApproveBooking !== undefined &&
+        body.autoApproveBooking !== exists.autoApproveBooking) ||
+      (body.canApproveBooking !== undefined &&
+        body.canApproveBooking !== exists.canApproveBooking)
+
+    const user = await prisma.$transaction(async (tx) => {
+      const updated = await tx.user.update({
+        where: { id },
+        data: {
+          ...(body.name !== undefined ? { name: body.name } : {}),
+          ...(body.phone !== undefined ? { phone: body.phone } : {}),
+          ...(body.companyName !== undefined ? { companyName: body.companyName } : {}),
+          ...(body.isActive !== undefined ? { isActive: body.isActive } : {}),
+          ...(body.password ? { passwordHash: await hashPassword(body.password) } : {}),
+          ...(body.autoApproveBooking !== undefined
+            ? { autoApproveBooking: body.autoApproveBooking }
+            : {}),
+          ...(body.canApproveBooking !== undefined
+            ? { canApproveBooking: body.canApproveBooking }
+            : {}),
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          companyName: true,
+          role: true,
+          isActive: true,
+          autoApproveBooking: true,
+          canApproveBooking: true,
+          createdAt: true,
+        },
+      })
+
+      // Memberi/mencabut hak approve atau whitelist mengubah siapa yang boleh
+      // melewati antrean. Itu perubahan wewenang, bukan sekadar data profil.
+      if (flagsChanged) {
+        await writeAudit(
+          {
+            userId: req.user!.id,
+            userRole: req.user!.role,
+            action: 'USER_APPROVAL_FLAGS_CHANGED',
+            meta: {
+              targetUserId: id,
+              autoApproveBooking: updated.autoApproveBooking,
+              canApproveBooking: updated.canApproveBooking,
+            },
+          },
+          tx as Tx
+        )
+      }
+
+      return updated
     })
 
     res.json({ data: user })

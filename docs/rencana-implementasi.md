@@ -304,6 +304,18 @@ domain HTTPS.
 | Supir membuka tautan lama setelah hari berganti | Tiket menampilkan status final, QR tidak bisa dipakai ulang setelah `CHECKED_OUT` |
 | Satu orang jaga semua pos | Admin dapat melakukan aksi gate/dock, tercatat di `audit_logs` |
 
+### Risiko fitur persetujuan booking
+
+Dokumen terpisah: **`docs/rencana-approval-booking.md`**. Ringkas:
+
+| Risiko | Mitigasi |
+| :--- | :--- |
+| Kuota bocor karena rilis ganda | `quota_released_at` + `finalizeRelease` satu pintu; tes cancel→expire dan pemanggilan ganda |
+| Job expire dan NO_SHOW berebut booking | Filter `approvalStatus` saling eksklusif di kedua job |
+| Admin approve tepat saat expire | Compare-and-set `WHERE approval_status = 'PENDING'`; `approval-concurrency.test.ts` |
+| Fitur mati saat rilis karena semua ter-whitelist | Mode rilis `AUTO`, flag customer default `false` |
+| Customer kabur dari approval lewat booking mendesak | Bypass dihapus; tenggat `max(start-30m, createdAt+15m)` |
+
 ---
 
 ## 8. Keputusan yang menyusul
@@ -330,7 +342,7 @@ Empat pertanyaan terbuka di draf awal sudah dijawab saat implementasi:
 | `npm run build` (typecheck + Vite) | lolos |
 | `npm run build:api` (tsc server) | lolos |
 | `npm run lint` | 0 error (4 warning bawaan template) |
-| `npm run test:api` | 67 tes lolos (9 berkas), termasuk konkurensi dua koneksi, kuota, auth, realtime, no-show, master |
+| `npm run test:api` | 97 tes lolos (12 berkas), termasuk konkurensi dua koneksi, kuota, auth, realtime, no-show, master, approval (3 berkas baru) |
 | `npm test` (Vitest browser) | 64 tes lolos |
 | Alur manual di browser | login 4 peran, booking, tiket, scan, dock, dashboard, laporan |
 | Edit jenis truk di Master Data | dialog `Ubah` tersimpan dan tabel ikut berubah; `blocks_required` dihitung server (`master.test.ts`: 403 customer, abaikan `blocksRequired` dari klien, nonaktif tetap terlihat di master tapi hilang dari `/api/settings`, durasi di luar batas ditolak) |
@@ -343,4 +355,5 @@ Empat pertanyaan terbuka di draf awal sudah dijawab saat implementasi:
 | Form booking untuk Admin | `/bookings/new` dibatasi ke CUSTOMER, sama dengan aturan `POST /api/bookings` |
 | Nonaktifkan akun sendiri | ditolak server (`CANNOT_DEACTIVATE_SELF`, `LAST_ADMIN`); switch-nya dimatikan di UI |
 | Mode terang/gelap | pemilih tema di sidebar, header, dan Pengaturan; `resolvedTheme` diperbaiki agar ikut berubah saat OS berganti tema |
+| Approval booking (fitur baru) | `approval.test.ts` (19), `approval-quota.test.ts` (8), `approval-concurrency.test.ts` (3): mode AUTO/MANUAL, whitelist, tenggat MAX, approve/reject/batch, kuota rilis tepat sekali, race approve vs expire, gate-in ditolak saat PENDING, KPI `expiredPending`. Rincian: `docs/rencana-approval-booking.md` |
 

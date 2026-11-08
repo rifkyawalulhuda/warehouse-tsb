@@ -73,11 +73,23 @@ export function UsersPage() {
     onError: (error) => toast.error(apiErrorMessage(error)),
   })
 
+  const toggleFlag = useMutation({
+    mutationFn: (params: {
+      id: string
+      autoApproveBooking?: boolean
+      canApproveBooking?: boolean
+    }) => updateUser(params.id, params),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['users'] })
+    },
+    onError: (error) => toast.error(apiErrorMessage(error)),
+  })
+
   return (
     <Main className='flex flex-1 flex-col gap-6'>
       <PageHeader
         title='Manajemen Pengguna'
-        description='Akun Security, Checker, dan Customer hanya bisa dibuat dari sini.'
+        description='Akun Security, Checker, dan Customer hanya bisa dibuat dari sini. Atur juga siapa yang boleh melewati antrean persetujuan booking.'
         actions={
           <Button size='sm' onClick={() => setCreateOpen(true)}>
             <Plus /> Tambah pengguna
@@ -131,6 +143,8 @@ export function UsersPage() {
                     <TableHead>Email</TableHead>
                     <TableHead>Peran</TableHead>
                     <TableHead>Perusahaan</TableHead>
+                    <TableHead className='text-center'>Booking otomatis</TableHead>
+                    <TableHead className='text-center'>Boleh menyetujui</TableHead>
                     <TableHead>Dibuat</TableHead>
                     <TableHead className='text-end'>Aktif</TableHead>
                   </TableRow>
@@ -154,6 +168,42 @@ export function UsersPage() {
                       </TableCell>
                       <TableCell className='text-sm'>
                         {user.companyName ?? '-'}
+                      </TableCell>
+                      <TableCell className='text-center'>
+                        {user.role === 'CUSTOMER' ? (
+                          <Switch
+                            checked={user.autoApproveBooking}
+                            disabled={toggleFlag.isPending}
+                            title='Saat mode Manual, booking customer ini tidak perlu antre'
+                            onCheckedChange={(checked) =>
+                              toggleFlag.mutate({
+                                id: user.id,
+                                autoApproveBooking: checked,
+                              })
+                            }
+                          />
+                        ) : (
+                          <span className='text-xs text-muted-foreground'>-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className='text-center'>
+                        {user.role === 'ADMIN' ? (
+                          // Admin selalu berhak; switch-nya dimatikan agar tidak
+                          // terlihat seolah masih bisa dicabut.
+                          <span className='text-xs text-muted-foreground'>Otomatis</span>
+                        ) : (
+                          <Switch
+                            checked={user.canApproveBooking}
+                            disabled={toggleFlag.isPending}
+                            title='Izinkan pengguna ini menyetujui booking'
+                            onCheckedChange={(checked) =>
+                              toggleFlag.mutate({
+                                id: user.id,
+                                canApproveBooking: checked,
+                              })
+                            }
+                          />
+                        )}
                       </TableCell>
                       <TableCell className='text-sm text-muted-foreground'>
                         {formatDate(user.createdAt)}

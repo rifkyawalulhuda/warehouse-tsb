@@ -18,6 +18,7 @@ import { PageHeader } from '@/components/page-header'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { ErrorBlock, LoadingBlock } from '@/components/query-state'
 import { StatusBadge } from '@/components/status-badge'
+import { ApprovalBadge } from '@/components/approval-badge'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -95,6 +96,41 @@ export function BookingDetail() {
       />
 
       <div className='grid gap-6 lg:grid-cols-3'>
+        {booking.approvalStatus !== 'NOT_REQUIRED' && (
+          <Card className='lg:col-span-3'>
+            <CardContent className='flex flex-wrap items-center gap-3 pt-6'>
+              <ApprovalBadge status={booking.approvalStatus} />
+              {booking.approvalStatus === 'PENDING' && (
+                <p className='text-sm text-muted-foreground'>
+                  Menunggu persetujuan Admin gudang.
+                  {booking.approvalDeadline && (
+                    <> Tenggat {formatDate(booking.approvalDeadline.slice(0, 10))}{' '}
+                      {formatTime(booking.approvalDeadline)}.</>
+                  )}{' '}
+                  QR baru aktif setelah disetujui.
+                </p>
+              )}
+              {booking.approvalStatus === 'APPROVED' && (
+                <p className='text-sm text-muted-foreground'>
+                  Disetujui{booking.approvedAt ? ` pada ${formatTime(booking.approvedAt)}` : ''}. QR
+                  sudah aktif bila data kendaraan lengkap.
+                </p>
+              )}
+              {booking.approvalStatus === 'REJECTED' && (
+                <p className='text-sm text-muted-foreground'>
+                  Alasan: {booking.rejectionReason ?? 'tidak dicatat'}. Silakan buat booking baru.
+                </p>
+              )}
+              {booking.approvalStatus === 'EXPIRED' && (
+                <p className='text-sm text-muted-foreground'>
+                  Booking kedaluwarsa karena tidak diputuskan sampai tenggat. Silakan buat
+                  booking baru.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         <Card className='lg:col-span-2'>
           <CardHeader>
             <CardTitle className='text-base'>Jadwal & dokumen</CardTitle>
@@ -105,7 +141,10 @@ export function BookingDetail() {
           </CardHeader>
           <CardContent className='grid gap-4 sm:grid-cols-2'>
             <Field label='Status'>
-              <StatusBadge status={booking.status} />
+              <div className='flex flex-wrap items-center gap-2'>
+                <StatusBadge status={booking.status} />
+                <ApprovalBadge status={booking.approvalStatus} />
+              </div>
             </Field>
             <Field label='Tanggal'>{formatDate(booking.bookingDate)}</Field>
             <Field label='Jam'>

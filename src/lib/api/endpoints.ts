@@ -2,6 +2,8 @@ import { api, getData, patchData, postData, putData } from './client'
 import type {
   ActivityItem,
   ActivityType,
+  ApprovalMode,
+  ApprovalStatus,
   AvailabilitySlot,
   Booking,
   Dock,
@@ -47,6 +49,10 @@ export function saveSettings(payload: {
   gracePeriodMinutes?: number
   earlyArrivalLimitMinutes?: number
   bookingWindowDays?: number
+  approvalMode?: ApprovalMode
+  approvalLeadMinutes?: number
+  approvalMinDecisionMinutes?: number
+  approvalUrgentBufferMinutes?: number
 }) {
   return putData<Settings>('/settings', payload)
 }
@@ -147,6 +153,33 @@ export function cancelBooking(id: string) {
   return postData<{ id: string; status: string }>(`/bookings/${id}/cancel`)
 }
 
+/* ----------------------------- approvals ----------------------------- */
+
+export type ApprovalQueue = {
+  status: ApprovalStatus
+  total: number
+  bookings: Booking[]
+}
+
+export function fetchApprovals(params?: { status?: ApprovalStatus; date?: string }) {
+  return getData<ApprovalQueue>('/approvals', { params })
+}
+
+export function approveBooking(id: string) {
+  return postData<Booking>(`/approvals/${id}/approve`)
+}
+
+export function rejectBooking(id: string, reason: string) {
+  return postData<Booking>(`/approvals/${id}/reject`, { reason })
+}
+
+export function batchApproveBookings(ids: string[]) {
+  return postData<{ approved: string[]; skipped: { id: string; reason: string }[] }>(
+    '/approvals/batch-approve',
+    { ids }
+  )
+}
+
 /* ---------------------------- tiket publik --------------------------- */
 
 export function fetchPublicTicket(qrToken: string) {
@@ -239,7 +272,10 @@ export function createUser(payload: {
 export function updateUser(
   id: string,
   payload: Partial<
-    Pick<ManagedUser, 'name' | 'phone' | 'companyName' | 'isActive'>
+    Pick<
+      ManagedUser,
+      'name' | 'phone' | 'companyName' | 'isActive' | 'autoApproveBooking' | 'canApproveBooking'
+    >
   > & { password?: string }
 ) {
   return patchData<ManagedUser>(`/users/${id}`, payload)

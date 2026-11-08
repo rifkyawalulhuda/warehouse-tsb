@@ -25,10 +25,12 @@ import { writeAudit } from '../../lib/audit'
 import {
   bookingSelect,
   buildBookingCode,
+  computeApprovalDeadline,
   getBookingById,
+  needsApproval,
   statusForVehicleData,
 } from './repository'
-import { getAvailability, releaseBlocks, reserveBlocks } from './quota-service'
+import { getAvailability, finalizeRelease, reserveBlocks } from './quota-service'
 import { generateQrToken } from '../../lib/auth'
 
 export const bookingsRouter = Router()
@@ -153,6 +155,15 @@ bookingsRouter.post('/', requireExactRole('CUSTOMER'), async (req, res, next) =>
     const driverName = body.driverName?.trim() ? body.driverName : null
     const complete = Boolean(plate && driverName)
 
+    // Keputusan approval dievaluasi SEKALI di sini dan disimpan. Job berkala
+    // tidak pernah mengevaluasi ulang, sehingga status booking tidak berubah
+    // tanpa ada yang meminta (keputusan grilling 3.3).
+    const approvalRequired = needsApproval({
+      approvalMode: settings.approvalMode,
+      role: user.role,
+      autoApproveBooking: user.autoApproveBooking,
+    })
+
     const created = await prisma.$transaction(
       async (tx) => {
         // Nomor urut per hari dikunci lebih dulu agar booking_code tetap rapi
@@ -191,6 +202,18 @@ bookingsRouter.post('/', requireExactRole('CUSTOMER'), async (req, res, next) =>
         const startTime = jakartaInstant(body.bookingDate, body.startMinute)
         const endTime = new Date(startTime.getTime() + truckType.durationMinutes * 60_000)
 
+        // `createdAt` dipakai bersama oleh kolom dan perhitungan tenggat supaya
+        // keduanya tidak beda beberapa milidetik.
+        const createdAt = new Date()
+        const approvalDeadline = approvalRequired
+          ? computeApprovalDeadline({
+              startTime,
+              createdAt,
+              leadMinutes: settings.approvalLeadMinutes,
+              minDecisionMinutes: settings.approvalMinDecisionMinutes,
+            })
+          : null
+
         const booking = await tx.booking.create({
           data: {
             bookingCode: buildBookingCode(body.bookingDate, sequence),
@@ -207,6 +230,9 @@ bookingsRouter.post('/', requireExactRole('CUSTOMER'), async (req, res, next) =>
             driverPhone: body.driverPhone || null,
             blocksLocked,
             status: complete ? 'BOOKED_READY' : 'BOOKED_INCOMPLETE',
+            approvalStatus: approvalRequired ? 'PENDING' : 'NOT_REQUIRED',
+            approvalDeadline,
+            createdAt,
             timeLog: {
               create: {
                 vehicleCompletedAt: complete ? new Date() : null,
@@ -226,6 +252,7 @@ bookingsRouter.post('/', requireExactRole('CUSTOMER'), async (req, res, next) =>
               bookingCode: booking.bookingCode,
               startMinute: body.startMinute,
               blocksRequired: blocksLocked,
+              approvalStatus: booking.approvalStatus,
             },
           },
           tx as Tx
@@ -430,7 +457,8 @@ bookingsRouter.post('/:id/cancel', async (req, res, next) => {
     const window = toWindow(settings)
 
     await prisma.$transaction(async (tx) => {
-      await releaseBlocks(tx, {
+      await finalizeRelease(tx, {
+        bookingId: id,
         date: utcToDateOnly(booking.bookingDate),
         activity: booking.activityType,
         startMinute: minuteOfDayJakarta(booking.startTime),

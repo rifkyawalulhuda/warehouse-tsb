@@ -7,7 +7,7 @@ import {
   todayISO,
   utcToDateOnly,
 } from '../lib/time'
-import { releaseBlocks } from '../modules/bookings/quota-service'
+import { finalizeRelease } from '../modules/bookings/quota-service'
 import { emitBookingUpdated } from '../realtime'
 import { writeAudit } from '../lib/audit'
 
@@ -31,6 +31,10 @@ export async function markNoShowBookings(now: Date = new Date()): Promise<number
   const candidates = await prisma.booking.findMany({
     where: {
       status: { in: ['BOOKED_INCOMPLETE', 'BOOKED_READY'] },
+      // Booking yang masih menunggu keputusan Admin adalah wilayah job expire,
+      // bukan NO_SHOW. Tanpa filter ini booking PENDING akan dicap NO_SHOW dan
+      // bucket KPI `expiredPending` tidak pernah terisi.
+      approvalStatus: { not: 'PENDING' },
       // Batasi ke tanggal yang mungkin sudah tutup; hari ini disaring di bawah.
       bookingDate: { lte: dateOnlyToUtc(todayISO()) },
     },
@@ -44,7 +48,8 @@ export async function markNoShowBookings(now: Date = new Date()): Promise<number
     if (!isOperationalDayOver(date, now, window.endMinute)) continue
 
     await prisma.$transaction(async (tx) => {
-      await releaseBlocks(tx, {
+      await finalizeRelease(tx, {
+        bookingId: booking.id,
         date,
         activity: booking.activityType,
         startMinute: minuteOfDayJakarta(booking.startTime),

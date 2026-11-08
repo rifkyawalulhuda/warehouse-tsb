@@ -51,6 +51,24 @@ enum BookingStatus {
   NO_SHOW
 }
 
+/// Kebijakan persetujuan booking di tingkat gudang.
+/// AUTO   = perilaku awal: semua booking langsung sah.
+/// MANUAL = hanya customer yang di-whitelist (auto_approve_booking) yang otomatis.
+enum ApprovalMode {
+  AUTO
+  MANUAL
+}
+
+/// Sumbu status persetujuan, terpisah dari BookingStatus supaya 18 pemanggil
+/// BookingStatus tidak perlu diubah. Lihat docs/rencana-approval-booking.md §1.
+enum ApprovalStatus {
+  NOT_REQUIRED
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
 model User {
   id           String   @id @default(uuid()) @db.Uuid
   name         String   @db.VarChar(120)
@@ -60,10 +78,15 @@ model User {
   passwordHash String   @map("password_hash") @db.VarChar(120)
   role         Role
   isActive     Boolean  @default(true) @map("is_active")
+  /// Whitelist customer: saat approval_mode = MANUAL, booking-nya tidak perlu antre.
+  autoApproveBooking Boolean @default(false) @map("auto_approve_booking")
+  /// Memberi hak approve ke non-ADMIN. Role ADMIN selalu berhak tanpa flag ini.
+  canApproveBooking  Boolean @default(false) @map("can_approve_booking")
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   bookings          Booking[]      @relation("CustomerBookings")
+  approvals         Booking[]      @relation("BookingApprovals")
   gateInLogs        BookingTimeLog[] @relation("GateInBy")
   dockAssignLogs    BookingTimeLog[] @relation("DockAssignedBy")
   processStartLogs  BookingTimeLog[] @relation("ProcessStartedBy")
@@ -85,6 +108,16 @@ model WarehouseSetting {
   gracePeriodMinutes       Int    @default(15) @map("grace_period_minutes")
   earlyArrivalLimitMinutes Int    @default(60) @map("early_arrival_limit_minutes")
   bookingWindowDays        Int    @default(7) @map("booking_window_days")
+
+  /// Kebijakan persetujuan booking. Rilis sebagai AUTO supaya perilaku tidak berubah.
+  approvalMode              ApprovalMode @default(AUTO) @map("approval_mode")
+  /// Keputusan Admin harus selesai minimal N menit sebelum jam kedatangan.
+  approvalLeadMinutes       Int          @default(30) @map("approval_lead_minutes")
+  /// Jendela keputusan minimum sejak booking dibuat, agar booking mendesak tetap bisa diputuskan.
+  approvalMinDecisionMinutes Int         @default(15) @map("approval_min_decision_minutes")
+  /// Ambang label "MENDESAK" di antrean (hanya memengaruhi badge, bukan keputusan).
+  approvalUrgentBufferMinutes Int        @default(1440) @map("approval_urgent_buffer_minutes")
+
   updatedAt                DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@map("warehouse_settings")
@@ -163,18 +196,33 @@ model Booking {
   status         BookingStatus
   lateMinutes    Int    @default(0) @map("late_minutes")
 
+  /// Sumbu persetujuan, ortogonal terhadap status. Default NOT_REQUIRED agar
+  /// booking tanpa antrean (mode AUTO / whitelist / data lama) tidak berubah.
+  approvalStatus   ApprovalStatus @default(NOT_REQUIRED) @map("approval_status")
+  /// Batas waktu keputusan Admin. Null bila approvalStatus = NOT_REQUIRED.
+  approvalDeadline DateTime?      @map("approval_deadline") @db.Timestamptz(3)
+  approvedById     String?        @map("approved_by_id") @db.Uuid
+  approvedAt       DateTime?      @map("approved_at") @db.Timestamptz(3)
+  /// Wajib terisi bila approvalStatus = REJECTED.
+  rejectionReason  String?        @map("rejection_reason") @db.VarChar(240)
+  /// Guard agar kuota dirilis tepat sekali (keputusan grilling 2.2 / rencana §4.3).
+  quotaReleasedAt  DateTime?      @map("quota_released_at") @db.Timestamptz(3)
+
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   customer     User            @relation("CustomerBookings", fields: [customerId], references: [id])
   truckType    TruckType       @relation(fields: [truckTypeId], references: [id])
   assignedDock Dock?           @relation("AssignedDock", fields: [assignedDockId], references: [id])
+  approvedBy   User?           @relation("BookingApprovals", fields: [approvedById], references: [id], onDelete: SetNull)
   timeLog      BookingTimeLog?
   auditLogs    AuditLog[]
 
   @@index([bookingDate, status])
   @@index([customerId, bookingDate])
   @@index([status, startTime])
+  @@index([approvalStatus, approvalDeadline])
+  @@index([approvalStatus, bookingDate])
   @@map("bookings")
 }
 
