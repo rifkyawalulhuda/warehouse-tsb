@@ -239,10 +239,9 @@ masterRouter.patch('/truck-types/:id', requireExactRole('ADMIN'), async (req, re
     // Durasi baru menentukan blok baru; kalau durasi tidak ikut diubah, blok
     // lama dipertahankan apa adanya.
     const durationMinutes = body.durationMinutes ?? existing.durationMinutes
-    const blocksRequired =
-      body.durationMinutes === undefined
-        ? existing.blocksRequired
-        : await blocksForDuration(durationMinutes)
+    const blocksRequired = body.durationMinutes !== undefined
+      ? await blocksForDuration(durationMinutes)
+      : existing.blocksRequired
 
     const updated = await prisma.truckType.update({
       where: { id },

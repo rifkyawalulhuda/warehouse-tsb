@@ -44,6 +44,22 @@ export function formatDateShort(value: string | Date | null | undefined) {
   }).format(date)
 }
 
+/**
+ * Tanggal ringkas untuk baris daftar: "Min 08 Nov". Tahun dibuang karena satu
+ * daftar booking praktis tidak pernah melintasi tahun, sedangkan nama hari dan
+ * bulan tetap yang membedakan satu baris dari baris lain.
+ */
+export function formatDateCompact(value: string | Date | null | undefined) {
+  const date = toDate(value)
+  if (!date) return DASH
+  return new Intl.DateTimeFormat('id-ID', {
+    weekday: 'short',
+    day: '2-digit',
+    month: 'short',
+    timeZone: TIME_ZONE,
+  }).format(date)
+}
+
 export function formatDateTime(value: string | Date | null | undefined) {
   const date = toDate(value)
   if (!date) return DASH

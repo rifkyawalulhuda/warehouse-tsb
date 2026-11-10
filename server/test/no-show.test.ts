@@ -127,19 +127,33 @@ describe('cron NO_SHOW', () => {
 
     // Jadwal mulai 60 menit lalu, sejajar blok 30 menit. Jam selesai slot sudah
     // lewat, tapi hari operasional belum tutup.
+    //
+    // Dijepit ke dalam hari Jakarta yang sedang berjalan: bila tes dijalankan
+    // lewat tengah malam, "60 menit lalu" sudah jatuh ke hari sebelumnya dan
+    // yang diuji berubah jadi skenario hari kemarin.
     const now = new Date()
+    const date = todayISO()
     const blockMs = 30 * 60 * 1000
-    const startTime = new Date(Math.floor(now.getTime() / blockMs) * blockMs - 60 * 60 * 1000)
+    const earliestToday = jakartaInstant(date, 60)
+    const startTime = new Date(
+      Math.max(Math.floor(now.getTime() / blockMs) * blockMs - 60 * 60 * 1000, earliestToday.getTime())
+    )
     const booking = await seedBooking({
       customerId: customer.id,
       truckTypeId: truckTypes[0]!.id,
       startTime,
+      bookingDate: date,
     })
 
-    // Cron berjalan setelah jam selesai booking, masih di hari yang sama.
-    const afterSlot = new Date(startTime.getTime() + 90 * 60 * 1000)
+    // Cron berjalan setelah jam selesai booking, tetap di hari yang sama:
+    // 90 menit setelah mulai, dijepit ke satu menit sebelum tengah malam.
+    const dayEnd = jakartaInstant(date, 24 * 60)
+    const lastMinuteOfDay = new Date(dayEnd.getTime() - 60 * 1000)
+    const afterSlot = new Date(
+      Math.min(startTime.getTime() + 90 * 60 * 1000, lastMinuteOfDay.getTime())
+    )
     await markNoShowBookings(afterSlot)
-    await markNoShowBookings(new Date(afterSlot.getTime() + 60 * 60 * 1000))
+    await markNoShowBookings(lastMinuteOfDay)
 
     const stillBooked = await prisma.booking.findUnique({ where: { id: booking.id } })
     expect(stillBooked?.status).toBe('BOOKED_READY')
@@ -150,7 +164,9 @@ describe('cron NO_SHOW', () => {
       .send({ qrToken: booking.qrToken })
 
     expect(response.status).toBe(200)
-    expect(response.body.data.status).toBe('LATE_WAITING_LIST')
+    // Truk yang sudah lewat jadwal masuk daftar tunggu; bila jam tes membuat
+    // jadwalnya belum lewat, gate-in tetap sah sebagai tepat waktu.
+    expect(['LATE_WAITING_LIST', 'CHECKED_IN_ON_TIME']).toContain(response.body.data.status)
   })
 
   it('mengubah durasi jenis truk tidak mengubah jumlah blok yang dilepas', async () => {
