@@ -94,6 +94,26 @@ export function addDaysISO(iso: string, days: number) {
   return date.toISOString().slice(0, 10)
 }
 
+/**
+ * `YYYY-MM-DD` menjadi Date tengah malam waktu lokal.
+ *
+ * Sengaja lokal, bukan UTC. Nilai ini menandai satu kotak di kalender, dan
+ * `new Date('2026-11-10')` (UTC) jatuh ke tanggal 9 bagi pengguna di zona
+ * waktu barat — kalender akan menyorot hari yang salah. Lewat pasangan
+ * `dateToISO` tanggalnya bolak-balik utuh di zona waktu mana pun.
+ */
+export function isoToDate(iso: string) {
+  const [year, month, day] = iso.split('-').map(Number)
+  return new Date(year, month - 1, day)
+}
+
+/** Kebalikan `isoToDate`: komponen tanggal lokal, tanpa geser zona waktu. */
+export function dateToISO(date: Date) {
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}-${month}-${day}`
+}
+
 export function durationLabel(minutes: number) {
   if (minutes < 60) return `${minutes} menit`
   const h = Math.floor(minutes / 60)

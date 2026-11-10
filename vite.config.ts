@@ -30,6 +30,11 @@ export default defineConfig({
     alias: {
       '@': path.resolve(import.meta.dirname, './src'),
     },
+    // Satu React untuk semua paket. Tanpa ini, modul Radix yang dimuat terpisah
+    // dari react-dom saat tes browser mendapat salinan React kedua yang tidak
+    // punya dispatcher aktif, dan hook-nya gagal dengan "Cannot read properties
+    // of null (reading 'useMemo')".
+    dedupe: ['react', 'react-dom'],
   },
   server: {
     // Frontend dan API satu origin saat dev, supaya cookie sesi ikut terkirim

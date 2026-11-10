@@ -29,6 +29,8 @@ import {
   waNumber,
 } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { useCanGoBack } from '@/hooks/use-can-go-back'
+import { useSetPageTitle } from '@/context/page-title-provider'
 import { Main } from '@/components/layout/main'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { ErrorBlock, LoadingBlock } from '@/components/query-state'
@@ -51,6 +53,14 @@ export function BookingDetail() {
   const { bookingId } = useParams({ from: '/_authenticated/bookings/$bookingId' })
   useRealtimeSync()
   const now = useNow()
+
+  // Halaman ini tidak memakai PageHeader (judulnya berupa kode booking), jadi
+  // judul bilah atas mobile didaftarkan langsung di sini.
+  useSetPageTitle('Detail Booking')
+
+  // Dipakai untuk memutuskan apakah tautan "Kembali ke Jadwal Saya" masih perlu
+  // tampil di layar sempit (lihat komentarnya di bawah).
+  const canGoBack = useCanGoBack()
 
   const queryClient = useQueryClient()
   const [vehicleOpen, setVehicleOpen] = useState(false)
@@ -81,7 +91,19 @@ export function BookingDetail() {
   return (
     <Main className='flex flex-1 flex-col gap-6'>
       <div className='flex flex-wrap items-center justify-between gap-3'>
-        <Button asChild variant='ghost' size='sm' className='-ms-2 text-muted-foreground'>
+        {/*
+          Di layar sempit bilah atas sudah punya tombol kembali, tapi hanya
+          kalau tab ini punya riwayat. Halaman detail kerap dibuka langsung
+          dari tautan WhatsApp — di sana tombol itu tidak muncul, dan tautan
+          inilah satu-satunya jalan pulang. Jadi ia disembunyikan hanya ketika
+          tombol kembali di bilah atas benar-benar ada.
+        */}
+        <Button
+          asChild
+          variant='ghost'
+          size='sm'
+          className={cn('-ms-2 text-muted-foreground', canGoBack && 'max-md:hidden')}
+        >
           <Link to='/bookings'>
             <ArrowLeft /> Kembali ke Jadwal Saya
           </Link>

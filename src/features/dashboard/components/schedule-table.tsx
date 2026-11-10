@@ -147,7 +147,12 @@ export function ScheduleTable({
                           className='text-muted-foreground'
                           asChild
                         >
-                          <a href={`/bookings/${booking.id}`}>Detail</a>
+                          {/* Link router, bukan <a href>: tautan biasa memuat
+                              ulang dokumen, dan riwayat SPA ikut hilang sehingga
+                              tombol kembali di bilah atas mobile tidak muncul. */}
+                          <Link to='/bookings/$bookingId' params={{ bookingId: booking.id }}>
+                            Detail
+                          </Link>
                         </Button>
                       )}
                     </TableCell>

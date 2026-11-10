@@ -11,13 +11,13 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { fetchCustomerOptions, fetchKpi, reportExportUrl } from '@/lib/api/endpoints'
-import { useRealtimeSync } from '@/hooks/use-realtime'
+import {
+  fetchCustomerOptions,
+  fetchKpi,
+  reportExportUrl,
+} from '@/lib/api/endpoints'
 import { addDaysISO, formatDateShort, todayISO } from '@/lib/format'
-import { Main } from '@/components/layout/main'
-import { PageHeader } from '@/components/page-header'
-import { ErrorBlock, LoadingBlock } from '@/components/query-state'
-import { StatusBadge } from '@/components/status-badge'
+import { useRealtimeSync } from '@/hooks/use-realtime'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -26,7 +26,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -42,6 +41,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { DatePicker } from '@/components/date-picker'
+import { Main } from '@/components/layout/main'
+import { PageHeader } from '@/components/page-header'
+import { ErrorBlock, LoadingBlock } from '@/components/query-state'
+import { StatusBadge } from '@/components/status-badge'
 
 export function ReportsPage() {
   useRealtimeSync()
@@ -56,7 +60,8 @@ export function ReportsPage() {
 
   const report = useQuery({
     queryKey: ['reports', from, to, customerId],
-    queryFn: () => fetchKpi(from, to, customerId === 'ALL' ? undefined : customerId),
+    queryFn: () =>
+      fetchKpi(from, to, customerId === 'ALL' ? undefined : customerId),
     enabled: from <= to,
   })
 
@@ -67,20 +72,18 @@ export function ReportsPage() {
         description='KPI operasional dan rekapitulasi per hari dalam rentang tanggal.'
         actions={
           <>
-            <Input
-              type='date'
+            <DatePicker
               value={from}
               max={to}
-              onChange={(event) => setFrom(event.target.value)}
-              className='h-9 w-auto'
+              onChange={setFrom}
+              className='w-44'
             />
-            <Input
-              type='date'
+            <DatePicker
               value={to}
               min={from}
               max={todayISO()}
-              onChange={(event) => setTo(event.target.value)}
-              className='h-9 w-auto'
+              onChange={setTo}
+              className='w-44'
             />
             <Select value={customerId} onValueChange={setCustomerId}>
               <SelectTrigger className='h-9 w-48'>
@@ -118,7 +121,10 @@ export function ReportsPage() {
       ) : report.isPending ? (
         <LoadingBlock label='Menghitung KPI...' />
       ) : report.isError ? (
-        <ErrorBlock error={report.error} onRetry={() => void report.refetch()} />
+        <ErrorBlock
+          error={report.error}
+          onRetry={() => void report.refetch()}
+        />
       ) : (
         <>
           <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
@@ -170,11 +176,26 @@ export function ReportsPage() {
                     }))}
                   >
                     <CartesianGrid strokeDasharray='3 3' vertical={false} />
-                    <XAxis dataKey='label' tickLine={false} axisLine={false} fontSize={12} />
-                    <YAxis allowDecimals={false} tickLine={false} axisLine={false} fontSize={12} />
+                    <XAxis
+                      dataKey='label'
+                      tickLine={false}
+                      axisLine={false}
+                      fontSize={12}
+                    />
+                    <YAxis
+                      allowDecimals={false}
+                      tickLine={false}
+                      axisLine={false}
+                      fontSize={12}
+                    />
                     <Tooltip />
                     <Legend />
-                    <Bar dataKey='total' name='Total' fill='var(--chart-1)' radius={[4, 4, 0, 0]} />
+                    <Bar
+                      dataKey='total'
+                      name='Total'
+                      fill='var(--chart-1)'
+                      radius={[4, 4, 0, 0]}
+                    />
                     <Bar
                       dataKey='completed'
                       name='Selesai'
@@ -194,7 +215,9 @@ export function ReportsPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle className='text-base'>Kedatangan vs kapasitas slot</CardTitle>
+                <CardTitle className='text-base'>
+                  Kedatangan vs kapasitas slot
+                </CardTitle>
                 <CardDescription>
                   Jumlah gate-in per jam dibanding kapasitas jam tersebut.
                 </CardDescription>
@@ -203,8 +226,18 @@ export function ReportsPage() {
                 <ResponsiveContainer width='100%' height='100%'>
                   <BarChart data={report.data.arrivalsByHour} barGap={2}>
                     <CartesianGrid strokeDasharray='3 3' vertical={false} />
-                    <XAxis dataKey='label' tickLine={false} axisLine={false} fontSize={12} />
-                    <YAxis allowDecimals={false} tickLine={false} axisLine={false} fontSize={12} />
+                    <XAxis
+                      dataKey='label'
+                      tickLine={false}
+                      axisLine={false}
+                      fontSize={12}
+                    />
+                    <YAxis
+                      allowDecimals={false}
+                      tickLine={false}
+                      axisLine={false}
+                      fontSize={12}
+                    />
                     <Tooltip />
                     <Legend />
                     <Bar
@@ -253,10 +286,18 @@ export function ReportsPage() {
                   <TableBody>
                     {report.data.rows.slice(0, 100).map((row) => (
                       <TableRow key={row.bookingCode}>
-                        <TableCell className='font-mono text-xs'>{row.bookingCode}</TableCell>
-                        <TableCell className='text-sm'>{row.bookingDate}</TableCell>
-                        <TableCell className='text-sm'>{row.customer}</TableCell>
-                        <TableCell className='text-sm'>{row.dockCode ?? '-'}</TableCell>
+                        <TableCell className='font-mono text-xs'>
+                          {row.bookingCode}
+                        </TableCell>
+                        <TableCell className='text-sm'>
+                          {row.bookingDate}
+                        </TableCell>
+                        <TableCell className='text-sm'>
+                          {row.customer}
+                        </TableCell>
+                        <TableCell className='text-sm'>
+                          {row.dockCode ?? '-'}
+                        </TableCell>
                         <TableCell>
                           <StatusBadge status={row.status} />
                         </TableCell>

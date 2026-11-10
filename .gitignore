@@ -29,6 +29,9 @@ server/dist
 *.sln
 *.sw?
 
+# Cache plugin TanStack Router (dibuat ulang tiap dev/test)
+/.tanstack/
+
 # Test coverage
 /coverage
 

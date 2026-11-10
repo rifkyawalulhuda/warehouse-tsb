@@ -1,24 +1,20 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { apiErrorMessage } from '@/lib/api/client'
-import { assignDock, fetchOpsDocks, fetchQueue, markNoShow } from '@/lib/api/endpoints'
-import type { Booking, DockWithBooking } from '@/lib/api/types'
-import { useRealtimeSync } from '@/hooks/use-realtime'
 import { useAuthStore } from '@/stores/auth-store'
+import { apiErrorMessage } from '@/lib/api/client'
+import {
+  assignDock,
+  fetchOpsDocks,
+  fetchQueue,
+  markNoShow,
+} from '@/lib/api/endpoints'
+import type { Booking, DockWithBooking } from '@/lib/api/types'
 import { activityLabels, formatTime, todayISO } from '@/lib/format'
-import { Main } from '@/components/layout/main'
-import { PageHeader } from '@/components/page-header'
-import { ConfirmDialog } from '@/components/confirm-dialog'
-import { ErrorBlock, LoadingBlock } from '@/components/query-state'
-import { StatusBadge } from '@/components/status-badge'
-import { ApprovalBadge } from '@/components/approval-badge'
+import { useRealtimeSync } from '@/hooks/use-realtime'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ApprovalsPanel } from '@/features/approvals'
 import {
   Select,
   SelectContent,
@@ -34,6 +30,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ApprovalBadge } from '@/components/approval-badge'
+import { ConfirmDialog } from '@/components/confirm-dialog'
+import { DatePicker } from '@/components/date-picker'
+import { Main } from '@/components/layout/main'
+import { PageHeader } from '@/components/page-header'
+import { ErrorBlock, LoadingBlock } from '@/components/query-state'
+import { StatusBadge } from '@/components/status-badge'
+import { ApprovalsPanel } from '@/features/approvals'
 
 /**
  * Satu layar untuk tiga antrean yang berbeda kepentingannya: yang tepat waktu,
@@ -75,8 +80,13 @@ export function QueuePage() {
   const docks = useQuery({ queryKey: ['ops', 'docks'], queryFn: fetchOpsDocks })
 
   const assign = useMutation({
-    mutationFn: ({ bookingId, dockId }: { bookingId: string; dockId: number }) =>
-      assignDock(bookingId, dockId),
+    mutationFn: ({
+      bookingId,
+      dockId,
+    }: {
+      bookingId: string
+      dockId: number
+    }) => assignDock(bookingId, dockId),
     onSuccess: () => {
       toast.success('Dock ditugaskan')
       setAssignTarget(null)
@@ -97,7 +107,8 @@ export function QueuePage() {
   })
 
   const availableDocks = useMemo(
-    () => (docks.data ?? []).filter((dock) => dock.currentStatus === 'AVAILABLE'),
+    () =>
+      (docks.data ?? []).filter((dock) => dock.currentStatus === 'AVAILABLE'),
     [docks.data]
   )
 
@@ -108,20 +119,20 @@ export function QueuePage() {
         description='Truk yang menunggu di area staging, dikelompokkan menurut status masuk.'
         actions={
           tab === 'queue' ? (
-            <Input
-              type='date'
-              value={date}
-              onChange={(event) => setDate(event.target.value)}
-              className='h-9 w-auto'
-            />
+            <DatePicker value={date} onChange={setDate} className='w-44' />
           ) : undefined
         }
       />
 
-      <Tabs value={tab} onValueChange={(value) => setTab(value as 'queue' | 'approvals')}>
+      <Tabs
+        value={tab}
+        onValueChange={(value) => setTab(value as 'queue' | 'approvals')}
+      >
         <TabsList>
           <TabsTrigger value='queue'>Antrean</TabsTrigger>
-          {canApprove && <TabsTrigger value='approvals'>Persetujuan</TabsTrigger>}
+          {canApprove && (
+            <TabsTrigger value='approvals'>Persetujuan</TabsTrigger>
+          )}
         </TabsList>
       </Tabs>
 
@@ -135,7 +146,11 @@ export function QueuePage() {
         <>
           <div className='grid gap-4 sm:grid-cols-4'>
             <Stat label='Tepat waktu' value={queue.data.onTime.length} />
-            <Stat label='Terlambat' value={queue.data.late.length} tone='warning' />
+            <Stat
+              label='Terlambat'
+              value={queue.data.late.length}
+              tone='warning'
+            />
             <Stat label='Di dock' value={queue.data.atDock.length} />
             <Stat label='Belum datang' value={queue.data.upcoming.length} />
           </div>
@@ -254,7 +269,7 @@ function Stat({
         <p
           className={
             tone === 'warning'
-              ? 'text-3xl font-semibold tabular-nums text-orange-600 dark:text-orange-400'
+              ? 'text-3xl font-semibold text-orange-600 tabular-nums dark:text-orange-400'
               : 'text-3xl font-semibold tabular-nums'
           }
         >
@@ -287,7 +302,11 @@ function QueueSection({
   highlight?: boolean
 }) {
   return (
-    <Card className={highlight && bookings.length > 0 ? 'border-orange-300/70' : undefined}>
+    <Card
+      className={
+        highlight && bookings.length > 0 ? 'border-orange-300/70' : undefined
+      }
+    >
       <CardHeader>
         <CardTitle className='text-base'>
           {title}{' '}
@@ -299,7 +318,9 @@ function QueueSection({
       </CardHeader>
       <CardContent>
         {bookings.length === 0 ? (
-          <p className='py-6 text-center text-sm text-muted-foreground'>Kosong.</p>
+          <p className='py-6 text-center text-sm text-muted-foreground'>
+            Kosong.
+          </p>
         ) : (
           <div className='overflow-x-auto'>
             <Table>
@@ -321,7 +342,7 @@ function QueueSection({
                       dock.allowedActivity === booking.activityType
                   )
 
-  return (
+                  return (
                     <TableRow key={booking.id}>
                       <TableCell className='font-mono text-xs'>
                         {booking.bookingCode}
@@ -333,7 +354,8 @@ function QueueSection({
                         </span>
                       </TableCell>
                       <TableCell className='text-sm'>
-                        {formatTime(booking.startTime)}–{formatTime(booking.endTime)}
+                        {formatTime(booking.startTime)}–
+                        {formatTime(booking.endTime)}
                         {booking.lateMinutes > 0 && (
                           <span className='ms-1 text-xs text-orange-600'>
                             +{booking.lateMinutes}m
@@ -383,7 +405,10 @@ function QueueSection({
                                 </SelectTrigger>
                                 <SelectContent>
                                   {compatible.map((dock) => (
-                                    <SelectItem key={dock.id} value={String(dock.id)}>
+                                    <SelectItem
+                                      key={dock.id}
+                                      value={String(dock.id)}
+                                    >
                                       {dock.dockCode}
                                     </SelectItem>
                                   ))}
