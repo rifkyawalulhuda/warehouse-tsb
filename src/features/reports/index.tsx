@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import type { ColumnDef } from '@tanstack/react-table'
 import { Download } from 'lucide-react'
 import {
   Bar,
@@ -16,6 +17,7 @@ import {
   fetchKpi,
   reportExportUrl,
 } from '@/lib/api/endpoints'
+import type { ReportRow } from '@/lib/api/types'
 import { addDaysISO, formatDateShort, todayISO } from '@/lib/format'
 import { useRealtimeSync } from '@/hooks/use-realtime'
 import { Button } from '@/components/ui/button'
@@ -33,19 +35,114 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { DataTable, DataTableColumnHeader } from '@/components/data-table'
 import { DatePicker } from '@/components/date-picker'
 import { Main } from '@/components/layout/main'
 import { PageHeader } from '@/components/page-header'
 import { ErrorBlock, LoadingBlock } from '@/components/query-state'
 import { StatusBadge } from '@/components/status-badge'
+
+/**
+ * Kolom angka memakai `accessorFn` numerik, bukan string: kalau tidak, "110"
+ * terurut sebelum "12" dan baris tanpa nilai ikut menyelip di tengah.
+ */
+const columns: ColumnDef<ReportRow>[] = [
+  {
+    accessorKey: 'bookingCode',
+    meta: { label: 'Kode', cellClassName: 'font-mono text-xs' },
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='Kode' />
+    ),
+  },
+  {
+    accessorKey: 'bookingDate',
+    meta: { label: 'Tanggal', cellClassName: 'text-sm' },
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='Tanggal' />
+    ),
+  },
+  {
+    accessorKey: 'customer',
+    meta: { label: 'Customer', cellClassName: 'text-sm' },
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='Customer' />
+    ),
+  },
+  {
+    id: 'dockCode',
+    accessorFn: (row) => row.dockCode ?? '',
+    meta: { label: 'Dock', cellClassName: 'text-sm' },
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='Dock' />
+    ),
+    cell: ({ row }) => row.original.dockCode ?? '-',
+  },
+  {
+    id: 'status',
+    accessorFn: (row) => row.status,
+    enableGlobalFilter: false,
+    meta: { label: 'Status' },
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='Status' />
+    ),
+    cell: ({ row }) => <StatusBadge status={row.original.status} />,
+  },
+  {
+    id: 'waitingMinutes',
+    // `?? undefined` (bukan `?? 0`) supaya TanStack menganggapnya kosong dan
+    // `sortUndefined: 'last'` menaruh baris tanpa durasi di bawah, bukan di atas.
+    accessorFn: (row) => row.waitingMinutes ?? undefined,
+    meta: {
+      label: 'Tunggu',
+      headerClassName: 'text-end',
+      cellClassName: 'text-end text-sm tabular-nums',
+    },
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='Tunggu' />
+    ),
+    cell: ({ row }) => row.original.waitingMinutes ?? '-',
+  },
+  {
+    id: 'processingMinutes',
+    accessorFn: (row) => row.processingMinutes ?? undefined,
+    meta: {
+      label: 'Proses',
+      headerClassName: 'text-end',
+      cellClassName: 'text-end text-sm tabular-nums',
+    },
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='Proses' />
+    ),
+    cell: ({ row }) => row.original.processingMinutes ?? '-',
+  },
+  {
+    id: 'turnaroundMinutes',
+    accessorFn: (row) => row.turnaroundMinutes ?? undefined,
+    meta: {
+      label: 'Turnaround',
+      headerClassName: 'text-end',
+      cellClassName: 'text-end text-sm tabular-nums',
+    },
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='Turnaround' />
+    ),
+    cell: ({ row }) => row.original.turnaroundMinutes ?? '-',
+  },
+  {
+    id: 'lateMinutes',
+    accessorFn: (row) => (row.lateMinutes > 0 ? row.lateMinutes : undefined),
+    meta: {
+      label: 'Terlambat',
+      headerClassName: 'text-end',
+      cellClassName: 'text-end text-sm tabular-nums',
+    },
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='Terlambat' />
+    ),
+    cell: ({ row }) =>
+      row.original.lateMinutes > 0 ? row.original.lateMinutes : '-',
+  },
+]
 
 export function ReportsPage() {
   useRealtimeSync()
@@ -268,56 +365,12 @@ export function ReportsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className='overflow-x-auto'>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Kode</TableHead>
-                      <TableHead>Tanggal</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Dock</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className='text-end'>Tunggu</TableHead>
-                      <TableHead className='text-end'>Proses</TableHead>
-                      <TableHead className='text-end'>Turnaround</TableHead>
-                      <TableHead className='text-end'>Terlambat</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {report.data.rows.slice(0, 100).map((row) => (
-                      <TableRow key={row.bookingCode}>
-                        <TableCell className='font-mono text-xs'>
-                          {row.bookingCode}
-                        </TableCell>
-                        <TableCell className='text-sm'>
-                          {row.bookingDate}
-                        </TableCell>
-                        <TableCell className='text-sm'>
-                          {row.customer}
-                        </TableCell>
-                        <TableCell className='text-sm'>
-                          {row.dockCode ?? '-'}
-                        </TableCell>
-                        <TableCell>
-                          <StatusBadge status={row.status} />
-                        </TableCell>
-                        <TableCell className='text-end text-sm tabular-nums'>
-                          {row.waitingMinutes ?? '-'}
-                        </TableCell>
-                        <TableCell className='text-end text-sm tabular-nums'>
-                          {row.processingMinutes ?? '-'}
-                        </TableCell>
-                        <TableCell className='text-end text-sm tabular-nums'>
-                          {row.turnaroundMinutes ?? '-'}
-                        </TableCell>
-                        <TableCell className='text-end text-sm tabular-nums'>
-                          {row.lateMinutes || '-'}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+              <DataTable
+                columns={columns}
+                data={report.data.rows}
+                getRowId={(row) => row.bookingCode}
+                emptyMessage='Tidak ada booking pada rentang tanggal ini.'
+              />
             </CardContent>
           </Card>
         </>

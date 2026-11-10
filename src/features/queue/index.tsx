@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { ColumnDef } from '@tanstack/react-table'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/auth-store'
 import { apiErrorMessage } from '@/lib/api/client'
@@ -22,17 +23,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ApprovalBadge } from '@/components/approval-badge'
 import { ConfirmDialog } from '@/components/confirm-dialog'
+import { DataTable, DataTableColumnHeader } from '@/components/data-table'
 import { DatePicker } from '@/components/date-picker'
 import { Main } from '@/components/layout/main'
 import { PageHeader } from '@/components/page-header'
@@ -301,6 +295,154 @@ function QueueSection({
   assignReset?: number
   highlight?: boolean
 }) {
+  const columns: ColumnDef<Booking>[] = [
+    {
+      accessorKey: 'bookingCode',
+      meta: { label: 'Kode', cellClassName: 'font-mono text-xs' },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Kode' />
+      ),
+    },
+    {
+      id: 'customer',
+      accessorFn: (booking) => booking.customer.name,
+      meta: { label: 'Customer', cellClassName: 'text-sm' },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Customer' />
+      ),
+      cell: ({ row }) => (
+        <>
+          {row.original.customer.name}
+          <span className='block text-xs text-muted-foreground'>
+            {activityLabels[row.original.activityType]}
+          </span>
+        </>
+      ),
+    },
+    {
+      accessorKey: 'startTime',
+      meta: { label: 'Jadwal', cellClassName: 'text-sm' },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Jadwal' />
+      ),
+      cell: ({ row }) => (
+        <>
+          {formatTime(row.original.startTime)}–
+          {formatTime(row.original.endTime)}
+          {row.original.lateMinutes > 0 && (
+            <span className='ms-1 text-xs text-orange-600'>
+              +{row.original.lateMinutes}m
+            </span>
+          )}
+        </>
+      ),
+    },
+    {
+      id: 'vehicle',
+      accessorFn: (booking) => booking.licensePlate ?? '',
+      meta: { label: 'Kendaraan', cellClassName: 'text-sm' },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Kendaraan' />
+      ),
+      cell: ({ row }) => (
+        <>
+          {row.original.licensePlate ?? '-'}
+          {row.original.driverName && (
+            <span className='block text-xs text-muted-foreground'>
+              {row.original.driverName}
+            </span>
+          )}
+        </>
+      ),
+    },
+    {
+      id: 'status',
+      accessorFn: (booking) => booking.status,
+      enableGlobalFilter: false,
+      meta: { label: 'Status' },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Status' />
+      ),
+      cell: ({ row }) => (
+        <div className='flex flex-col items-start gap-1'>
+          <StatusBadge status={row.original.status} />
+          <ApprovalBadge status={row.original.approvalStatus} />
+        </div>
+      ),
+    },
+    {
+      id: 'actions',
+      enableSorting: false,
+      enableHiding: false,
+      meta: {
+        label: 'Aksi',
+        headerClassName: 'text-end',
+        cellClassName: 'text-end',
+      },
+      header: () => <span>Aksi</span>,
+      cell: ({ row }) => {
+        const booking = row.original
+        const compatible = (docks ?? []).filter(
+          (dock) =>
+            dock.allowedActivity === 'BOTH' ||
+            dock.allowedActivity === booking.activityType
+        )
+
+        return (
+          <div className='flex items-center justify-end gap-2'>
+            {booking.approvalStatus === 'PENDING' && (
+              <span className='text-xs text-muted-foreground'>
+                Menunggu persetujuan
+              </span>
+            )}
+            {onAssign &&
+              booking.approvalStatus !== 'PENDING' &&
+              (compatible.length > 0 ? (
+                <Select
+                  // Dropdown ini uncontrolled: setelah dialog dibatalkan,
+                  // pilihan yang batal tetap tampil seolah dock sudah dipakai.
+                  // Ganti key supaya kembali ke "Pilih dock".
+                  key={`${booking.id}-${assignReset}`}
+                  disabled={assigning}
+                  onValueChange={(value) => {
+                    const dock = compatible.find(
+                      (item) => item.id === Number(value)
+                    )
+                    if (dock) onAssign(booking, dock)
+                  }}
+                >
+                  <SelectTrigger className='h-8 w-32'>
+                    <SelectValue placeholder='Pilih dock' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {compatible.map((dock) => (
+                      <SelectItem key={dock.id} value={String(dock.id)}>
+                        {dock.dockCode}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <span className='text-xs text-muted-foreground'>
+                  Tidak ada dock
+                </span>
+              ))}
+            {onNoShow && (
+              <Button
+                variant='ghost'
+                size='sm'
+                className='text-muted-foreground'
+                onClick={() => onNoShow(booking)}
+              >
+                No-show
+              </Button>
+            )}
+          </div>
+        )
+      },
+    },
+  ]
+
   return (
     <Card
       className={
@@ -322,121 +464,12 @@ function QueueSection({
             Kosong.
           </p>
         ) : (
-          <div className='overflow-x-auto'>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Kode</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Jadwal</TableHead>
-                  <TableHead>Kendaraan</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className='text-end'>Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {bookings.map((booking) => {
-                  const compatible = (docks ?? []).filter(
-                    (dock) =>
-                      dock.allowedActivity === 'BOTH' ||
-                      dock.allowedActivity === booking.activityType
-                  )
-
-                  return (
-                    <TableRow key={booking.id}>
-                      <TableCell className='font-mono text-xs'>
-                        {booking.bookingCode}
-                      </TableCell>
-                      <TableCell className='text-sm'>
-                        {booking.customer.name}
-                        <span className='block text-xs text-muted-foreground'>
-                          {activityLabels[booking.activityType]}
-                        </span>
-                      </TableCell>
-                      <TableCell className='text-sm'>
-                        {formatTime(booking.startTime)}–
-                        {formatTime(booking.endTime)}
-                        {booking.lateMinutes > 0 && (
-                          <span className='ms-1 text-xs text-orange-600'>
-                            +{booking.lateMinutes}m
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell className='text-sm'>
-                        {booking.licensePlate ?? '-'}
-                        {booking.driverName && (
-                          <span className='block text-xs text-muted-foreground'>
-                            {booking.driverName}
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className='flex flex-col items-start gap-1'>
-                          <StatusBadge status={booking.status} />
-                          <ApprovalBadge status={booking.approvalStatus} />
-                        </div>
-                      </TableCell>
-                      <TableCell className='text-end'>
-                        <div className='flex items-center justify-end gap-2'>
-                          {booking.approvalStatus === 'PENDING' && (
-                            <span className='text-xs text-muted-foreground'>
-                              Menunggu persetujuan
-                            </span>
-                          )}
-                          {onAssign &&
-                            booking.approvalStatus !== 'PENDING' &&
-                            (compatible.length > 0 ? (
-                              <Select
-                                // Dropdown ini uncontrolled: setelah dialog
-                                // dibatalkan, pilihan yang batal tetap tampil
-                                // seolah dock sudah dipakai. Ganti key supaya
-                                // kembali ke "Pilih dock".
-                                key={`${booking.id}-${assignReset}`}
-                                disabled={assigning}
-                                onValueChange={(value) => {
-                                  const dock = compatible.find(
-                                    (item) => item.id === Number(value)
-                                  )
-                                  if (dock) onAssign(booking, dock)
-                                }}
-                              >
-                                <SelectTrigger className='h-8 w-32'>
-                                  <SelectValue placeholder='Pilih dock' />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {compatible.map((dock) => (
-                                    <SelectItem
-                                      key={dock.id}
-                                      value={String(dock.id)}
-                                    >
-                                      {dock.dockCode}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            ) : (
-                              <span className='text-xs text-muted-foreground'>
-                                Tidak ada dock
-                              </span>
-                            ))}
-                          {onNoShow && (
-                            <Button
-                              variant='ghost'
-                              size='sm'
-                              className='text-muted-foreground'
-                              onClick={() => onNoShow(booking)}
-                            >
-                              No-show
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </div>
+          <DataTable
+            columns={columns}
+            data={bookings}
+            getRowId={(booking) => booking.id}
+            emptyMessage='Kosong.'
+          />
         )}
       </CardContent>
     </Card>

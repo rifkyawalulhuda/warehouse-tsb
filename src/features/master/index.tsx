@@ -1,10 +1,11 @@
-import { Fragment, useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import {
   useMutation,
   useQuery,
   useQueryClient,
   type UseQueryResult,
 } from '@tanstack/react-query'
+import type { ColumnDef } from '@tanstack/react-table'
 import {
   ArrowDownUp,
   Building2,
@@ -34,11 +35,9 @@ import {
   updateWarehouse,
 } from '@/lib/api/endpoints'
 import type { Customer, Dock, TruckType, Warehouse } from '@/lib/api/types'
-import { useRealtimeSync } from '@/hooks/use-realtime'
 import { durationLabel } from '@/lib/format'
-import { Main } from '@/components/layout/main'
-import { PageHeader } from '@/components/page-header'
-import { ErrorBlock, LoadingBlock } from '@/components/query-state'
+import { cn } from '@/lib/utils'
+import { useRealtimeSync } from '@/hooks/use-realtime'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -66,16 +65,11 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { cn } from '@/lib/utils'
+import { DataTable, DataTableColumnHeader } from '@/components/data-table'
+import { Main } from '@/components/layout/main'
+import { PageHeader } from '@/components/page-header'
+import { ErrorBlock, LoadingBlock } from '@/components/query-state'
 import { CustomerDialog, CustomerSection } from './customer-section'
 
 /**
@@ -105,12 +99,18 @@ export function MasterData() {
 
   const [editingDock, setEditingDock] = useState<Dock | null>(null)
   const [creatingDock, setCreatingDock] = useState(false)
-  const [editingWarehouse, setEditingWarehouse] = useState<Warehouse | null>(null)
+  const [editingWarehouse, setEditingWarehouse] = useState<Warehouse | null>(
+    null
+  )
   const [creatingWarehouse, setCreatingWarehouse] = useState(false)
-  const [editingTruckType, setEditingTruckType] = useState<TruckType | null>(null)
+  const [editingTruckType, setEditingTruckType] = useState<TruckType | null>(
+    null
+  )
   const [creatingTruckType, setCreatingTruckType] = useState(false)
   // `undefined` = dialog tertutup; `null` = membuat baru; objek = mengubah.
-  const [customerDialog, setCustomerDialog] = useState<Customer | null | undefined>(undefined)
+  const [customerDialog, setCustomerDialog] = useState<
+    Customer | null | undefined
+  >(undefined)
 
   const refreshMaster = () => {
     void queryClient.invalidateQueries({ queryKey: ['master'] })
@@ -125,8 +125,13 @@ export function MasterData() {
   }
 
   const toggleDock = useMutation({
-    mutationFn: ({ dock, status }: { dock: Dock; status: Dock['currentStatus'] }) =>
-      updateDock(dock.id, { currentStatus: status }),
+    mutationFn: ({
+      dock,
+      status,
+    }: {
+      dock: Dock
+      status: Dock['currentStatus']
+    }) => updateDock(dock.id, { currentStatus: status }),
     onSuccess: () => {
       toast.success('Status dock diperbarui')
       refreshMaster()
@@ -138,14 +143,17 @@ export function MasterData() {
     const all = docks.data?.docks ?? []
     const capacities = docks.data?.capacities
     return {
-      docksActive: all.filter((dock) => dock.currentStatus !== 'MAINTENANCE').length,
+      docksActive: all.filter((dock) => dock.currentStatus !== 'MAINTENANCE')
+        .length,
       docksTotal: all.length,
       loading: capacities?.LOADING ?? 0,
       unloading: capacities?.UNLOADING ?? 0,
-      truckTypesActive: truckTypes.data?.filter((type) => type.isActive).length ?? 0,
+      truckTypesActive:
+        truckTypes.data?.filter((type) => type.isActive).length ?? 0,
       truckTypesTotal: truckTypes.data?.length ?? 0,
       warehouseCount: warehouses.data?.length ?? 0,
-      customersActive: customers.data?.filter((customer) => customer.isActive).length ?? 0,
+      customersActive:
+        customers.data?.filter((customer) => customer.isActive).length ?? 0,
       customersTotal: customers.data?.length ?? 0,
     }
   }, [docks.data, truckTypes.data, warehouses.data, customers.data])
@@ -348,17 +356,23 @@ function SummaryCard({
     <Card className='gap-2 py-4'>
       <CardContent className='flex items-start justify-between gap-3'>
         <div className='min-w-0 space-y-1'>
-          <p className='truncate text-sm font-medium text-muted-foreground'>{label}</p>
+          <p className='truncate text-sm font-medium text-muted-foreground'>
+            {label}
+          </p>
           <p className='flex items-baseline gap-1'>
             <span className='text-2xl font-semibold tabular-nums'>{value}</span>
-            <span className='text-xs font-medium text-muted-foreground'>{unit}</span>
+            <span className='text-xs font-medium text-muted-foreground'>
+              {unit}
+            </span>
           </p>
-          <p className='line-clamp-2 text-[11px] text-muted-foreground'>{hint}</p>
+          <p className='line-clamp-2 text-[11px] text-muted-foreground'>
+            {hint}
+          </p>
         </div>
         <span
           className={cn(
             'flex size-9 shrink-0 items-center justify-center rounded-lg',
-            summaryTone[tone],
+            summaryTone[tone]
           )}
         >
           <Icon className='size-4.5' />
@@ -407,16 +421,6 @@ function SectionToolbar({
   )
 }
 
-function EmptyRow({ colSpan, children }: { colSpan: number; children: ReactNode }) {
-  return (
-    <TableRow>
-      <TableCell colSpan={colSpan} className='h-24 text-center text-muted-foreground'>
-        {children}
-      </TableCell>
-    </TableRow>
-  )
-}
-
 function DockSection({
   query,
   warehouses,
@@ -433,7 +437,9 @@ function DockSection({
   onCreate: () => void
 }) {
   const [search, setSearch] = useState('')
-  const [activity, setActivity] = useState<'ALL' | Dock['allowedActivity']>('ALL')
+  const [activity, setActivity] = useState<'ALL' | Dock['allowedActivity']>(
+    'ALL'
+  )
 
   const docks = query.data?.docks
   const capacities = query.data?.capacities
@@ -447,7 +453,8 @@ function DockSection({
       dock.dockCode.toLowerCase().includes(term) ||
       (dock.areaName ?? '').toLowerCase().includes(term) ||
       (dock.warehouse?.name ?? '').toLowerCase().includes(term)
-    const matchesActivity = activity === 'ALL' || dock.allowedActivity === activity
+    const matchesActivity =
+      activity === 'ALL' || dock.allowedActivity === activity
     return matchesTerm && matchesActivity
   })
 
@@ -467,63 +474,120 @@ function DockSection({
     return [...map.entries()].sort(([a], [b]) => a.localeCompare(b))
   })()
 
-  const renderRows = (rows: Dock[]) =>
-    rows.map((dock) => (
-      <TableRow key={dock.id}>
-        <TableCell className='font-medium'>{dock.dockCode}</TableCell>
-        <TableCell className='text-sm'>
-          {dock.areaName || <span className='text-muted-foreground'>Belum diisi</span>}
-        </TableCell>
-        <TableCell className='text-sm'>{dock.warehouse?.name ?? '—'}</TableCell>
-        <TableCell>
-          <div className='flex flex-wrap gap-1'>
-            {(dock.allowedActivity === 'BOTH'
-              ? ['LOADING', 'UNLOADING']
-              : [dock.allowedActivity]
-            ).map((item) => (
-              <Badge key={item} variant='outline' className='font-normal'>
-                {item === 'LOADING' ? 'Loading' : 'Unloading'}
-              </Badge>
-            ))}
+  const dockColumns: ColumnDef<Dock>[] = [
+    {
+      accessorKey: 'dockCode',
+      meta: { label: 'Kode', cellClassName: 'font-medium' },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Kode' />
+      ),
+    },
+    {
+      id: 'areaName',
+      accessorFn: (dock) => dock.areaName ?? '',
+      meta: { label: 'Nama Area', cellClassName: 'text-sm' },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Nama Area' />
+      ),
+      cell: ({ row }) =>
+        row.original.areaName || (
+          <span className='text-muted-foreground'>Belum diisi</span>
+        ),
+    },
+    {
+      id: 'warehouse',
+      accessorFn: (dock) => dock.warehouse?.name ?? '',
+      meta: { label: 'Warehouse', cellClassName: 'text-sm' },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Warehouse' />
+      ),
+      cell: ({ row }) => row.original.warehouse?.name ?? '—',
+    },
+    {
+      id: 'activity',
+      accessorFn: (dock) => dock.allowedActivity,
+      enableGlobalFilter: false,
+      meta: { label: 'Melayani' },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Melayani' />
+      ),
+      cell: ({ row }) => (
+        <div className='flex flex-wrap gap-1'>
+          {(row.original.allowedActivity === 'BOTH'
+            ? ['LOADING', 'UNLOADING']
+            : [row.original.allowedActivity]
+          ).map((item) => (
+            <Badge key={item} variant='outline' className='font-normal'>
+              {item === 'LOADING' ? 'Loading' : 'Unloading'}
+            </Badge>
+          ))}
+        </div>
+      ),
+    },
+    {
+      id: 'status',
+      accessorFn: (dock) => dock.currentStatus,
+      enableGlobalFilter: false,
+      meta: { label: 'Status' },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Status' />
+      ),
+      cell: ({ row }) =>
+        row.original.currentStatus === 'OCCUPIED' ? (
+          <div className='flex items-center gap-2'>
+            <Badge
+              variant='outline'
+              className='border-blue-300 text-blue-700 dark:border-blue-800 dark:text-blue-300'
+            >
+              Terpakai
+            </Badge>
+            <span className='text-xs text-muted-foreground'>
+              dikunci booking aktif
+            </span>
           </div>
-        </TableCell>
-        <TableCell>
-          {dock.currentStatus === 'OCCUPIED' ? (
-            <div className='flex items-center gap-2'>
-              <Badge
-                variant='outline'
-                className='border-blue-300 text-blue-700 dark:border-blue-800 dark:text-blue-300'
-              >
-                Terpakai
-              </Badge>
-              <span className='text-xs text-muted-foreground'>
-                dikunci booking aktif
-              </span>
-            </div>
-          ) : (
-            <label className='flex cursor-pointer items-center gap-2'>
-              <Switch
-                checked={dock.currentStatus === 'AVAILABLE'}
-                disabled={toggling}
-                onCheckedChange={(checked) =>
-                  onToggle({ dock, status: checked ? 'AVAILABLE' : 'MAINTENANCE' })
-                }
-                aria-label={`Status ${dock.dockCode}, ${dock.currentStatus === 'AVAILABLE' ? 'tersedia' : 'perawatan'}`}
-              />
-              <span className='text-sm'>
-                {dock.currentStatus === 'AVAILABLE' ? 'Tersedia' : 'Perawatan'}
-              </span>
-            </label>
-          )}
-        </TableCell>
-        <TableCell className='text-right'>
-          <Button size='sm' variant='outline' onClick={() => onEdit(dock)}>
-            <PencilLine />
-            Ubah
-          </Button>
-        </TableCell>
-      </TableRow>
-    ))
+        ) : (
+          <label className='flex cursor-pointer items-center gap-2'>
+            <Switch
+              checked={row.original.currentStatus === 'AVAILABLE'}
+              disabled={toggling}
+              onCheckedChange={(checked) =>
+                onToggle({
+                  dock: row.original,
+                  status: checked ? 'AVAILABLE' : 'MAINTENANCE',
+                })
+              }
+              aria-label={`Status ${row.original.dockCode}, ${row.original.currentStatus === 'AVAILABLE' ? 'tersedia' : 'perawatan'}`}
+            />
+            <span className='text-sm'>
+              {row.original.currentStatus === 'AVAILABLE'
+                ? 'Tersedia'
+                : 'Perawatan'}
+            </span>
+          </label>
+        ),
+    },
+    {
+      id: 'actions',
+      enableSorting: false,
+      enableHiding: false,
+      meta: {
+        label: 'Aksi',
+        headerClassName: 'text-right',
+        cellClassName: 'text-right',
+      },
+      header: () => <span>Aksi</span>,
+      cell: ({ row }) => (
+        <Button
+          size='sm'
+          variant='outline'
+          onClick={() => onEdit(row.original)}
+        >
+          <PencilLine />
+          Ubah
+        </Button>
+      ),
+    },
+  ]
 
   return (
     <Card>
@@ -547,7 +611,10 @@ function DockSection({
             value={activity}
             onValueChange={(value) => setActivity(value as typeof activity)}
           >
-            <SelectTrigger className='w-full sm:w-44' aria-label='Filter aktivitas'>
+            <SelectTrigger
+              className='w-full sm:w-44'
+              aria-label='Filter aktivitas'
+            >
               <ArrowDownUp className='size-4 text-muted-foreground' />
               <SelectValue />
             </SelectTrigger>
@@ -563,48 +630,36 @@ function DockSection({
         {query.isPending ? (
           <LoadingBlock label='Memuat dock...' />
         ) : query.isError ? (
-          <ErrorBlock error={query.error} onRetry={() => void query.refetch()} />
+          <ErrorBlock
+            error={query.error}
+            onRetry={() => void query.refetch()}
+          />
         ) : (
           <>
             {/* Desktop: tabel penuh. Mobile: kartu, karena 6 kolom tidak terbaca. */}
             <div className='hidden md:block'>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Kode</TableHead>
-                    <TableHead>Nama Area</TableHead>
-                    <TableHead>Warehouse</TableHead>
-                    <TableHead>Melayani</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className='text-right'>Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {grouped
-                    ? grouped.map(([warehouseName, rows]) => (
-                        <Fragment key={`group-${warehouseName}`}>
-                          <TableRow className='bg-muted/40 hover:bg-muted/40'>
-                            <TableCell colSpan={6} className='py-1.5'>
-                              <span className='flex items-center gap-1.5 text-xs font-medium text-muted-foreground'>
-                                <WarehouseIcon className='size-3.5' />
-                                {warehouseName}
-                                <span className='tabular-nums'>({rows.length})</span>
-                              </span>
-                            </TableCell>
-                          </TableRow>
-                          {renderRows(rows)}
-                        </Fragment>
-                      ))
-                    : renderRows(filtered)}
-                  {filtered.length === 0 && (
-                    <EmptyRow colSpan={6}>
-                      {(docks?.length ?? 0) === 0
-                        ? 'Belum ada dock. Tambahkan satu supaya booking bisa diparkir.'
-                        : 'Tidak ada dock yang cocok dengan pencarian.'}
-                    </EmptyRow>
-                  )}
-                </TableBody>
-              </Table>
+              <DataTable
+                columns={dockColumns}
+                data={filtered}
+                getRowId={(dock) => String(dock.id)}
+                groupBy={
+                  grouped
+                    ? (dock) => dock.warehouse?.name ?? 'Tanpa gudang'
+                    : undefined
+                }
+                groupLabel={(name, count) => (
+                  <>
+                    <WarehouseIcon className='size-3.5' />
+                    {name}
+                    <span className='tabular-nums'>({count})</span>
+                  </>
+                )}
+                emptyMessage={
+                  (docks?.length ?? 0) === 0
+                    ? 'Belum ada dock. Tambahkan satu supaya booking bisa diparkir.'
+                    : 'Tidak ada dock yang cocok dengan pencarian.'
+                }
+              />
             </div>
 
             <div className='space-y-2 md:hidden'>
@@ -614,10 +669,15 @@ function DockSection({
                     <div className='min-w-0'>
                       <p className='font-medium'>{dock.dockCode}</p>
                       <p className='truncate text-xs text-muted-foreground'>
-                        {dock.areaName || 'Area belum diisi'} · {dock.warehouse?.name ?? '—'}
+                        {dock.areaName || 'Area belum diisi'} ·{' '}
+                        {dock.warehouse?.name ?? '—'}
                       </p>
                     </div>
-                    <Button size='sm' variant='outline' onClick={() => onEdit(dock)}>
+                    <Button
+                      size='sm'
+                      variant='outline'
+                      onClick={() => onEdit(dock)}
+                    >
                       <PencilLine />
                       Ubah
                     </Button>
@@ -627,7 +687,11 @@ function DockSection({
                       ? ['LOADING', 'UNLOADING']
                       : [dock.allowedActivity]
                     ).map((item) => (
-                      <Badge key={item} variant='outline' className='font-normal'>
+                      <Badge
+                        key={item}
+                        variant='outline'
+                        className='font-normal'
+                      >
                         {item === 'LOADING' ? 'Loading' : 'Unloading'}
                       </Badge>
                     ))}
@@ -652,7 +716,9 @@ function DockSection({
                           aria-label={`Status ${dock.dockCode}`}
                         />
                         <span className='text-xs'>
-                          {dock.currentStatus === 'AVAILABLE' ? 'Tersedia' : 'Perawatan'}
+                          {dock.currentStatus === 'AVAILABLE'
+                            ? 'Tersedia'
+                            : 'Perawatan'}
                         </span>
                       </label>
                     )}
@@ -696,13 +762,91 @@ function TruckTypeSection({
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase()
     return (types ?? []).filter((type) => {
-      const matchesTerm = term === '' || type.truckName.toLowerCase().includes(term)
+      const matchesTerm =
+        term === '' || type.truckName.toLowerCase().includes(term)
       const matchesActive = !onlyActive || type.isActive
       return matchesTerm && matchesActive
     })
   }, [types, search, onlyActive])
 
   const activeCount = (types ?? []).filter((type) => type.isActive).length
+
+  const truckTypeColumns: ColumnDef<TruckType>[] = [
+    {
+      accessorKey: 'truckName',
+      meta: { label: 'Jenis', cellClassName: 'font-medium' },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Jenis' />
+      ),
+    },
+    {
+      accessorKey: 'durationMinutes',
+      meta: { label: 'Durasi' },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Durasi' />
+      ),
+      cell: ({ row }) => (
+        <div className='flex flex-wrap items-center gap-1.5 text-sm'>
+          {durationLabel(row.original.durationMinutes)}
+          <Badge variant='secondary' className='font-normal tabular-nums'>
+            {row.original.blocksRequired} blok
+          </Badge>
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'sortOrder',
+      meta: {
+        label: 'Urutan',
+        cellClassName: 'text-sm tabular-nums text-muted-foreground',
+      },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Urutan' />
+      ),
+    },
+    {
+      id: 'status',
+      accessorFn: (type) => type.isActive,
+      enableGlobalFilter: false,
+      meta: { label: 'Status' },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Status' />
+      ),
+      cell: ({ row }) => (
+        <Badge
+          variant='outline'
+          className={
+            row.original.isActive
+              ? 'border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-300'
+              : 'border-border text-muted-foreground'
+          }
+        >
+          {row.original.isActive ? 'Aktif' : 'Nonaktif'}
+        </Badge>
+      ),
+    },
+    {
+      id: 'actions',
+      enableSorting: false,
+      enableHiding: false,
+      meta: {
+        label: 'Aksi',
+        headerClassName: 'text-right',
+        cellClassName: 'text-right',
+      },
+      header: () => <span>Aksi</span>,
+      cell: ({ row }) => (
+        <Button
+          size='sm'
+          variant='outline'
+          onClick={() => onEdit(row.original)}
+        >
+          <PencilLine />
+          Ubah
+        </Button>
+      ),
+    },
+  ]
 
   return (
     <Card>
@@ -734,70 +878,29 @@ function TruckTypeSection({
 
         {query.data && activeCount === 0 && (
           <p className='rounded-lg border border-amber-300/70 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-300'>
-            Tidak ada jenis truk aktif. Customer tidak bisa membuat booking sampai
-            minimal satu jenis diaktifkan kembali.
+            Tidak ada jenis truk aktif. Customer tidak bisa membuat booking
+            sampai minimal satu jenis diaktifkan kembali.
           </p>
         )}
 
         {query.isPending ? (
           <LoadingBlock label='Memuat jenis truk...' />
         ) : query.isError ? (
-          <ErrorBlock error={query.error} onRetry={() => void query.refetch()} />
+          <ErrorBlock
+            error={query.error}
+            onRetry={() => void query.refetch()}
+          />
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Jenis</TableHead>
-                <TableHead>Durasi</TableHead>
-                <TableHead>Urutan</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className='text-right'>Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((type) => (
-                <TableRow key={type.id} className={type.isActive ? '' : 'opacity-70'}>
-                  <TableCell className='font-medium'>{type.truckName}</TableCell>
-                  <TableCell>
-                    <div className='flex flex-wrap items-center gap-1.5 text-sm'>
-                      {durationLabel(type.durationMinutes)}
-                      <Badge variant='secondary' className='font-normal tabular-nums'>
-                        {type.blocksRequired} blok
-                      </Badge>
-                    </div>
-                  </TableCell>
-                  <TableCell className='text-sm tabular-nums text-muted-foreground'>
-                    {type.sortOrder}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant='outline'
-                      className={
-                        type.isActive
-                          ? 'border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-300'
-                          : 'border-border text-muted-foreground'
-                      }
-                    >
-                      {type.isActive ? 'Aktif' : 'Nonaktif'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className='text-right'>
-                    <Button size='sm' variant='outline' onClick={() => onEdit(type)}>
-                      <PencilLine />
-                      Ubah
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filtered.length === 0 && (
-                <EmptyRow colSpan={5}>
-                  {(types?.length ?? 0) === 0
-                    ? 'Belum ada jenis truk.'
-                    : 'Tidak ada jenis truk yang cocok dengan pencarian.'}
-                </EmptyRow>
-              )}
-            </TableBody>
-          </Table>
+          <DataTable
+            columns={truckTypeColumns}
+            data={filtered}
+            getRowId={(type) => String(type.id)}
+            emptyMessage={
+              (types?.length ?? 0) === 0
+                ? 'Belum ada jenis truk.'
+                : 'Tidak ada jenis truk yang cocok dengan pencarian.'
+            }
+          />
         )}
       </CardContent>
     </Card>
@@ -855,7 +958,9 @@ function TruckTypeDialog({
         : updateTruckType(type.id, payload)
     },
     onSuccess: () => {
-      toast.success(creating ? 'Jenis truk ditambahkan' : 'Jenis truk diperbarui')
+      toast.success(
+        creating ? 'Jenis truk ditambahkan' : 'Jenis truk diperbarui'
+      )
       onChanged()
       onDone()
     },
@@ -981,9 +1086,71 @@ function WarehouseSection({
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase()
     return (list ?? []).filter((warehouse) =>
-      warehouse.name.toLowerCase().includes(term),
+      warehouse.name.toLowerCase().includes(term)
     )
   }, [list, search])
+
+  const warehouseColumns: ColumnDef<Warehouse>[] = [
+    {
+      accessorKey: 'name',
+      meta: { label: 'Nama', cellClassName: 'font-medium' },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Nama' />
+      ),
+    },
+    {
+      id: 'docks',
+      accessorFn: (warehouse) => warehouse._count?.docks ?? 0,
+      enableGlobalFilter: false,
+      meta: { label: 'Dock', cellClassName: 'text-sm tabular-nums' },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Dock' />
+      ),
+      cell: ({ row }) => row.original._count?.docks ?? 0,
+    },
+    {
+      id: 'status',
+      accessorFn: (warehouse) => warehouse.isActive,
+      enableGlobalFilter: false,
+      meta: { label: 'Status' },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Status' />
+      ),
+      cell: ({ row }) => (
+        <Badge
+          variant='outline'
+          className={
+            row.original.isActive
+              ? 'border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-300'
+              : 'border-border text-muted-foreground'
+          }
+        >
+          {row.original.isActive ? 'Aktif' : 'Nonaktif'}
+        </Badge>
+      ),
+    },
+    {
+      id: 'actions',
+      enableSorting: false,
+      enableHiding: false,
+      meta: {
+        label: 'Aksi',
+        headerClassName: 'text-right',
+        cellClassName: 'text-right',
+      },
+      header: () => <span>Aksi</span>,
+      cell: ({ row }) => (
+        <Button
+          size='sm'
+          variant='outline'
+          onClick={() => onEdit(row.original)}
+        >
+          <PencilLine />
+          Ubah
+        </Button>
+      ),
+    },
+  ]
 
   return (
     <Card>
@@ -1007,56 +1174,21 @@ function WarehouseSection({
         {query.isPending ? (
           <LoadingBlock label='Memuat gudang...' />
         ) : query.isError ? (
-          <ErrorBlock error={query.error} onRetry={() => void query.refetch()} />
+          <ErrorBlock
+            error={query.error}
+            onRetry={() => void query.refetch()}
+          />
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nama</TableHead>
-                <TableHead>Dock</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className='text-right'>Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((warehouse) => (
-                <TableRow
-                  key={warehouse.id}
-                  className={warehouse.isActive ? '' : 'opacity-70'}
-                >
-                  <TableCell className='font-medium'>{warehouse.name}</TableCell>
-                  <TableCell className='text-sm tabular-nums'>
-                    {warehouse._count?.docks ?? 0}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant='outline'
-                      className={
-                        warehouse.isActive
-                          ? 'border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-300'
-                          : 'border-border text-muted-foreground'
-                      }
-                    >
-                      {warehouse.isActive ? 'Aktif' : 'Nonaktif'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className='text-right'>
-                    <Button size='sm' variant='outline' onClick={() => onEdit(warehouse)}>
-                      <PencilLine />
-                      Ubah
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filtered.length === 0 && (
-                <EmptyRow colSpan={4}>
-                  {(list?.length ?? 0) === 0
-                    ? 'Belum ada gudang. Tambahkan satu supaya setiap dock punya tujuan.'
-                    : 'Tidak ada gudang yang cocok dengan pencarian.'}
-                </EmptyRow>
-              )}
-            </TableBody>
-          </Table>
+          <DataTable
+            columns={warehouseColumns}
+            data={filtered}
+            getRowId={(warehouse) => String(warehouse.id)}
+            emptyMessage={
+              (list?.length ?? 0) === 0
+                ? 'Belum ada gudang. Tambahkan satu supaya setiap dock punya tujuan.'
+                : 'Tidak ada gudang yang cocok dengan pencarian.'
+            }
+          />
         )}
       </CardContent>
     </Card>
@@ -1079,7 +1211,9 @@ function WarehouseDialog({
   const dockCount = warehouse?._count?.docks ?? 0
   const valid = name.trim().length >= 2
   const dirty =
-    creating || name.trim() !== warehouse.name || isActive !== warehouse.isActive
+    creating ||
+    name.trim() !== warehouse.name ||
+    isActive !== warehouse.isActive
 
   const save = useMutation({
     mutationFn: () => {
@@ -1105,10 +1239,12 @@ function WarehouseDialog({
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{creating ? 'Tambah gudang' : 'Ubah gudang'}</DialogTitle>
+          <DialogTitle>
+            {creating ? 'Tambah gudang' : 'Ubah gudang'}
+          </DialogTitle>
           <DialogDescription>
-            Nama gudang pertama juga tercetak di tiket supir, jadi mengubahnya di
-            sini ikut mengubah nama di Pengaturan.
+            Nama gudang pertama juga tercetak di tiket supir, jadi mengubahnya
+            di sini ikut mengubah nama di Pengaturan.
           </DialogDescription>
         </DialogHeader>
 
@@ -1178,16 +1314,16 @@ function DockDialog({
 }) {
   const creating = dock === null
   const [dockCode, setDockCode] = useState(dock?.dockCode ?? '')
-  const [allowedActivity, setAllowedActivity] = useState<Dock['allowedActivity']>(
-    dock?.allowedActivity ?? 'BOTH',
-  )
+  const [allowedActivity, setAllowedActivity] = useState<
+    Dock['allowedActivity']
+  >(dock?.allowedActivity ?? 'BOTH')
   const [areaName, setAreaName] = useState(dock?.areaName ?? '')
   const [warehouseId, setWarehouseId] = useState(
     String(
       dock?.warehouse?.id ??
         warehouses.find((warehouse) => warehouse.isActive)?.id ??
-        '',
-    ),
+        ''
+    )
   )
 
   const trimmedArea = areaName.trim()
@@ -1202,7 +1338,7 @@ function DockDialog({
   // Gudang nonaktif tidak boleh hilang dari pilihan kalau dock masih menunjuk
   // ke sana, andainya tidak ada yang memindahkannya dulu.
   const choices = warehouses.filter(
-    (warehouse) => warehouse.isActive || warehouse.id === Number(warehouseId),
+    (warehouse) => warehouse.isActive || warehouse.id === Number(warehouseId)
   )
 
   const save = useMutation({
@@ -1236,8 +1372,8 @@ function DockDialog({
             {creating ? 'Tambah dock' : `Ubah dock ${dock.dockCode}`}
           </DialogTitle>
           <DialogDescription>
-            Nama Area dan Warehouse hanya untuk pengelompokan — tidak mempengaruhi
-            kapasitas per slot.
+            Nama Area dan Warehouse hanya untuk pengelompokan — tidak
+            mempengaruhi kapasitas per slot.
           </DialogDescription>
         </DialogHeader>
 
@@ -1291,7 +1427,8 @@ function DockDialog({
             </Select>
             {choices.length === 0 && (
               <p className='text-xs text-amber-700 dark:text-amber-400'>
-                Belum ada gudang aktif. Tambahkan satu di tab Gudang terlebih dahulu.
+                Belum ada gudang aktif. Tambahkan satu di tab Gudang terlebih
+                dahulu.
               </p>
             )}
           </div>
@@ -1315,8 +1452,8 @@ function DockDialog({
               </SelectContent>
             </Select>
             <p className='text-xs text-muted-foreground'>
-              Mengubah aktivitas mengubah kapasitas per slot; booking yang sudah ada
-              tetap berjalan seperti semula.
+              Mengubah aktivitas mengubah kapasitas per slot; booking yang sudah
+              ada tetap berjalan seperti semula.
             </p>
           </div>
         </div>

@@ -1,15 +1,13 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { ColumnDef } from '@tanstack/react-table'
 import { Loader2, Plus, Search } from 'lucide-react'
 import { toast } from 'sonner'
+import { useAuthStore } from '@/stores/auth-store'
 import { apiErrorMessage } from '@/lib/api/client'
 import { createUser, fetchUsers, updateUser } from '@/lib/api/endpoints'
 import type { ManagedUser, Role } from '@/lib/api/types'
 import { formatDate, roleLabels } from '@/lib/format'
-import { useAuthStore } from '@/stores/auth-store'
-import { Main } from '@/components/layout/main'
-import { PageHeader } from '@/components/page-header'
-import { ErrorBlock, LoadingBlock } from '@/components/query-state'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -37,14 +35,10 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { DataTable, DataTableColumnHeader } from '@/components/data-table'
+import { Main } from '@/components/layout/main'
+import { PageHeader } from '@/components/page-header'
+import { ErrorBlock, LoadingBlock } from '@/components/query-state'
 
 /**
  * Halaman ini mengelola akun STAF (Admin, Security, Checker).
@@ -82,13 +76,127 @@ export function UsersPage() {
   })
 
   const toggleApprove = useMutation({
-    mutationFn: ({ id, canApproveBooking }: { id: string; canApproveBooking: boolean }) =>
-      updateUser(id, { canApproveBooking }),
+    mutationFn: ({
+      id,
+      canApproveBooking,
+    }: {
+      id: string
+      canApproveBooking: boolean
+    }) => updateUser(id, { canApproveBooking }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['users'] })
     },
     onError: (error) => toast.error(apiErrorMessage(error)),
   })
+
+  const columns: ColumnDef<ManagedUser>[] = [
+    {
+      accessorKey: 'name',
+      meta: { label: 'Nama', cellClassName: 'font-medium' },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Nama' />
+      ),
+      cell: ({ row }) => (
+        <>
+          {row.original.name}
+          {row.original.id === currentUser?.id && (
+            <Badge variant='secondary' className='ms-2'>
+              Anda
+            </Badge>
+          )}
+        </>
+      ),
+    },
+    {
+      accessorKey: 'email',
+      meta: { label: 'Email', cellClassName: 'text-sm text-muted-foreground' },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Email' />
+      ),
+    },
+    {
+      id: 'role',
+      accessorFn: (user) => roleLabels[user.role],
+      meta: { label: 'Peran' },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Peran' />
+      ),
+      cell: ({ row }) => (
+        <Badge variant='outline'>{roleLabels[row.original.role]}</Badge>
+      ),
+    },
+    {
+      id: 'approve',
+      accessorFn: (user) => user.canApproveBooking,
+      enableGlobalFilter: false,
+      meta: {
+        label: 'Boleh menyetujui',
+        headerClassName: 'text-center',
+        cellClassName: 'text-center',
+      },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Boleh menyetujui' />
+      ),
+      cell: ({ row }) =>
+        row.original.role === 'ADMIN' ? (
+          // Admin selalu berhak; switch dimatikan agar tidak terlihat seolah
+          // masih bisa dicabut.
+          <span className='text-xs text-muted-foreground'>Otomatis</span>
+        ) : (
+          <Switch
+            checked={row.original.canApproveBooking}
+            disabled={toggleApprove.isPending}
+            title='Izinkan pengguna ini menyetujui booking'
+            onCheckedChange={(checked) =>
+              toggleApprove.mutate({
+                id: row.original.id,
+                canApproveBooking: checked,
+              })
+            }
+          />
+        ),
+    },
+    {
+      accessorKey: 'createdAt',
+      meta: {
+        label: 'Dibuat',
+        cellClassName: 'text-sm text-muted-foreground',
+      },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Dibuat' />
+      ),
+      cell: ({ row }) => formatDate(row.original.createdAt),
+    },
+    {
+      id: 'active',
+      accessorFn: (user) => user.isActive,
+      enableGlobalFilter: false,
+      meta: {
+        label: 'Aktif',
+        headerClassName: 'text-end',
+        cellClassName: 'text-end',
+      },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Aktif' />
+      ),
+      cell: ({ row }) => (
+        <Switch
+          checked={row.original.isActive}
+          disabled={
+            toggleActive.isPending || row.original.id === currentUser?.id
+          }
+          title={
+            row.original.id === currentUser?.id
+              ? 'Akun Anda sendiri tidak bisa dinonaktifkan'
+              : undefined
+          }
+          onCheckedChange={(checked) =>
+            toggleActive.mutate({ id: row.original.id, isActive: checked })
+          }
+        />
+      ),
+    },
+  ]
 
   return (
     <Main className='flex flex-1 flex-col gap-6'>
@@ -120,7 +228,10 @@ export function UsersPage() {
                 className='ps-8'
               />
             </div>
-            <Select value={role} onValueChange={(value) => setRole(value as Role | 'ALL')}>
+            <Select
+              value={role}
+              onValueChange={(value) => setRole(value as Role | 'ALL')}
+            >
               <SelectTrigger className='w-44'>
                 <SelectValue />
               </SelectTrigger>
@@ -138,88 +249,17 @@ export function UsersPage() {
           {users.isPending ? (
             <LoadingBlock label='Memuat pengguna...' />
           ) : users.isError ? (
-            <ErrorBlock error={users.error} onRetry={() => void users.refetch()} />
+            <ErrorBlock
+              error={users.error}
+              onRetry={() => void users.refetch()}
+            />
           ) : (
-            <div className='overflow-x-auto'>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nama</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Peran</TableHead>
-                    <TableHead className='text-center'>Boleh menyetujui</TableHead>
-                    <TableHead>Dibuat</TableHead>
-                    <TableHead className='text-end'>Aktif</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users.data.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className='py-8 text-center text-sm text-muted-foreground'>
-                        Tidak ada akun staf. Tambah pengguna untuk memulai.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    users.data.map((user) => (
-                      <TableRow key={user.id}>
-                        <TableCell className='font-medium'>
-                          {user.name}
-                          {user.id === currentUser?.id && (
-                            <Badge variant='secondary' className='ms-2'>
-                              Anda
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className='text-sm text-muted-foreground'>
-                          {user.email}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant='outline'>{roleLabels[user.role]}</Badge>
-                        </TableCell>
-                        <TableCell className='text-center'>
-                          {user.role === 'ADMIN' ? (
-                            // Admin selalu berhak; switch dimatikan agar tidak
-                            // terlihat seolah masih bisa dicabut.
-                            <span className='text-xs text-muted-foreground'>Otomatis</span>
-                          ) : (
-                            <Switch
-                              checked={user.canApproveBooking}
-                              disabled={toggleApprove.isPending}
-                              title='Izinkan pengguna ini menyetujui booking'
-                              onCheckedChange={(checked) =>
-                                toggleApprove.mutate({
-                                  id: user.id,
-                                  canApproveBooking: checked,
-                                })
-                              }
-                            />
-                          )}
-                        </TableCell>
-                        <TableCell className='text-sm text-muted-foreground'>
-                          {formatDate(user.createdAt)}
-                        </TableCell>
-                        <TableCell className='text-end'>
-                          <Switch
-                            checked={user.isActive}
-                            disabled={
-                              toggleActive.isPending || user.id === currentUser?.id
-                            }
-                            title={
-                              user.id === currentUser?.id
-                                ? 'Akun Anda sendiri tidak bisa dinonaktifkan'
-                                : undefined
-                            }
-                            onCheckedChange={(checked) =>
-                              toggleActive.mutate({ id: user.id, isActive: checked })
-                            }
-                          />
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+            <DataTable
+              columns={columns}
+              data={users.data}
+              getRowId={(user) => user.id}
+              emptyMessage='Tidak ada akun staf. Tambah pengguna untuk memulai.'
+            />
           )}
         </CardContent>
       </Card>
@@ -293,7 +333,9 @@ function CreateUserDialog({
             <Input
               id='new-name'
               value={form.name}
-              onChange={(event) => setForm({ ...form, name: event.target.value })}
+              onChange={(event) =>
+                setForm({ ...form, name: event.target.value })
+              }
             />
           </div>
           <div className='grid gap-3 sm:grid-cols-2'>
@@ -303,7 +345,9 @@ function CreateUserDialog({
                 id='new-email'
                 type='email'
                 value={form.email}
-                onChange={(event) => setForm({ ...form, email: event.target.value })}
+                onChange={(event) =>
+                  setForm({ ...form, email: event.target.value })
+                }
               />
             </div>
             <div className='space-y-1'>
@@ -311,7 +355,9 @@ function CreateUserDialog({
               <Input
                 id='new-phone'
                 value={form.phone}
-                onChange={(event) => setForm({ ...form, phone: event.target.value })}
+                onChange={(event) =>
+                  setForm({ ...form, phone: event.target.value })
+                }
               />
             </div>
           </div>
@@ -319,7 +365,9 @@ function CreateUserDialog({
             <Label>Peran</Label>
             <Select
               value={form.role}
-              onValueChange={(value) => setForm({ ...form, role: value as Role })}
+              onValueChange={(value) =>
+                setForm({ ...form, role: value as Role })
+              }
             >
               <SelectTrigger>
                 <SelectValue />
@@ -339,7 +387,9 @@ function CreateUserDialog({
               id='new-password'
               type='password'
               value={form.password}
-              onChange={(event) => setForm({ ...form, password: event.target.value })}
+              onChange={(event) =>
+                setForm({ ...form, password: event.target.value })
+              }
               placeholder='Minimal 7 karakter'
             />
           </div>
@@ -349,7 +399,10 @@ function CreateUserDialog({
           <Button variant='outline' onClick={() => onOpenChange(false)}>
             Batal
           </Button>
-          <Button disabled={!valid || create.isPending} onClick={() => create.mutate()}>
+          <Button
+            disabled={!valid || create.isPending}
+            onClick={() => create.mutate()}
+          >
             {create.isPending && <Loader2 className='animate-spin' />}
             Simpan
           </Button>

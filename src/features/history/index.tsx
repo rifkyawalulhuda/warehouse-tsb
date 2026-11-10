@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import type { ColumnDef } from '@tanstack/react-table'
 import { SearchIcon, RefreshCwIcon } from 'lucide-react'
 import { fetchGateHistory } from '@/lib/api/endpoints'
 import type { GateHistoryEvent, GateHistoryRow } from '@/lib/api/types'
@@ -15,14 +16,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+import { DataTable, DataTableColumnHeader } from '@/components/data-table'
 import { DatePicker } from '@/components/date-picker'
 import { Main } from '@/components/layout/main'
 import { PageHeader } from '@/components/page-header'
@@ -39,6 +33,109 @@ const eventLabels: Record<GateHistoryEvent, string> = {
  * siang muncul dua kali. Urutannya kronologis terbalik, sehingga kejadian
  * terakhir — yang biasanya ditanyakan orang — ada paling atas.
  */
+const columns: ColumnDef<GateHistoryRow>[] = [
+  {
+    accessorKey: 'at',
+    meta: {
+      label: 'Waktu',
+      cellClassName: 'text-sm whitespace-nowrap tabular-nums',
+    },
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='Waktu' />
+    ),
+    cell: ({ row }) => formatDateTime(row.original.at),
+  },
+  {
+    accessorKey: 'event',
+    enableGlobalFilter: false,
+    meta: { label: 'Peristiwa' },
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='Peristiwa' />
+    ),
+    cell: ({ row }) => <EventBadge event={row.original.event} />,
+  },
+  {
+    id: 'bookingCode',
+    accessorFn: (row) => row.bookingCode ?? '',
+    meta: { label: 'Kode', cellClassName: 'font-mono text-xs' },
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='Kode' />
+    ),
+    cell: ({ row }) => row.original.bookingCode ?? '—',
+  },
+  {
+    id: 'customer',
+    accessorFn: (row) => row.customer ?? '',
+    meta: { label: 'Customer', cellClassName: 'text-sm' },
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='Customer' />
+    ),
+    cell: ({ row }) => row.original.customer ?? '—',
+  },
+  {
+    id: 'vehicle',
+    accessorFn: (row) => row.licensePlate ?? '',
+    meta: { label: 'Kendaraan', cellClassName: 'text-sm' },
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='Kendaraan' />
+    ),
+    cell: ({ row }) => (
+      <>
+        {row.original.licensePlate ?? '—'}
+        {row.original.driverName && (
+          <span className='block text-xs text-muted-foreground'>
+            {row.original.driverName}
+          </span>
+        )}
+      </>
+    ),
+  },
+  {
+    id: 'dock',
+    accessorFn: (row) => row.dockCode ?? '',
+    meta: { label: 'Dock', cellClassName: 'text-sm' },
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='Dock' />
+    ),
+    cell: ({ row }) => (
+      <>
+        {row.original.dockCode ?? '—'}
+        {row.original.activityType && (
+          <span className='block text-xs text-muted-foreground'>
+            {activityLabels[row.original.activityType]}
+          </span>
+        )}
+      </>
+    ),
+  },
+  {
+    id: 'officer',
+    accessorFn: (row) => row.officerName ?? '',
+    meta: { label: 'Petugas', cellClassName: 'text-sm' },
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title='Petugas' />
+    ),
+    cell: ({ row }) => (
+      <>
+        {row.original.officerName ?? '—'}
+        {row.original.officerRole && (
+          <span className='block text-xs text-muted-foreground'>
+            {roleLabels[row.original.officerRole]}
+          </span>
+        )}
+      </>
+    ),
+  },
+  {
+    id: 'description',
+    enableSorting: false,
+    enableGlobalFilter: false,
+    meta: { label: 'Keterangan', cellClassName: 'max-w-64 text-sm' },
+    header: () => <span>Keterangan</span>,
+    cell: ({ row }) => <Description row={row.original} />,
+  },
+]
+
 export function GateHistoryPage() {
   useRealtimeSync()
 
@@ -187,67 +284,13 @@ export function GateHistoryPage() {
                   </p>
                 </div>
               ) : (
-                <div className='overflow-x-auto'>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Waktu</TableHead>
-                        <TableHead>Peristiwa</TableHead>
-                        <TableHead>Kode</TableHead>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Kendaraan</TableHead>
-                        <TableHead>Dock</TableHead>
-                        <TableHead>Petugas</TableHead>
-                        <TableHead>Keterangan</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {rows.map((row) => (
-                        <TableRow key={row.id}>
-                          <TableCell className='text-sm whitespace-nowrap tabular-nums'>
-                            {formatDateTime(row.at)}
-                          </TableCell>
-                          <TableCell>
-                            <EventBadge event={row.event} />
-                          </TableCell>
-                          <TableCell className='font-mono text-xs'>
-                            {row.bookingCode ?? '—'}
-                          </TableCell>
-                          <TableCell className='text-sm'>
-                            {row.customer ?? '—'}
-                          </TableCell>
-                          <TableCell className='text-sm'>
-                            {row.licensePlate ?? '—'}
-                            {row.driverName && (
-                              <span className='block text-xs text-muted-foreground'>
-                                {row.driverName}
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell className='text-sm'>
-                            {row.dockCode ?? '—'}
-                            {row.activityType && (
-                              <span className='block text-xs text-muted-foreground'>
-                                {activityLabels[row.activityType]}
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell className='text-sm'>
-                            {row.officerName ?? '—'}
-                            {row.officerRole && (
-                              <span className='block text-xs text-muted-foreground'>
-                                {roleLabels[row.officerRole]}
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell className='max-w-64 text-sm'>
-                            <Description row={row} />
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                <DataTable
+                  columns={columns}
+                  data={rows}
+                  getRowId={(row) => row.id}
+                  pageSize={20}
+                  emptyMessage='Tidak ada peristiwa gate pada rentang ini.'
+                />
               )}
             </CardContent>
           </Card>

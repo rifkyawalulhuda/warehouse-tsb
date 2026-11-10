@@ -1,5 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
-import { type Table } from '@tanstack/react-table'
+import { useEffect, useRef, useState } from 'react'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
@@ -11,51 +10,38 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 
-type DataTableBulkActionsProps<TData> = {
-  table: Table<TData>
+type DataTableBulkActionsProps = {
+  count: number
+  onClear: () => void
   entityName: string
   children: React.ReactNode
 }
 
 /**
- * A modular toolbar for displaying bulk actions when table rows are selected.
+ * Bar aksi massal yang muncul saat ada baris terpilih.
  *
- * @template TData The type of data in the table.
- * @param {object} props The component props.
- * @param {Table<TData>} props.table The react-table instance.
- * @param {string} props.entityName The name of the entity being acted upon (e.g., "task", "user").
- * @param {React.ReactNode} props.children The action buttons to be rendered inside the toolbar.
- * @returns {React.ReactNode | null} The rendered component or null if no rows are selected.
+ * Menerima `count`/`onClear` alih-alih instance tabel supaya pemanggil tidak
+ * perlu memegang tabel TanStack hanya untuk menampilkan aksi.
  */
-export function DataTableBulkActions<TData>({
-  table,
+export function DataTableBulkActions({
+  count,
+  onClear,
   entityName,
   children,
-}: DataTableBulkActionsProps<TData>): React.ReactNode | null {
-  const selectedRows = table.getFilteredSelectedRowModel().rows
-  const selectedCount = selectedRows.length
+}: DataTableBulkActionsProps): React.ReactNode | null {
   const toolbarRef = useRef<HTMLDivElement>(null)
   const [announcement, setAnnouncement] = useState('')
 
-  // Announce selection changes to screen readers
   useEffect(() => {
-    if (selectedCount > 0) {
-      const message = `${selectedCount} ${entityName}${selectedCount > 1 ? 's' : ''} selected. Bulk actions toolbar is available.`
-
-      // Use queueMicrotask to defer state update and avoid cascading renders
-      queueMicrotask(() => {
-        setAnnouncement(message)
-      })
-
-      // Clear announcement after a delay
-      const timer = setTimeout(() => setAnnouncement(''), 3000)
-      return () => clearTimeout(timer)
-    }
-  }, [selectedCount, entityName])
-
-  const handleClearSelection = () => {
-    table.resetRowSelection()
-  }
+    if (count === 0) return
+    queueMicrotask(() => {
+      setAnnouncement(
+        `${count} ${entityName} dipilih. Bilah aksi massal tersedia.`
+      )
+    })
+    const timer = setTimeout(() => setAnnouncement(''), 3000)
+    return () => clearTimeout(timer)
+  }, [count, entityName])
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
     const buttons = toolbarRef.current?.querySelectorAll('button')
@@ -88,44 +74,17 @@ export function DataTableBulkActions<TData>({
         buttons[buttons.length - 1]?.focus()
         break
       case 'Escape': {
-        // Check if the Escape key came from a dropdown trigger or content
-        // We can't check dropdown state because Radix UI closes it before our handler runs
-        const target = event.target as HTMLElement
-        const activeElement = document.activeElement as HTMLElement
-
-        // Check if the event target or currently focused element is a dropdown trigger
-        const isFromDropdownTrigger =
-          target?.getAttribute('data-slot') === 'dropdown-menu-trigger' ||
-          activeElement?.getAttribute('data-slot') ===
-            'dropdown-menu-trigger' ||
-          target?.closest('[data-slot="dropdown-menu-trigger"]') ||
-          activeElement?.closest('[data-slot="dropdown-menu-trigger"]')
-
-        // Check if the focused element is inside dropdown content (which is portaled)
-        const isFromDropdownContent =
-          activeElement?.closest('[data-slot="dropdown-menu-content"]') ||
-          target?.closest('[data-slot="dropdown-menu-content"]')
-
-        if (isFromDropdownTrigger || isFromDropdownContent) {
-          // Escape was meant for the dropdown - don't clear selection
-          return
-        }
-
-        // Escape was meant for the toolbar - clear selection
         event.preventDefault()
-        handleClearSelection()
+        onClear()
         break
       }
     }
   }
 
-  if (selectedCount === 0) {
-    return null
-  }
+  if (count === 0) return null
 
   return (
     <>
-      {/* Live region for screen reader announcements */}
       <div
         aria-live='polite'
         aria-atomic='true'
@@ -138,22 +97,21 @@ export function DataTableBulkActions<TData>({
       <div
         ref={toolbarRef}
         role='toolbar'
-        aria-label={`Bulk actions for ${selectedCount} selected ${entityName}${selectedCount > 1 ? 's' : ''}`}
+        aria-label={`Aksi massal untuk ${count} ${entityName} terpilih`}
         aria-describedby='bulk-actions-description'
         tabIndex={-1}
         onKeyDown={handleKeyDown}
         className={cn(
           'fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-xl',
-          'transition-all delay-100 duration-300 ease-out hover:scale-105',
+          'transition-all duration-300 ease-out hover:scale-105',
           'focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none'
         )}
       >
         <div
           className={cn(
-            'p-2 shadow-xl',
+            'flex items-center gap-x-2 p-2 shadow-xl',
             'rounded-xl border',
-            'bg-background/95 backdrop-blur-lg supports-backdrop-filter:bg-background/60',
-            'flex items-center gap-x-2'
+            'bg-background/95 backdrop-blur-lg supports-backdrop-filter:bg-background/60'
           )}
         >
           <Tooltip>
@@ -161,17 +119,16 @@ export function DataTableBulkActions<TData>({
               <Button
                 variant='outline'
                 size='icon'
-                onClick={handleClearSelection}
+                onClick={onClear}
                 className='size-6 rounded-full'
-                aria-label='Clear selection'
-                title='Clear selection (Escape)'
+                aria-label='Kosongkan pilihan'
+                title='Kosongkan pilihan (Escape)'
               >
                 <X />
-                <span className='sr-only'>Clear selection</span>
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Clear selection (Escape)</p>
+              <p>Kosongkan pilihan (Escape)</p>
             </TooltipContent>
           </Tooltip>
 
@@ -187,16 +144,12 @@ export function DataTableBulkActions<TData>({
           >
             <Badge
               variant='default'
-              className='min-w-8 rounded-lg'
-              aria-label={`${selectedCount} selected`}
+              className='min-w-8 rounded-lg tabular-nums'
+              aria-label={`${count} dipilih`}
             >
-              {selectedCount}
+              {count}
             </Badge>{' '}
-            <span className='hidden sm:inline'>
-              {entityName}
-              {selectedCount > 1 ? 's' : ''}
-            </span>{' '}
-            selected
+            <span className='text-muted-foreground'>dipilih</span>
           </div>
 
           <Separator
