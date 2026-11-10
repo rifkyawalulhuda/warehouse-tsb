@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import type { ColumnDef } from '@tanstack/react-table'
-import { Download } from 'lucide-react'
+import { Download, RefreshCwIcon } from 'lucide-react'
 import {
   Bar,
   BarChart,
@@ -19,6 +19,7 @@ import {
 } from '@/lib/api/endpoints'
 import type { ReportRow } from '@/lib/api/types'
 import { addDaysISO, formatDateShort, todayISO } from '@/lib/format'
+import { cn } from '@/lib/utils'
 import { useRealtimeSync } from '@/hooks/use-realtime'
 import { Button } from '@/components/ui/button'
 import {
@@ -28,6 +29,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -144,11 +146,27 @@ const columns: ColumnDef<ReportRow>[] = [
   },
 ]
 
+/** Rentang cepat dalam jumlah hari ke belakang, termasuk hari ini. */
+const rangePresets = [
+  { label: 'Hari ini', days: 0 },
+  { label: '7 hari', days: 6 },
+  { label: '30 hari', days: 29 },
+] as const
+
+/** Rentang bawaan sekaligus tujuan tombol "Atur ulang": tujuh hari terakhir. */
+const DEFAULT_RANGE_DAYS = 6
+
 export function ReportsPage() {
   useRealtimeSync()
-  const [from, setFrom] = useState(addDaysISO(todayISO(), -6))
-  const [to, setTo] = useState(todayISO())
+  const today = todayISO()
+  const defaultFrom = addDaysISO(today, -DEFAULT_RANGE_DAYS)
+  const [from, setFrom] = useState(defaultFrom)
+  const [to, setTo] = useState(today)
   const [customerId, setCustomerId] = useState('ALL')
+
+  const rangeInvalid = from > to
+  const customerParam = customerId === 'ALL' ? undefined : customerId
+  const isDefaultRange = from === defaultFrom && to === today
 
   const customers = useQuery({
     queryKey: ['customers', 'options'],
@@ -159,59 +177,184 @@ export function ReportsPage() {
     queryKey: ['reports', from, to, customerId],
     queryFn: () =>
       fetchKpi(from, to, customerId === 'ALL' ? undefined : customerId),
-    enabled: from <= to,
+    enabled: !rangeInvalid,
+    // Ganti tanggal bukan alasan mengosongkan layar: KPI dan grafik lama tetap
+    // tampil sampai respons baru datang, supaya tidak ada kedipan loading.
+    placeholderData: keepPreviousData,
   })
+
+  const applyPreset = (days: number) => {
+    setFrom(addDaysISO(today, -days))
+    setTo(today)
+  }
+
+  const resetFilters = () => {
+    setFrom(defaultFrom)
+    setTo(today)
+    setCustomerId('ALL')
+  }
+
+  // Label pemicu dropdown disiapkan di sini karena `SelectValue` dengan
+  // children tidak lagi menurunkan teks dari item yang sedang terpilih.
+  const selectedName =
+    customerId === 'ALL'
+      ? 'Semua customer'
+      : ((customers.data ?? []).find((item) => item.id === customerId)?.name ??
+        'Semua customer')
 
   return (
     <Main className='flex flex-1 flex-col gap-6'>
       <PageHeader
         title='Laporan'
         description='KPI operasional dan rekapitulasi per hari dalam rentang tanggal.'
-        actions={
-          <>
-            <DatePicker
-              value={from}
-              max={to}
-              onChange={setFrom}
-              className='w-44'
-            />
-            <DatePicker
-              value={to}
-              min={from}
-              max={todayISO()}
-              onChange={setTo}
-              className='w-44'
-            />
-            <Select value={customerId} onValueChange={setCustomerId}>
-              <SelectTrigger className='h-9 w-48'>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='ALL'>Semua customer</SelectItem>
-                {(customers.data ?? []).map((customer) => (
-                  <SelectItem key={customer.id} value={customer.id}>
-                    {customer.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button asChild variant='outline' disabled={!report.data}>
-              <a
-                href={reportExportUrl(
-                  from,
-                  to,
-                  customerId === 'ALL' ? undefined : customerId
-                )}
-                download
-              >
-                <Download /> Ekspor Excel
-              </a>
-            </Button>
-          </>
-        }
       />
 
-      {from > to ? (
+      <Card>
+        <CardContent className='flex flex-col gap-4 pt-6'>
+          <div className='flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end'>
+            <div className='flex flex-col gap-1.5'>
+              <Label
+                htmlFor='report-from'
+                className='text-xs font-medium text-muted-foreground'
+              >
+                Dari tanggal
+              </Label>
+              <DatePicker
+                id='report-from'
+                value={from}
+                max={to}
+                onChange={setFrom}
+                className='w-full sm:w-44'
+              />
+            </div>
+            <div className='flex flex-col gap-1.5'>
+              <Label
+                htmlFor='report-to'
+                className='text-xs font-medium text-muted-foreground'
+              >
+                Sampai tanggal
+              </Label>
+              <DatePicker
+                id='report-to'
+                value={to}
+                min={from}
+                max={today}
+                onChange={setTo}
+                className='w-full sm:w-44'
+              />
+            </div>
+            <div className='flex flex-col gap-1.5'>
+              <Label
+                htmlFor='report-customer'
+                className='text-xs font-medium text-muted-foreground'
+              >
+                Customer
+              </Label>
+              <Select
+                value={customerId}
+                onValueChange={setCustomerId}
+                disabled={customers.isPending}
+              >
+                <SelectTrigger id='report-customer' className='w-full sm:w-56'>
+                  {/*
+                    Nilai select selalu terisi ('ALL' atau id customer), jadi
+                    `placeholder` tidak pernah tampil. Keadaan memuat ditulis
+                    sebagai children supaya tetap terlihat.
+                  */}
+                  <SelectValue>
+                    {customers.isPending ? 'Memuat customer...' : selectedName}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='ALL'>Semua customer</SelectItem>
+                  {(customers.data ?? []).map((customer) => (
+                    <SelectItem key={customer.id} value={customer.id}>
+                      {customer.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {customers.isError && (
+                <p className='text-xs text-destructive'>
+                  Daftar customer gagal dimuat.
+                </p>
+              )}
+            </div>
+
+            <div className='flex items-center gap-2 sm:ms-auto'>
+              <Button
+                variant='outline'
+                size='icon'
+                className='size-11 shrink-0 sm:size-9'
+                onClick={() => void report.refetch()}
+                disabled={report.isFetching || rangeInvalid}
+                aria-label='Muat ulang laporan'
+              >
+                <RefreshCwIcon
+                  className={report.isFetching ? 'animate-spin' : undefined}
+                />
+              </Button>
+              {/*
+                `disabled` tidak berlaku pada <a>, jadi tautan ekspor baru
+                dirender ketika data untuk rentang yang sedang dipilih sudah
+                benar-benar ada. Selama data lama masih ditampilkan
+                (`isPlaceholderData`), tombolnya mati agar unduhan tidak
+                memakai rentang yang hasilnya belum masuk.
+              */}
+              {report.data && !report.isPlaceholderData ? (
+                <Button asChild variant='outline'>
+                  <a href={reportExportUrl(from, to, customerParam)} download>
+                    <Download /> Ekspor Excel
+                  </a>
+                </Button>
+              ) : (
+                <Button variant='outline' disabled>
+                  <Download /> Ekspor Excel
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <div className='flex flex-wrap items-center gap-2'>
+            <div
+              role='group'
+              aria-label='Rentang tanggal cepat'
+              className='flex flex-wrap items-center gap-2'
+            >
+              {rangePresets.map((preset) => {
+                const presetFrom = addDaysISO(today, -preset.days)
+                const active = from === presetFrom && to === today
+                return (
+                  <Button
+                    key={preset.label}
+                    variant={active ? 'secondary' : 'outline'}
+                    aria-pressed={active}
+                    onClick={() => applyPreset(preset.days)}
+                  >
+                    {preset.label}
+                  </Button>
+                )
+              })}
+            </div>
+            <Button
+              variant='ghost'
+              onClick={resetFilters}
+              disabled={isDefaultRange && customerId === 'ALL'}
+            >
+              Atur ulang
+            </Button>
+            <span
+              role='status'
+              aria-live='polite'
+              className='text-xs text-muted-foreground'
+            >
+              {report.isPlaceholderData ? 'Memperbarui laporan...' : ''}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {rangeInvalid ? (
         <p className='text-sm text-destructive'>
           Tanggal awal tidak boleh melewati tanggal akhir.
         </p>
@@ -223,7 +366,19 @@ export function ReportsPage() {
           onRetry={() => void report.refetch()}
         />
       ) : (
-        <>
+        /*
+          Saat rentang diganti, `placeholderData` menahan hasil sebelumnya di
+          layar. `aria-busy` dan peredupan halus hanya menandai keadaan itu —
+          bukan setiap penyegaran latar dari realtime, yang kalau ikut meredup
+          akan membuat halaman berkedip terus.
+        */
+        <div
+          aria-busy={report.isPlaceholderData}
+          className={cn(
+            'flex flex-col gap-6 transition-opacity',
+            report.isPlaceholderData && 'opacity-60'
+          )}
+        >
           <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
             <Kpi label='Total booking' value={report.data.kpi.totalBookings} />
             <Kpi
@@ -373,7 +528,7 @@ export function ReportsPage() {
               />
             </CardContent>
           </Card>
-        </>
+        </div>
       )}
     </Main>
   )
