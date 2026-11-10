@@ -80,14 +80,16 @@ export function ScanPage() {
     <Main className='mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6'>
       <PageHeader
         title='Gate'
-        description='Pindai QR tiket truk untuk check-in dan check-out.'
+        description='Pindai QR tiket atau ketik kode booking untuk check-in dan check-out.'
       />
 
       <Card>
         <CardHeader>
           <CardTitle className='text-base'>Pindai tiket</CardTitle>
           <CardDescription>
-            {scanning ? 'Memeriksa tiket...' : 'Arahkan kamera ke QR, atau isi kode manual.'}
+            {scanning
+              ? 'Memeriksa tiket...'
+              : 'Arahkan kamera ke QR, atau ketik token / kode booking.'}
           </CardDescription>
         </CardHeader>
         <CardContent>

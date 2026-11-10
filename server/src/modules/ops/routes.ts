@@ -10,7 +10,7 @@ import { getSettings, toWindow } from '../../lib/settings'
 import { utcToDateOnly, minuteOfDayJakarta, todayISO, jakartaInstant, addDaysISO, diffMinutes } from '../../lib/time'
 import { emitBookingUpdated, emitDockUpdated } from '../../realtime'
 import { writeAudit } from '../../lib/audit'
-import { bookingSelect, ACTIVE_STATUSES, getBookingByQrToken } from '../bookings/repository'
+import { bookingSelect, ACTIVE_STATUSES, getBookingByScanInput, isBookingCode, scanInputWhere } from '../bookings/repository'
 import { finalizeRelease } from '../bookings/quota-service'
 
 export const opsRouter = Router()
@@ -27,12 +27,36 @@ type OpsActor = {
   actingAs?: 'GATE_OFFICER' | 'CHECKER' | null
 }
 
-async function loadBookingByQr(qrToken: string) {
-  const booking = await prisma.booking.findUnique({
-    where: { qrToken },
+/**
+ * Pesan galat saat masukan gate tidak menemukan booking.
+ *
+ * Dipisah menurut bentuk masukan supaya petugas tahu apa yang salah: kode
+ * booking yang keliru ketik tidak sama dengan QR yang tidak terdaftar. Kalimat
+ * "tiket sudah tidak berlaku" sengaja tidak dipakai — tiket batal atau no-show
+ * tetap ditemukan, dan ditolak dengan alasan statusnya sendiri.
+ */
+function ticketNotFoundMessage(input: string): string {
+  return isBookingCode(input)
+    ? `Kode booking ${input.trim().toUpperCase()} tidak ditemukan`
+    : 'QR Code tidak dikenali'
+}
+
+/**
+ * Ambil booking untuk aksi gate dari isi layar gate.
+ *
+ * Menerima dua bentuk: token QR hasil pindai kamera, dan kode booking
+ * (`TSB-YYYYMMDD-NNN`) yang diketik manual — kode itulah yang tercetak besar di
+ * tiket, jadi petugas lapangan wajar mengetiknya.
+ *
+ * Kode booking sengaja hanya diterima di sini, bukan di tiket publik: bentuknya
+ * bisa ditebak (`TSB-tanggal-urut`), sedangkan token QR adalah 24 byte acak.
+ */
+async function loadBookingForGate(input: string) {
+  const booking = await prisma.booking.findFirst({
+    where: scanInputWhere(input),
     include: { timeLog: true, truckType: true, assignedDock: true },
   })
-  if (!booking) throw notFound('QR Code tidak dikenali atau tiket sudah tidak berlaku')
+  if (!booking) throw notFound(ticketNotFoundMessage(input))
   return booking
 }
 
@@ -155,9 +179,9 @@ opsRouter.get('/scan/:qrToken', requireRole('GATE_OFFICER', 'CHECKER'), async (r
     const qrToken = pathParam(req, 'qrToken')
     if (!qrToken) throw badRequest('INVALID_QR', 'QR Code tidak dikenali')
 
-    const booking = await getBookingByQrToken(qrToken)
+    const booking = await getBookingByScanInput(qrToken)
     if (!booking) {
-      const message = 'QR Code tidak dikenali atau tiket sudah tidak berlaku'
+      const message = ticketNotFoundMessage(qrToken)
       await recordRejectedScan({ req, qrToken, reason: 'NOT_FOUND', message })
       throw notFound(message)
     }
@@ -244,9 +268,9 @@ opsRouter.get(
       const qrToken = pathParam(req, 'qrToken')
       if (!qrToken) throw badRequest('INVALID_QR', 'QR Code tidak dikenali')
 
-      const booking = await getBookingByQrToken(qrToken)
+      const booking = await getBookingByScanInput(qrToken)
       if (!booking) {
-        throw notFound('QR Code tidak dikenali atau tiket sudah tidak berlaku')
+        throw notFound(ticketNotFoundMessage(qrToken))
       }
 
       const waiting = ['CHECKED_IN_ON_TIME', 'LATE_WAITING_LIST'].includes(
@@ -315,7 +339,7 @@ opsRouter.post(
       const user = req.user!
       const settings = await getSettings()
 
-      const booking = await loadBookingByQr(body.qrToken)
+      const booking = await loadBookingForGate(body.qrToken)
       assertStatus(
         booking,
         ['BOOKED_INCOMPLETE', 'BOOKED_READY'],
@@ -666,7 +690,7 @@ opsRouter.post('/gate-out', requireRole('GATE_OFFICER'), async (req, res, next) 
     const body = parse(z.object({ qrToken: z.string().min(16) }), req.body, 'QR')
     const user = req.user!
 
-    const booking = await loadBookingByQr(body.qrToken)
+    const booking = await loadBookingForGate(body.qrToken)
     assertStatus(booking, ['COMPLETED'], 'melakukan gate-out')
 
     const now = new Date()

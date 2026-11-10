@@ -158,7 +158,7 @@ export function CheckerScanPage() {
     <Main className='mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6'>
       <PageHeader
         title='Scan Checker'
-        description='Pindai QR tiket untuk menugaskan dock, memulai, atau menyelesaikan proses.'
+        description='Pindai QR tiket atau ketik kode booking untuk menugaskan dock, memulai, atau menyelesaikan proses.'
       />
 
       <Card>
@@ -167,7 +167,7 @@ export function CheckerScanPage() {
           <CardDescription>
             {scanning
               ? 'Memeriksa tiket...'
-              : 'Arahkan kamera ke QR, atau isi kode manual.'}
+              : 'Arahkan kamera ke QR, atau ketik token / kode booking.'}
           </CardDescription>
         </CardHeader>
         <CardContent>

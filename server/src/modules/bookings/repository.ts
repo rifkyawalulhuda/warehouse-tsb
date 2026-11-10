@@ -61,6 +61,40 @@ export function getBookingByQrToken(qrToken: string) {
   return prisma.booking.findUnique({ where: { qrToken }, select: bookingSelect })
 }
 
+/** Bentuk kode booking yang dibuat `buildBookingCode`: `TSB-YYYYMMDD-NNN`. */
+const BOOKING_CODE_PATTERN = /^TSB-\d{8}-\d{3}$/i
+
+/** Apakah masukan berbentuk kode booking (bukan token QR)? */
+export function isBookingCode(value: string): boolean {
+  return BOOKING_CODE_PATTERN.test(value.trim())
+}
+
+/**
+ * Filter `where` untuk satu masukan layar gate.
+ *
+ * Dipakai jalur yang butuh relasi ikut termuat (gate-in/gate-out). Bila masukan
+ * berbentuk kode booking, dua kolom dicari sekaligus; selain itu hanya `qrToken`.
+ *
+ * Hanya untuk endpoint ops yang sudah dijaga peran. Tiket publik tetap memakai
+ * `getBookingByQrToken` karena kode booking mudah ditebak (`TSB-tanggal-urut`).
+ */
+export function scanInputWhere(input: string): Prisma.BookingWhereInput {
+  const value = input.trim()
+  return isBookingCode(value)
+    ? { OR: [{ qrToken: value }, { bookingCode: value.toUpperCase() }] }
+    : { qrToken: value }
+}
+
+/**
+ * Satu pintu pencarian tiket di layar gate: token QR atau kode booking.
+ *
+ * Hanya untuk endpoint ops yang sudah dijaga peran; tiket publik tetap memakai
+ * `getBookingByQrToken` karena kode booking mudah ditebak.
+ */
+export function getBookingByScanInput(input: string) {
+  return prisma.booking.findFirst({ where: scanInputWhere(input), select: bookingSelect })
+}
+
 export function isFinalStatus(status: BookingStatus): boolean {
   return FINAL_STATUSES.includes(status)
 }

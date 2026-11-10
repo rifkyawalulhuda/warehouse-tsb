@@ -3,6 +3,7 @@ import { Html5Qrcode } from 'html5-qrcode'
 import { Camera, CameraOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { parseScanInput } from './scan-input'
 
 /**
  * Kamera QR dengan fallback input manual. Kamera sering diblokir browser HP
@@ -49,7 +50,10 @@ export function QrScanner({ onScan }: { onScan: (token: string) => void }) {
       const active = scannerRef.current
       scannerRef.current = null
       if (active && active.isScanning) {
-        void active.stop().then(() => active.clear()).catch(() => undefined)
+        void active
+          .stop()
+          .then(() => active.clear())
+          .catch(() => undefined)
       } else {
         try {
           active?.clear()
@@ -59,6 +63,8 @@ export function QrScanner({ onScan }: { onScan: (token: string) => void }) {
       }
     }
   }, [cameraOn, onScan])
+
+  const parsed = parseScanInput(manual)
 
   return (
     <div className='space-y-3'>
@@ -93,23 +99,36 @@ export function QrScanner({ onScan }: { onScan: (token: string) => void }) {
         className='flex gap-2'
         onSubmit={(event) => {
           event.preventDefault()
-          const token = manual.trim()
-          if (token.length >= 16) {
-            setManual('')
-            onScan(token)
-          }
+          if (!parsed) return
+          setManual('')
+          onScan(parsed.value)
         }}
       >
         <Input
           value={manual}
           onChange={(event) => setManual(event.target.value)}
-          placeholder='Tempel kode tiket atau isi manual'
+          placeholder='Token QR atau kode booking'
           autoComplete='off'
+          spellCheck={false}
+          className='font-mono'
         />
-        <Button type='submit' variant='outline' disabled={manual.trim().length < 16}>
+        <Button type='submit' variant='outline' disabled={!parsed}>
           Cek
         </Button>
       </form>
+
+      {manual.trim() && !parsed ? (
+        <p className='text-center text-xs text-destructive'>
+          Kode tidak dikenali. Tempel token QR dari e-tiket (32 karakter), atau
+          ketik kode booking seperti TSB-20261111-003.
+        </p>
+      ) : (
+        <p className='text-center text-xs text-muted-foreground'>
+          QR tiket berisi token acak. Bila kamera tidak bisa dipakai, ketik
+          token itu atau kode booking yang tercetak di tiket (mis.
+          TSB-20261111-003).
+        </p>
+      )}
     </div>
   )
 }
