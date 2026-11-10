@@ -26,6 +26,7 @@ type DatePickerProps = {
   name?: string
   disabled?: boolean
   onBlur?: () => void
+  'aria-label'?: string
   'aria-invalid'?: boolean
   'aria-describedby'?: string
   ref?: React.Ref<HTMLButtonElement>
@@ -48,6 +49,7 @@ export function DatePicker({
   name,
   disabled,
   onBlur,
+  'aria-label': ariaLabel,
   'aria-invalid': ariaInvalid,
   'aria-describedby': describedBy,
   ref,
@@ -77,6 +79,7 @@ export function DatePicker({
           variant='outline'
           disabled={disabled}
           onBlur={onBlur}
+          aria-label={ariaLabel}
           aria-invalid={ariaInvalid}
           aria-describedby={describedBy}
           data-empty={!selected}

@@ -2,8 +2,10 @@ import {
   BarChart3,
   CalendarClock,
   ClipboardList,
+  History,
   LayoutDashboard,
   ListChecks,
+  QrCode,
   ScanLine,
   Settings,
   Truck,
@@ -26,7 +28,10 @@ const customerNav: NavGroup[] = [
 const gateNav: NavGroup[] = [
   {
     title: 'Gate',
-    items: [{ title: 'Scan Gate', url: '/scan', icon: ScanLine }],
+    items: [
+      { title: 'Scan Gate', url: '/scan', icon: ScanLine },
+      { title: 'Riwayat Gate', url: '/history', icon: History },
+    ],
   },
 ]
 
@@ -34,8 +39,10 @@ const checkerNav: NavGroup[] = [
   {
     title: 'Operasional',
     items: [
+      { title: 'Scan Checker', url: '/checker/scan', icon: QrCode },
       { title: 'Antrean Hari Ini', url: '/queue', icon: ListChecks },
       { title: 'Papan Dock', url: '/dock', icon: Truck },
+      { title: 'Riwayat Gate', url: '/history', icon: History },
     ],
   },
   {
@@ -51,7 +58,9 @@ const adminNav: NavGroup[] = [
       { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
       { title: 'Antrean Hari Ini', url: '/queue', icon: ListChecks },
       { title: 'Papan Dock', url: '/dock', icon: Truck },
+      { title: 'Scan Checker', url: '/checker/scan', icon: QrCode },
       { title: 'Scan Gate', url: '/scan', icon: ScanLine },
+      { title: 'Riwayat Gate', url: '/history', icon: History },
     ],
   },
   {

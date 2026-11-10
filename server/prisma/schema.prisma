@@ -130,6 +130,7 @@ model User {
   processDoneLogs   BookingTimeLog[] @relation("ProcessCompletedBy")
   gateOutLogs       BookingTimeLog[] @relation("GateOutBy")
   auditLogs         AuditLog[]
+  scanAttempts      ScanAttempt[]
 
   @@index([customerId])
   @@map("users")
@@ -259,6 +260,7 @@ model Booking {
   approvedBy   User?           @relation("BookingApprovals", fields: [approvedById], references: [id], onDelete: SetNull)
   timeLog      BookingTimeLog?
   auditLogs    AuditLog[]
+  scanAttempts ScanAttempt[]
 
   @@index([bookingDate, status])
   @@index([customerId, bookingDate])
@@ -292,6 +294,10 @@ model BookingTimeLog {
   processCompletedUser User? @relation("ProcessCompletedBy", fields: [processCompletedBy], references: [id])
   gateOutUser      User?   @relation("GateOutBy", fields: [gateOutBy], references: [id])
 
+  /// Riwayat gate disaring menurut jam masuk/keluar, bukan tanggal booking:
+  /// truk shift malam bisa masuk setelah tengah malam.
+  @@index([gateInAt])
+  @@index([gateOutAt])
   @@map("booking_time_logs")
 }
 
@@ -337,4 +343,47 @@ model AuditLog {
   @@index([bookingId, createdAt])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+/// Pemindaian QR yang TIDAK menghasilkan aksi gate.
+///
+/// Sebelumnya pemindaian gagal tidak meninggalkan jejak sama sekali: endpoint
+/// `GET /ops/scan/:qrToken` hanya melempar galat, sehingga riwayat gate berisi
+/// keberhasilan saja dan justru kejadian yang perlu dipertanggungjawabkan
+/// (QR palsu, tiket batal, datang terlalu awal) hilang tanpa bekas.
+///
+/// Yang disimpan hanya percobaan yang GAGAL. Pemindaian yang berujung gate-in
+/// atau gate-out sudah tercatat di `booking_time_logs` dan `audit_logs`; bila
+/// ikut ditulis di sini, setiap truk muncul dua kali di riwayat.
+model ScanAttempt {
+  id String @id @default(uuid()) @db.Uuid
+
+  /// Token yang dipindai apa adanya. Untuk QR palsu nilainya tidak cocok
+  /// dengan booking mana pun, jadi kolom ini sengaja tidak unik.
+  qrToken String @map("qr_token") @db.VarChar(128)
+
+  /// Kode alasan yang stabil untuk disaring dan dihitung: `INVALID_QR`,
+  /// `NOT_FOUND`, `EARLY_ARRIVAL`, `APPROVAL_PENDING`,
+  /// `VEHICLE_INCOMPLETE`, `WRONG_STATUS`, `CANCELLED`, `NO_SHOW`.
+  reason String @db.VarChar(40)
+
+  /// Kalimat yang dilihat petugas saat itu, disimpan agar riwayat bisa
+  /// menjelaskan penolakan tanpa menebak ulang dari kode alasan.
+  message String @db.VarChar(240)
+
+  userId   String? @map("user_id") @db.Uuid
+  userRole Role    @map("user_role")
+
+  /// Terisi bila tokennya dikenali — mis. tiket batal atau datang terlalu awal.
+  /// Null untuk QR yang tidak cocok dengan booking mana pun.
+  bookingId String? @map("booking_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  user    User?    @relation(fields: [userId], references: [id])
+  booking Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([qrToken, createdAt])
+  @@map("scan_attempts")
 }

@@ -1,13 +1,13 @@
-import { Router } from 'express'
+﻿import { Router, type Request } from 'express'
 import { z } from 'zod'
-import type { BookingStatus } from '@prisma/client'
+import type { BookingStatus, Prisma } from '@prisma/client'
 import { prisma, type Tx } from '../../lib/prisma'
 import { parse } from '../../lib/validate'
 import { badRequest, conflict, notFound } from '../../lib/http-error'
 import { pathParam } from '../../lib/params'
 import { requireAuth, requireRole } from '../../middleware/auth'
 import { getSettings, toWindow } from '../../lib/settings'
-import { utcToDateOnly, minuteOfDayJakarta, todayISO } from '../../lib/time'
+import { utcToDateOnly, minuteOfDayJakarta, todayISO, jakartaInstant, addDaysISO, diffMinutes } from '../../lib/time'
 import { emitBookingUpdated, emitDockUpdated } from '../../realtime'
 import { writeAudit } from '../../lib/audit'
 import { bookingSelect, ACTIVE_STATUSES, getBookingByQrToken } from '../bookings/repository'
@@ -46,6 +46,107 @@ function assertStatus(booking: { status: BookingStatus }, allowed: BookingStatus
 }
 
 /* ------------------------------------------------------------------ */
+/* Jejak pemindaian yang gagal                                        */
+/* ------------------------------------------------------------------ */
+
+const SCAN_DEDUPE_WINDOW_MS = 60_000
+
+/**
+ * Mencatat pemindaian yang tidak berujung aksi gate.
+ *
+ * Hanya dipanggil saat klien menandai `?record=1`, yaitu ketika petugas benar
+ * benar memindai sesuatu. Pemanggilan ulang otomatis dari layar scan (mis.
+ * menyegarkan kartu setelah gate-in) tidak ikut tercatat, supaya riwayat tidak
+ * dipenuhi baris yang tidak pernah dilakukan siapa pun.
+ *
+ * Pengulangan dalam 60 detik diabaikan: kamera bisa mengirim token yang sama
+ * dua kali untuk satu tiket, dan baris kembar hanya mengaburkan riwayat.
+ */
+async function recordRejectedScan(input: {
+  req: Request
+  qrToken: string
+  reason: string
+  message: string
+  bookingId?: string | null
+}) {
+  const { req } = input
+  if (req.query.record !== '1') return
+  if (!req.user) return
+
+  const since = new Date(Date.now() - SCAN_DEDUPE_WINDOW_MS)
+  const duplicate = await prisma.scanAttempt.findFirst({
+    where: {
+      qrToken: input.qrToken,
+      reason: input.reason,
+      userId: req.user.id,
+      createdAt: { gte: since },
+    },
+    select: { id: true },
+  })
+  if (duplicate) return
+
+  await prisma.scanAttempt.create({
+    data: {
+      qrToken: input.qrToken.slice(0, 128),
+      reason: input.reason.slice(0, 40),
+      message: input.message.slice(0, 240),
+      userId: req.user.id,
+      userRole: req.user.role,
+      bookingId: input.bookingId ?? null,
+    },
+  })
+}
+
+/**
+ * Alasan sebuah tiket yang terbaca tetapi tidak bisa diproses di gate.
+ *
+ * Urutannya penting: status terminal lebih dulu, karena tiket batal juga bisa
+ * terbaca sebagai "belum boleh masuk" bila diperiksa dengan urutan terbalik.
+ */
+function blockedScanReason(input: {
+  status: BookingStatus
+  approvalPending: boolean
+  earlyArrival: boolean
+  vehicleIncomplete: boolean
+  earlyArrivalMessage?: string | null
+}): { reason: string; message: string } | null {
+  if (input.status === 'CANCELLED') {
+    return { reason: 'CANCELLED', message: 'Tiket sudah dibatalkan.' }
+  }
+  if (input.status === 'NO_SHOW') {
+    return { reason: 'NO_SHOW', message: 'Booking ditandai tidak hadir.' }
+  }
+  if (input.status === 'CHECKED_OUT') {
+    return { reason: 'ALREADY_CHECKED_OUT', message: 'Tiket sudah selesai dipakai.' }
+  }
+  if (input.approvalPending) {
+    return {
+      reason: 'APPROVAL_PENDING',
+      message: 'Booking belum disetujui Admin gudang.',
+    }
+  }
+  if (input.earlyArrival) {
+    return {
+      reason: 'EARLY_ARRIVAL',
+      message: input.earlyArrivalMessage ?? 'Truk datang melebihi batas kedatangan awal.',
+    }
+  }
+  if (input.vehicleIncomplete) {
+    return {
+      reason: 'VEHICLE_INCOMPLETE',
+      message: 'Plat nomor dan nama supir belum lengkap.',
+    }
+  }
+  if (input.status !== 'BOOKED_INCOMPLETE' && input.status !== 'BOOKED_READY') {
+    return {
+      reason: 'WRONG_STATUS',
+      message: `Tiket sudah diproses (status ${input.status}).`,
+    }
+  }
+  return null
+}
+
+/* ------------------------------------------------------------------ */
 /* Scan: hanya membaca data, tidak mengubah apa pun                    */
 /* ------------------------------------------------------------------ */
 
@@ -55,7 +156,11 @@ opsRouter.get('/scan/:qrToken', requireRole('GATE_OFFICER', 'CHECKER'), async (r
     if (!qrToken) throw badRequest('INVALID_QR', 'QR Code tidak dikenali')
 
     const booking = await getBookingByQrToken(qrToken)
-    if (!booking) throw notFound('QR Code tidak dikenali atau tiket sudah tidak berlaku')
+    if (!booking) {
+      const message = 'QR Code tidak dikenali atau tiket sudah tidak berlaku'
+      await recordRejectedScan({ req, qrToken, reason: 'NOT_FOUND', message })
+      throw notFound(message)
+    }
 
     const settings = await getSettings()
     const now = new Date()
@@ -66,20 +171,44 @@ opsRouter.get('/scan/:qrToken', requireRole('GATE_OFFICER', 'CHECKER'), async (r
       0,
       Math.floor((now.getTime() - booking.startTime.getTime()) / 60_000)
     )
+    const earlyArrivalMessage =
+      earlyMinutes > settings.earlyArrivalLimitMinutes
+        ? `Truk datang ${earlyMinutes} menit lebih awal. Batas kedatangan awal ${settings.earlyArrivalLimitMinutes} menit.`
+        : null
+    const canGateIn =
+      ['BOOKED_INCOMPLETE', 'BOOKED_READY'].includes(booking.status) &&
+      booking.approvalStatus !== 'PENDING' &&
+      earlyMinutes <= settings.earlyArrivalLimitMinutes
+    const blocked = canGateIn
+      ? null
+      : blockedScanReason({
+          status: booking.status,
+          approvalPending: booking.approvalStatus === 'PENDING',
+          earlyArrival: earlyMinutes > settings.earlyArrivalLimitMinutes,
+          vehicleIncomplete: !(booking.licensePlate && booking.driverName),
+          earlyArrivalMessage,
+        })
+
+    if (blocked) {
+      await recordRejectedScan({
+        req,
+        qrToken,
+        bookingId: booking.id,
+        reason: blocked.reason,
+        message: blocked.message,
+      })
+    }
 
     res.json({
       data: {
         booking,
-        canGateIn:
-          ['BOOKED_INCOMPLETE', 'BOOKED_READY'].includes(booking.status) &&
-          booking.approvalStatus !== 'PENDING' &&
-          earlyMinutes <= settings.earlyArrivalLimitMinutes,
+        canGateIn,
         earlyArrival:
           earlyMinutes > settings.earlyArrivalLimitMinutes
             ? {
                 minutesTooEarly: earlyMinutes,
                 limitMinutes: settings.earlyArrivalLimitMinutes,
-                message: `Truk datang ${earlyMinutes} menit lebih awal. Batas kedatangan awal ${settings.earlyArrivalLimitMinutes} menit.`,
+                message: earlyArrivalMessage,
               }
             : null,
         vehicleIncomplete: !(booking.licensePlate && booking.driverName),
@@ -96,6 +225,82 @@ opsRouter.get('/scan/:qrToken', requireRole('GATE_OFFICER', 'CHECKER'), async (r
     next(error)
   }
 })
+
+/* ------------------------------------------------------------------ */
+/* Pindai untuk checker                                                */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Hasil pindai versi checker: bukan soal boleh-masuk-gate, melainkan apa yang
+ * bisa dikerjakan di dock sekarang — mulai, selesai, atau menugaskan dock bila
+ * truk masih menunggu. Dipisah dari `/scan` supaya checker tidak pernah
+ * menerima tombol gate yang akan ditolak 403.
+ */
+opsRouter.get(
+  '/checker/scan/:qrToken',
+  requireRole('CHECKER'),
+  async (req, res, next) => {
+    try {
+      const qrToken = pathParam(req, 'qrToken')
+      if (!qrToken) throw badRequest('INVALID_QR', 'QR Code tidak dikenali')
+
+      const booking = await getBookingByQrToken(qrToken)
+      if (!booking) {
+        throw notFound('QR Code tidak dikenali atau tiket sudah tidak berlaku')
+      }
+
+      const waiting = ['CHECKED_IN_ON_TIME', 'LATE_WAITING_LIST'].includes(
+        booking.status
+      )
+      const gateInAt = booking.timeLog?.gateInAt ?? null
+
+      // Posisi antrean mengikuti siapa yang lebih dulu tercatat masuk gate,
+      // bukan jadwal — truk yang datang lebih awal berhak dilayani lebih dulu.
+      const waitingPosition =
+        waiting && gateInAt
+          ? (await prisma.booking.count({
+              where: {
+                id: { not: booking.id },
+                status: { in: ['CHECKED_IN_ON_TIME', 'LATE_WAITING_LIST'] },
+                timeLog: { gateInAt: { lt: gateInAt } },
+              },
+            })) + 1
+          : null
+
+      const docks = await prisma.dock.findMany({
+        orderBy: { id: 'asc' },
+        select: {
+          id: true,
+          dockCode: true,
+          allowedActivity: true,
+          currentStatus: true,
+        },
+      })
+
+      res.json({
+        data: {
+          booking,
+          waitingPosition,
+          waitingSince: gateInAt,
+          actions: {
+            assignDock: waiting && booking.approvalStatus !== 'PENDING',
+            start: booking.status === 'DOCK_ASSIGNED',
+            finish: booking.status === 'IN_PROGRESS',
+          },
+          docks: docks.map((dock) => ({
+            ...dock,
+            eligible:
+              dock.currentStatus === 'AVAILABLE' &&
+              (dock.allowedActivity === 'BOTH' ||
+                dock.allowedActivity === booking.activityType),
+          })),
+        },
+      })
+    } catch (error) {
+      next(error)
+    }
+  }
+)
 
 /* ------------------------------------------------------------------ */
 /* Gate-In                                                             */
@@ -694,7 +899,7 @@ opsRouter.get('/activity', requireRole('CHECKER'), async (req, res, next) => {
             driverName: true,
             activityType: true,
             assignedDock: { select: { dockCode: true } },
-            customer: { select: { companyName: true, name: true } },
+            customer: { select: { name: true } },
           },
         },
       },
@@ -712,11 +917,191 @@ opsRouter.get('/activity', requireRole('CHECKER'), async (req, res, next) => {
         driverName: log.booking?.driverName ?? null,
         activityType: log.booking?.activityType ?? null,
         dockCode: log.booking?.assignedDock?.dockCode ?? null,
-        customer: log.booking?.customer
-          ? (log.booking.customer.companyName ?? log.booking.customer.name)
-          : null,
+        customer: log.booking?.customer?.name ?? null,
         meta: log.meta,
       })),
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+/**
+ * Riwayat gate: kronologi truk yang masuk, keluar, dan pemindaian yang ditolak.
+ *
+ * Satu baris = satu peristiwa, bukan satu booking. Truk yang masuk pukul 08:00
+ * dan keluar pukul 10:00 muncul dua kali, karena petugas perlu melihat kedua
+ * momen itu di urutan kejadiannya.
+ *
+ * Tiga kueri terpisah lalu digabung di memori: tiap kueri hanya mengambil
+ * `limit` baris terbaru dari jenisnya, jadi biayanya tetap terbatas walaupun
+ * rentang tanggalnya lebar.
+ */
+opsRouter.get('/gate-history', requireRole('GATE_OFFICER', 'CHECKER'), async (req, res, next) => {
+  try {
+    const query = parse(
+      z
+        .object({
+          from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Tanggal harus YYYY-MM-DD'),
+          to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Tanggal harus YYYY-MM-DD'),
+          q: z.string().trim().max(60).optional(),
+          limit: z.coerce.number().int().min(1).max(500).default(300),
+        })
+        .refine((value) => value.from <= value.to, {
+          message: 'Tanggal awal tidak boleh melewati tanggal akhir',
+          path: ['from'],
+        }),
+      req.query,
+      'Parameter riwayat gate'
+    )
+
+    // `to` inklusif: batas atasnya awal hari berikutnya.
+    const fromInstant = jakartaInstant(query.from, 0)
+    const toInstant = jakartaInstant(addDaysISO(query.to, 1), 0)
+    const search = query.q ? { contains: query.q, mode: 'insensitive' as const } : null
+
+    const bookingFilter: Prisma.BookingWhereInput | undefined = search
+      ? {
+          OR: [
+            { bookingCode: search },
+            { licensePlate: search },
+            { driverName: search },
+          ],
+        }
+      : undefined
+
+    const bookingPreview = {
+      bookingCode: true,
+      licensePlate: true,
+      driverName: true,
+      activityType: true,
+      assignedDock: { select: { dockCode: true } },
+      customer: { select: { name: true } },
+    } satisfies Prisma.BookingSelect
+
+    const [gateIns, gateOuts, rejected] = await Promise.all([
+      prisma.bookingTimeLog.findMany({
+        where: {
+          gateInAt: { gte: fromInstant, lt: toInstant },
+          ...(bookingFilter ? { booking: bookingFilter } : {}),
+        },
+        orderBy: { gateInAt: 'desc' },
+        take: query.limit,
+        select: {
+          id: true,
+          gateInAt: true,
+          gateOutAt: true,
+          booking: { select: bookingPreview },
+          gateInUser: { select: { name: true, role: true } },
+        },
+      }),
+      prisma.bookingTimeLog.findMany({
+        where: {
+          gateOutAt: { gte: fromInstant, lt: toInstant },
+          ...(bookingFilter ? { booking: bookingFilter } : {}),
+        },
+        orderBy: { gateOutAt: 'desc' },
+        take: query.limit,
+        select: {
+          id: true,
+          gateInAt: true,
+          gateOutAt: true,
+          booking: { select: bookingPreview },
+          gateOutUser: { select: { name: true, role: true } },
+        },
+      }),
+      prisma.scanAttempt.findMany({
+        where: {
+          createdAt: { gte: fromInstant, lt: toInstant },
+          // Kode QR untuk tiket palsu, data booking untuk penolakan yang punya
+          // tiket (mis. datang terlalu awal) — supaya pencarian plat juga
+          // menemukan penolakannya, bukan hanya pemindaian yang gagal total.
+          ...(search && bookingFilter
+            ? { OR: [{ qrToken: search }, { booking: bookingFilter }] }
+            : {}),
+        },
+        orderBy: { createdAt: 'desc' },
+        take: query.limit,
+        select: {
+          id: true,
+          qrToken: true,
+          reason: true,
+          message: true,
+          createdAt: true,
+          userRole: true,
+          user: { select: { name: true } },
+          booking: { select: bookingPreview },
+        },
+      }),
+    ])
+
+    const rows = [
+      ...gateIns.map((log) => ({
+        id: `in:${log.id}`,
+        event: 'GATE_IN' as const,
+        at: log.gateInAt!,
+        bookingCode: log.booking.bookingCode,
+        customer: log.booking.customer.name,
+        licensePlate: log.booking.licensePlate,
+        driverName: log.booking.driverName,
+        activityType: log.booking.activityType,
+        dockCode: log.booking.assignedDock?.dockCode ?? null,
+        gateInAt: log.gateInAt,
+        gateOutAt: log.gateOutAt,
+        minutesInside: diffMinutes(log.gateInAt, log.gateOutAt),
+        officerName: log.gateInUser?.name ?? null,
+        officerRole: log.gateInUser?.role ?? null,
+        reason: null as string | null,
+        message: null as string | null,
+        qrToken: null as string | null,
+      })),
+      ...gateOuts.map((log) => ({
+        id: `out:${log.id}`,
+        event: 'GATE_OUT' as const,
+        at: log.gateOutAt!,
+        bookingCode: log.booking.bookingCode,
+        customer: log.booking.customer.name,
+        licensePlate: log.booking.licensePlate,
+        driverName: log.booking.driverName,
+        activityType: log.booking.activityType,
+        dockCode: log.booking.assignedDock?.dockCode ?? null,
+        gateInAt: log.gateInAt,
+        gateOutAt: log.gateOutAt,
+        minutesInside: diffMinutes(log.gateInAt, log.gateOutAt),
+        officerName: log.gateOutUser?.name ?? null,
+        officerRole: log.gateOutUser?.role ?? null,
+        reason: null as string | null,
+        message: null as string | null,
+        qrToken: null as string | null,
+      })),
+      ...rejected.map((attempt) => ({
+        id: `rejected:${attempt.id}`,
+        event: 'REJECTED' as const,
+        at: attempt.createdAt,
+        bookingCode: attempt.booking?.bookingCode ?? null,
+        customer: attempt.booking?.customer.name ?? null,
+        licensePlate: attempt.booking?.licensePlate ?? null,
+        driverName: attempt.booking?.driverName ?? null,
+        activityType: attempt.booking?.activityType ?? null,
+        dockCode: attempt.booking?.assignedDock?.dockCode ?? null,
+        gateInAt: null as Date | null,
+        gateOutAt: null as Date | null,
+        minutesInside: null as number | null,
+        officerName: attempt.user?.name ?? null,
+        officerRole: attempt.userRole,
+        reason: attempt.reason,
+        message: attempt.message,
+        qrToken: attempt.qrToken,
+      })),
+    ].sort((a, b) => b.at.getTime() - a.at.getTime())
+
+    res.json({
+      data: {
+        rows: rows.slice(0, query.limit),
+        truncated: rows.length > query.limit,
+        from: query.from,
+        to: query.to,
+      },
     })
   } catch (error) {
     next(error)

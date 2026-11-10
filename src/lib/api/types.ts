@@ -25,11 +25,7 @@ export type ApprovalMode = 'AUTO' | 'MANUAL'
  * NOT_REQUIRED = booking tidak pernah masuk antrean (mode AUTO / whitelist / data lama).
  */
 export type ApprovalStatus =
-  | 'NOT_REQUIRED'
-  | 'PENDING'
-  | 'APPROVED'
-  | 'REJECTED'
-  | 'EXPIRED'
+  'NOT_REQUIRED' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED'
 
 export type SessionUser = {
   id: string
@@ -202,6 +198,27 @@ export type ScanResult = {
   gracePeriodMinutes: number
 }
 
+/** Hasil pindai di layar checker: apa yang bisa dikerjakan di dock. */
+export type CheckerScanResult = {
+  booking: Booking
+  /** Urutan tunggu (1 = paling dulu masuk gate), null bila truk tidak menunggu. */
+  waitingPosition: number | null
+  waitingSince: string | null
+  actions: {
+    assignDock: boolean
+    start: boolean
+    finish: boolean
+  }
+  docks: Array<{
+    id: number
+    dockCode: string
+    allowedActivity: ActivityType | 'BOTH'
+    currentStatus: 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE'
+    /** Kosong dan melayani aktivitas booking ini. */
+    eligible: boolean
+  }>
+}
+
 export type PublicTicket = {
   bookingCode: string
   qrToken: string
@@ -355,4 +372,39 @@ export type ActivityItem = {
   dockCode: string | null
   customer: string | null
   meta: unknown
+}
+
+/* ----------------------------- riwayat gate ---------------------------- */
+
+/** Jenis peristiwa di riwayat gate. Satu baris = satu peristiwa. */
+export type GateHistoryEvent = 'GATE_IN' | 'GATE_OUT' | 'REJECTED'
+
+export type GateHistoryRow = {
+  id: string
+  event: GateHistoryEvent
+  at: string
+  bookingCode: string | null
+  customer: string | null
+  licensePlate: string | null
+  driverName: string | null
+  activityType: ActivityType | null
+  dockCode: string | null
+  gateInAt: string | null
+  gateOutAt: string | null
+  /** Lama truk di dalam gudang, dalam menit; null bila belum keluar. */
+  minutesInside: number | null
+  officerName: string | null
+  officerRole: Role | null
+  /** Kode alasan untuk baris REJECTED, mis. `EARLY_ARRIVAL`. */
+  reason: string | null
+  message: string | null
+  qrToken: string | null
+}
+
+export type GateHistoryResponse = {
+  rows: GateHistoryRow[]
+  /** true bila jumlah baris melebihi batas dan sebagian disembunyikan. */
+  truncated: boolean
+  from: string
+  to: string
 }

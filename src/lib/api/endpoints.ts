@@ -1,4 +1,11 @@
-import { api, deleteData, getData, patchData, postData, putData } from './client'
+import {
+  api,
+  deleteData,
+  getData,
+  patchData,
+  postData,
+  putData,
+} from './client'
 import type {
   ActivityItem,
   ActivityType,
@@ -6,12 +13,14 @@ import type {
   ApprovalStatus,
   AvailabilitySlot,
   Booking,
+  CheckerScanResult,
   Customer,
   CustomerDetail,
   CustomerAccount,
   Dock,
   DockInput,
   DockWithBooking,
+  GateHistoryResponse,
   ManagedUser,
   PublicTicket,
   QueueResponse,
@@ -84,7 +93,10 @@ export function createWarehouse(payload: { name: string }) {
   return postData<Warehouse>('/master/warehouses', payload)
 }
 
-export function updateWarehouse(id: number, payload: Partial<Pick<Warehouse, 'name' | 'isActive'>>) {
+export function updateWarehouse(
+  id: number,
+  payload: Partial<Pick<Warehouse, 'name' | 'isActive'>>
+) {
   return patchData<Warehouse>(`/master/warehouses/${id}`, payload)
 }
 
@@ -164,7 +176,10 @@ export type ApprovalQueue = {
   bookings: Booking[]
 }
 
-export function fetchApprovals(params?: { status?: ApprovalStatus; date?: string }) {
+export function fetchApprovals(params?: {
+  status?: ApprovalStatus
+  date?: string
+}) {
   return getData<ApprovalQueue>('/approvals', { params })
 }
 
@@ -177,10 +192,10 @@ export function rejectBooking(id: string, reason: string) {
 }
 
 export function batchApproveBookings(ids: string[]) {
-  return postData<{ approved: string[]; skipped: { id: string; reason: string }[] }>(
-    '/approvals/batch-approve',
-    { ids }
-  )
+  return postData<{
+    approved: string[]
+    skipped: { id: string; reason: string }[]
+  }>('/approvals/batch-approve', { ids })
 }
 
 /* ---------------------------- tiket publik --------------------------- */
@@ -201,8 +216,14 @@ export function completeVehicleByTicket(
 
 /* --------------------------------- ops ------------------------------- */
 
-export function scanQr(qrToken: string) {
-  return getData<ScanResult>(`/ops/scan/${qrToken}`)
+export function scanQr(qrToken: string, options: { record?: boolean } = {}) {
+  return getData<ScanResult>(`/ops/scan/${qrToken}`, {
+    params: options.record ? { record: 1 } : undefined,
+  })
+}
+
+export function fetchCheckerScan(qrToken: string) {
+  return getData<CheckerScanResult>(`/ops/checker/scan/${qrToken}`)
 }
 
 export function gateIn(qrToken: string) {
@@ -245,10 +266,20 @@ export function fetchActivity(limit = 12) {
   return getData<ActivityItem[]>('/ops/activity', { params: { limit } })
 }
 
+export type GateHistoryQuery = { from: string; to: string; q?: string }
+
+export function fetchGateHistory({ from, to, q }: GateHistoryQuery) {
+  return getData<GateHistoryResponse>('/ops/gate-history', {
+    params: { from, to, q: q?.trim() ? q.trim() : undefined },
+  })
+}
+
 /* ------------------------------ reports ------------------------------ */
 
 export function fetchKpi(from: string, to: string, customerId?: string) {
-  return getData<ReportResponse>('/reports/kpi', { params: { from, to, customerId } })
+  return getData<ReportResponse>('/reports/kpi', {
+    params: { from, to, customerId },
+  })
 }
 
 export function reportExportUrl(from: string, to: string, customerId?: string) {
@@ -284,7 +315,10 @@ export function updateUser(
 
 /* ------------------------------ customers ---------------------------- */
 
-export function fetchCustomers(params?: { q?: string; isActive?: 'true' | 'false' }) {
+export function fetchCustomers(params?: {
+  q?: string
+  isActive?: 'true' | 'false'
+}) {
   return getData<Customer[]>('/customers', { params })
 }
 
@@ -313,7 +347,10 @@ export function createCustomer(payload: CustomerProfileInput) {
   return postData<Customer>('/customers', payload)
 }
 
-export function updateCustomer(id: string, payload: Partial<CustomerProfileInput>) {
+export function updateCustomer(
+  id: string,
+  payload: Partial<CustomerProfileInput>
+) {
   return patchData<Customer>(`/customers/${id}`, payload)
 }
 
@@ -339,5 +376,8 @@ export function updateCustomerAccount(
     canApproveBooking: boolean
   }>
 ) {
-  return patchData<CustomerAccount>(`/customers/${customerId}/users/${userId}`, payload)
+  return patchData<CustomerAccount>(
+    `/customers/${customerId}/users/${userId}`,
+    payload
+  )
 }

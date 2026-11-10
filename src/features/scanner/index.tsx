@@ -35,7 +35,7 @@ export function ScanPage() {
   const [confirm, setConfirm] = useState<'gate-in' | 'gate-out' | null>(null)
 
   const scan = useMutation({
-    mutationFn: (token: string) => scanQr(token),
+    mutationFn: (token: string) => scanQr(token, { record: true }),
     onSuccess: (data) => setResult(data),
     onError: (error) => toast.error(apiErrorMessage(error)),
   })

@@ -46,7 +46,9 @@ let refreshing: Promise<boolean> | null = null
  */
 export async function refreshSession(): Promise<boolean> {
   refreshing ??= axios
-    .post<Envelope<unknown>>('/api/auth/refresh', null, { withCredentials: true })
+    .post<Envelope<unknown>>('/api/auth/refresh', null, {
+      withCredentials: true,
+    })
     .then(() => true)
     .catch(() => false)
     .finally(() => {
@@ -63,7 +65,8 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const config = error.config as RetriableConfig | undefined
     const url = config?.url ?? ''
-    const isAuthCall = url.includes('/auth/login') || url.includes('/auth/refresh')
+    const isAuthCall =
+      url.includes('/auth/login') || url.includes('/auth/refresh')
 
     if (
       error.response?.status !== 401 ||
