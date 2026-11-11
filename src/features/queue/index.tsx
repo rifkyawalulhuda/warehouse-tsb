@@ -16,18 +16,12 @@ import { useRealtimeSync } from '@/hooks/use-realtime'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ApprovalBadge } from '@/components/approval-badge'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { DataTable, DataTableColumnHeader } from '@/components/data-table'
 import { DatePicker } from '@/components/date-picker'
+import { DockPicker } from '@/components/dock-picker'
 import { Main } from '@/components/layout/main'
 import { PageHeader } from '@/components/page-header'
 import { ErrorBlock, LoadingBlock } from '@/components/query-state'
@@ -56,9 +50,9 @@ export function QueuePage() {
     dock: DockWithBooking
   } | null>(null)
   /**
-   * Dinaikkan setiap dialog dock ditutup, supaya `<Select>` per baris kembali
-   * ke placeholder. Tanpa ini pilihan yang dibatalkan tetap terlihat, dan
-   * petugas bisa mengira truk sudah punya dock padahal belum.
+   * Dinaikkan setiap dialog dock ditutup, supaya pemilih dock per baris
+   * kembali ke placeholder. Tanpa ini pilihan yang dibatalkan tetap terlihat,
+   * dan petugas bisa mengira truk sudah punya dock padahal belum.
    */
   const [assignReset, setAssignReset] = useState(0)
 
@@ -398,30 +392,17 @@ function QueueSection({
             {onAssign &&
               booking.approvalStatus !== 'PENDING' &&
               (compatible.length > 0 ? (
-                <Select
-                  // Dropdown ini uncontrolled: setelah dialog dibatalkan,
-                  // pilihan yang batal tetap tampil seolah dock sudah dipakai.
-                  // Ganti key supaya kembali ke "Pilih dock".
+                <DockPicker
+                  // Pilihan ditahan secara internal, jadi setelah dialog
+                  // dibatalkan komponen ini di-remount lewat key agar kembali
+                  // ke placeholder. Tanpa ini pilihan yang batal tetap terlihat
+                  // dan petugas bisa mengira truk sudah punya dock.
                   key={`${booking.id}-${assignReset}`}
+                  docks={compatible}
                   disabled={assigning}
-                  onValueChange={(value) => {
-                    const dock = compatible.find(
-                      (item) => item.id === Number(value)
-                    )
-                    if (dock) onAssign(booking, dock)
-                  }}
-                >
-                  <SelectTrigger className='h-8 w-32'>
-                    <SelectValue placeholder='Pilih dock' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {compatible.map((dock) => (
-                      <SelectItem key={dock.id} value={String(dock.id)}>
-                        {dock.dockCode}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  label={`Pilih dock untuk ${booking.bookingCode}`}
+                  onSelect={(dock) => onAssign(booking, dock)}
+                />
               ) : (
                 <span className='text-xs text-muted-foreground'>
                   Tidak ada dock

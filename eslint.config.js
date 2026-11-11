@@ -67,6 +67,7 @@ export default defineConfig(
   {
     files: [
       'server/prisma/seed.ts',
+      'server/prisma/seed-dock-demo.ts',
       'server/scripts/**/*.ts',
       'server/test/**/*.ts',
     ],

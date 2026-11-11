@@ -1,47 +1,81 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CheckCircle2, PlayCircle, Truck } from 'lucide-react'
+import { Search, Truck } from 'lucide-react'
 import { toast } from 'sonner'
 import { apiErrorMessage } from '@/lib/api/client'
 import {
   fetchOpsDocks,
+  fetchQueue,
   finishProcess,
   startProcess,
 } from '@/lib/api/endpoints'
 import type { Booking, DockWithBooking } from '@/lib/api/types'
+import { useNow } from '@/hooks/use-now'
 import { useRealtimeSync } from '@/hooks/use-realtime'
-import { activityLabels, formatTime } from '@/lib/format'
+import { activityLabels, todayISO } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Main } from '@/components/layout/main'
 import { PageHeader } from '@/components/page-header'
 import { ErrorBlock, LoadingBlock } from '@/components/query-state'
-import { StatusBadge } from '@/components/status-badge'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { DockCard } from './dock-card'
+import {
+  dockFilterCounts,
+  dockFilterLabels,
+  dockFilters,
+  groupDocks,
+  waitingCount,
+  type DockFilter,
+  type DockPhase,
+} from './dock-model'
+import { DockSummary, DockQueueStrip } from './dock-summary'
+import { DockTile } from './dock-tile'
+
+const groupTitles: Record<DockPhase, string> = {
+  starting: 'Perlu dimulai',
+  serving: 'Sedang diproses',
+  available: 'Dock kosong',
+  maintenance: 'Perawatan',
+}
 
 /**
- * Papan dock untuk checker. Setiap kartu mewakili satu dock fisik; checker
- * memakai tombol di dalamnya untuk memulai dan menyelesaikan bongkar/muat.
+ * Tindakan yang mengubah siapa yang boleh masuk dock, jadi selalu lewat
+ * konfirmasi — tombol di layar sentuh mudah tersentuh tanpa sengaja.
  */
+type PendingAction = {
+  kind: 'start' | 'finish'
+  booking: Booking
+  dock: DockWithBooking
+}
+
 export function DockBoard() {
   useRealtimeSync()
   const queryClient = useQueryClient()
+  const today = todayISO()
 
   const docks = useQuery({ queryKey: ['ops', 'docks'], queryFn: fetchOpsDocks })
 
-  /**
-   * Aksi yang menunggu konfirmasi. Memulai proses mengunci dock untuk satu
-   * truk, dan menyelesaikannya membebaskan dock untuk truk berikutnya —
-   * keduanya mengubah siapa yang boleh masuk, jadi tidak dijalankan dari satu
-   * klik yang bisa meleset di layar sentuh.
-   */
-  const [pending, setPending] = useState<{
-    kind: 'start' | 'finish'
-    booking: Booking
-    dock: DockWithBooking
-  } | null>(null)
+  // Antrean hanya pelengkap: bila gagal dimuat, papan dock tetap bisa dipakai.
+  const queue = useQuery({
+    queryKey: ['ops', 'queue', today],
+    queryFn: () => fetchQueue(today),
+  })
+
+  const serving = (docks.data ?? []).some(
+    (dock) => dock.currentBooking?.status === 'IN_PROGRESS'
+  )
+  // Detak hanya hidup selama ada proses berjalan; tanpa itu tidak ada angka
+  // yang perlu diperbarui tiap 30 detik.
+  const now = useNow(30_000, serving)
+
+  const [filter, setFilter] = useState<DockFilter>('all')
+  const [search, setSearch] = useState('')
+
+  const [pending, setPending] = useState<PendingAction | null>(null)
 
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ['ops'] })
@@ -72,112 +106,159 @@ export function DockBoard() {
   if (docks.isError)
     return <ErrorBlock error={docks.error} onRetry={() => void docks.refetch()} />
 
-  const busy = docks.data.filter((dock) => dock.currentBooking !== null).length
+  const counts = dockFilterCounts(docks.data)
+  const groups = groupDocks(docks.data, filter, search)
+  const waiting = waitingCount(queue.data)
+  const isFiltered = filter !== 'all' || search.trim() !== ''
+
+  const resetFilters = () => {
+    setFilter('all')
+    setSearch('')
+  }
 
   return (
     <Main className='flex flex-1 flex-col gap-6'>
       <PageHeader
         title='Papan Dock'
-        description={`${busy} dari ${docks.data.length} dock sedang melayani truk.`}
+        description={`${counts.serving} sedang diproses · ${counts.action} perlu dimulai · ${counts.empty} kosong.`}
       />
+
+      <DockSummary docks={docks.data} waiting={waiting} />
+
+      {queue.data && <DockQueueStrip queue={queue.data} />}
+
+      <Card className='gap-0 py-0'>
+        <div className='flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between'>
+          <div
+            role='group'
+            aria-label='Saring dock'
+            className='-mx-1 flex flex-nowrap items-center gap-2 overflow-x-auto px-1 pb-1 lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0 lg:pb-0'
+          >
+            {dockFilters.map((value) => {
+              const active = filter === value
+              return (
+                <Button
+                  key={value}
+                  variant={active ? 'secondary' : 'outline'}
+                  aria-pressed={active}
+                  className='h-11 shrink-0 sm:h-9'
+                  onClick={() => setFilter(value)}
+                >
+                  {dockFilterLabels[value]}
+                  <span
+                    className={cn(
+                      'rounded-full px-1.5 text-xs tabular-nums',
+                      active
+                        ? 'bg-foreground/10 text-foreground'
+                        : 'bg-muted text-muted-foreground'
+                    )}
+                  >
+                    {counts[value]}
+                  </span>
+                </Button>
+              )
+            })}
+          </div>
+
+          <div className='flex items-center gap-2'>
+            <div className='relative w-full lg:w-72'>
+              <Search
+                aria-hidden
+                className='pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground'
+              />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                aria-label='Cari dock, kode booking, plat, atau customer'
+                placeholder='Cari dock, booking, plat...'
+                className='h-11 ps-9 sm:h-9'
+              />
+            </div>
+            {isFiltered && (
+              <Button variant='ghost' className='h-11 sm:h-9' onClick={resetFilters}>
+                Atur ulang
+              </Button>
+            )}
+          </div>
+        </div>
+      </Card>
+
+      <div
+        aria-live='polite'
+        role='status'
+        className='sr-only'
+      >
+        {groups.reduce((total, group) => total + group.docks.length, 0)} dock
+        ditampilkan
+      </div>
 
       {docks.data.length === 0 ? (
         <Card>
-          <CardContent className='py-12 text-center text-sm text-muted-foreground'>
-            Belum ada dock. Tambahkan lewat Master Data.
-          </CardContent>
+          <div className='flex flex-col items-center gap-2 px-6 text-center'>
+            <Truck className='size-8 text-muted-foreground' aria-hidden />
+            <p className='text-sm font-medium'>Belum ada dock</p>
+            <p className='text-sm text-muted-foreground'>
+              Tambahkan dock lewat Master Data agar papan ini terisi.
+            </p>
+          </div>
+        </Card>
+      ) : groups.length === 0 ? (
+        <Card>
+          <div className='flex flex-col items-center gap-3 px-6 text-center'>
+            <p className='text-sm font-medium'>Tidak ada dock yang cocok</p>
+            <p className='text-sm text-muted-foreground'>
+              Ubah kata kunci atau kembali ke semua dock.
+            </p>
+            <Button variant='outline' onClick={resetFilters}>
+              Tampilkan semua dock
+            </Button>
+          </div>
         </Card>
       ) : (
-        <div className='grid gap-4 sm:grid-cols-2 xl:grid-cols-3'>
-          {docks.data.map((dock) => {
-            const booking = dock.currentBooking
-            const maintenance = dock.currentStatus === 'MAINTENANCE'
-
-            return (
-              <Card
-                key={dock.id}
-                className={cn(
-                  maintenance && 'opacity-60',
-                  booking?.status === 'IN_PROGRESS' && 'border-blue-300/70'
-                )}
+        groups.map((group) => (
+          <section
+            key={group.phase}
+            aria-labelledby={`dock-group-${group.phase}`}
+            className='flex flex-col gap-3'
+          >
+            <div className='flex items-center gap-2'>
+              <h2
+                id={`dock-group-${group.phase}`}
+                className='text-sm font-semibold'
               >
-                <CardContent className='space-y-3'>
-                  <div className='flex items-center justify-between gap-2'>
-                    <span className='inline-flex items-center gap-2 text-lg font-semibold'>
-                      <Truck className='size-5 text-muted-foreground' />
-                      {dock.dockCode}
-                    </span>
-                    <DockStatus status={dock.currentStatus} />
-                  </div>
+                {groupTitles[group.phase]}
+              </h2>
+              <Badge variant='secondary' className='tabular-nums'>
+                {group.docks.length}
+              </Badge>
+            </div>
 
-                  <p className='text-xs text-muted-foreground'>
-                    {dock.allowedActivity === 'BOTH'
-                      ? 'Loading & Unloading'
-                      : dock.allowedActivity === 'LOADING'
-                        ? 'Loading saja'
-                        : 'Unloading saja'}
-                  </p>
-
-                  {booking ? (
-                    <div className='space-y-3 rounded-lg bg-muted/60 p-3'>
-                      <div className='flex flex-wrap items-center justify-between gap-2'>
-                        <span className='font-mono text-sm font-semibold'>
-                          {booking.bookingCode}
-                        </span>
-                        <StatusBadge status={booking.status} />
-                      </div>
-                      <div className='space-y-1 text-sm'>
-                        <p className='font-medium'>
-                          {booking.licensePlate ?? 'Plat belum diisi'}
-                        </p>
-                        <p className='text-xs text-muted-foreground'>
-                          {booking.customer.name}
-                          {booking.driverName ? ` · ${booking.driverName}` : ''}
-                        </p>
-                        <p className='text-xs text-muted-foreground'>
-                          Jadwal {formatTime(booking.startTime)}–
-                          {formatTime(booking.endTime)}
-                          {booking.timeLog?.gateInAt
-                            ? ` · masuk ${formatTime(booking.timeLog.gateInAt)}`
-                            : ''}
-                        </p>
-                      </div>
-
-                      {booking.status === 'DOCK_ASSIGNED' && (
-                        <Button
-                          size='sm'
-                          className='w-full'
-                          disabled={start.isPending}
-                          onClick={() =>
-                            setPending({ kind: 'start', booking, dock })
-                          }
-                        >
-                          <PlayCircle /> Mulai proses
-                        </Button>
-                      )}
-                      {booking.status === 'IN_PROGRESS' && (
-                        <Button
-                          size='sm'
-                          className='w-full'
-                          disabled={finish.isPending}
-                          onClick={() =>
-                            setPending({ kind: 'finish', booking, dock })
-                          }
-                        >
-                          <CheckCircle2 /> Selesaikan proses
-                        </Button>
-                      )}
-                    </div>
-                  ) : (
-                    <p className='rounded-lg border border-dashed p-4 text-center text-xs text-muted-foreground'>
-                      {maintenance ? 'Dalam perawatan' : 'Menunggu truk'}
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
+            {group.phase === 'starting' || group.phase === 'serving' ? (
+              <div className='grid gap-4 md:grid-cols-2 2xl:grid-cols-3'>
+                {group.docks.map((dock) => (
+                  <DockCard
+                    key={dock.id}
+                    dock={dock}
+                    now={now}
+                    actionPending={start.isPending || finish.isPending}
+                    onStart={(booking, targetDock) =>
+                      setPending({ kind: 'start', booking, dock: targetDock })
+                    }
+                    onFinish={(booking, targetDock) =>
+                      setPending({ kind: 'finish', booking, dock: targetDock })
+                    }
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className='grid gap-3 sm:grid-cols-2 xl:grid-cols-3'>
+                {group.docks.map((dock) => (
+                  <DockTile key={dock.id} dock={dock} />
+                ))}
+              </div>
+            )}
+          </section>
+        ))
       )}
 
       <ConfirmDialog
@@ -228,25 +309,5 @@ export function DockBoard() {
         }}
       />
     </Main>
-  )
-}
-
-function DockStatus({ status }: { status: 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE' }) {
-  if (status === 'AVAILABLE')
-    return (
-      <Badge variant='outline' className='border-emerald-300 text-emerald-700'>
-        Tersedia
-      </Badge>
-    )
-  if (status === 'OCCUPIED')
-    return (
-      <Badge variant='outline' className='border-blue-300 text-blue-700'>
-        Terpakai
-      </Badge>
-    )
-  return (
-    <Badge variant='outline' className='border-slate-300 text-slate-600'>
-      Perawatan
-    </Badge>
   )
 }
