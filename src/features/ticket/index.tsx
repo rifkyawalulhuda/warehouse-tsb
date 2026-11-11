@@ -1,20 +1,21 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams } from '@tanstack/react-router'
-import { Download, Loader2, Lock, MessageCircle, Printer } from 'lucide-react'
-import { QRCodeCanvas } from 'qrcode.react'
+import { Loader2, Lock, MessageCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { apiErrorMessage } from '@/lib/api/client'
 import { completeVehicleByTicket, fetchPublicTicket } from '@/lib/api/endpoints'
+import { formatTime, waNumber } from '@/lib/format'
 import { closeTicketSocket, getTicketSocket } from '@/lib/socket'
-import { activityLabels, formatDate, formatTime, waNumber } from '@/lib/format'
-import { ErrorBlock, LoadingBlock } from '@/components/query-state'
-import { StatusBadge } from '@/components/status-badge'
-import { ApprovalBadge } from '@/components/approval-badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { ApprovalBadge } from '@/components/approval-badge'
+import { ErrorBlock, LoadingBlock } from '@/components/query-state'
+import { StatusBadge } from '@/components/status-badge'
+import { TicketPanel } from './ticket-panel'
+import './ticket-print.css'
 
 /**
  * Halaman ini dibuka supir tanpa login. QR hanya ditampilkan setelah data
@@ -32,7 +33,9 @@ export function TicketPage() {
     // terputus); realtime di bawah membuat perubahan terasa seketika.
     refetchInterval: (query) => {
       const status = query.state.data?.status
-      return status === 'CHECKED_OUT' || status === 'CANCELLED' || status === 'NO_SHOW'
+      return status === 'CHECKED_OUT' ||
+        status === 'CANCELLED' ||
+        status === 'NO_SHOW'
         ? false
         : 60_000
     },
@@ -63,7 +66,9 @@ export function TicketPage() {
     )
 
   const ticket = data
-  const finished = ['CHECKED_OUT', 'CANCELLED', 'NO_SHOW'].includes(ticket.status)
+  const finished = ['CHECKED_OUT', 'CANCELLED', 'NO_SHOW'].includes(
+    ticket.status
+  )
 
   // Dua syarat, bukan satu: kendaraan lengkap DAN sudah disetujui.
   // Keduanya bisa gagal bersamaan, jadi pesannya harus dibedakan — kalau
@@ -74,13 +79,14 @@ export function TicketPage() {
   return (
     <div className='mx-auto max-w-md space-y-4 p-4 pb-10 sm:p-6'>
       <div className='space-y-1 text-center'>
-        <p className='text-xs uppercase tracking-wide text-muted-foreground'>
+        <p className='text-xs tracking-wide text-muted-foreground uppercase'>
           {ticket.warehouseName}
         </p>
         <h1 className='text-xl font-semibold'>Tiket Truk</h1>
       </div>
 
-      {(ticket.approvalStatus === 'REJECTED' || ticket.approvalStatus === 'EXPIRED') && (
+      {(ticket.approvalStatus === 'REJECTED' ||
+        ticket.approvalStatus === 'EXPIRED') && (
         <div className='rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm'>
           <p className='font-medium text-destructive'>
             {ticket.approvalStatus === 'REJECTED'
@@ -89,96 +95,48 @@ export function TicketPage() {
           </p>
           <p className='mt-1 text-muted-foreground'>
             {ticket.approvalStatus === 'REJECTED'
-              ? ticket.rejectionReason ?? 'Tidak ada alasan yang dicatat.'
+              ? (ticket.rejectionReason ?? 'Tidak ada alasan yang dicatat.')
               : 'Booking tidak diputuskan sampai tenggat, jadi dibatalkan otomatis. Silakan buat booking baru.'}
           </p>
         </div>
       )}
 
-      <Card>
-        <CardContent className='space-y-5 pt-6'>
-          <div className='space-y-2 text-center'>
-            <p className='font-mono text-lg font-semibold'>{ticket.bookingCode}</p>
-            <div className='flex flex-wrap items-center justify-center gap-2'>
-              <StatusBadge status={ticket.status} />
-              <ApprovalBadge status={ticket.approvalStatus} />
-            </div>
-          </div>
+      <div className='flex flex-wrap items-center justify-center gap-2'>
+        <StatusBadge status={ticket.status} />
+        <ApprovalBadge status={ticket.approvalStatus} />
+      </div>
 
-          <div className='flex justify-center'>
-            {qrVisible ? (
-              <div className='rounded-xl border bg-white p-4' id='qr-sheet'>
-                <QRCodeCanvas
-                  id='ticket-qr'
-                  value={ticket.qrToken}
-                  size={220}
-                  level='M'
-                  marginSize={2}
-                />
-              </div>
-            ) : (
-              <div className='flex flex-col items-center gap-2 rounded-xl border border-dashed p-8 text-center'>
-                <Lock className='size-6 text-muted-foreground' />
-                <p className='text-sm font-medium'>QR terkunci</p>
-                <p className='text-xs text-muted-foreground'>
-                  {approvalBlocked
-                    ? 'Booking masih menunggu persetujuan Admin gudang. QR aktif setelah disetujui.'
-                    : 'Lengkapi plat nomor dan nama supir untuk membuka QR gate-in.'}
-                </p>
-                {approvalBlocked && !ticket.vehicleComplete && (
-                  <p className='text-xs text-amber-600 dark:text-amber-400'>
-                    Data kendaraan juga belum lengkap.
-                  </p>
-                )}
-              </div>
+      {qrVisible ? (
+        <TicketPanel ticket={ticket} finished={finished} />
+      ) : (
+        <Card>
+          <CardContent className='flex flex-col items-center gap-2 pt-6 text-center'>
+            <Lock className='size-6 text-muted-foreground' />
+            <p className='text-sm font-medium'>QR terkunci</p>
+            <p className='text-xs text-muted-foreground'>
+              {approvalBlocked
+                ? 'Booking masih menunggu persetujuan Admin gudang. QR aktif setelah disetujui.'
+                : 'Lengkapi plat nomor dan nama supir untuk membuka QR gate-in.'}
+            </p>
+            {approvalBlocked && !ticket.vehicleComplete && (
+              <p className='text-xs text-amber-600 dark:text-amber-400'>
+                Data kendaraan juga belum lengkap.
+              </p>
             )}
-          </div>
-
-          <dl className='space-y-2 border-t pt-4 text-sm'>
-            <Row label='Aktivitas'>{activityLabels[ticket.activityType]}</Row>
-            <Row label='Jenis truk'>{ticket.truckType.truckName}</Row>
-            <Row label='Tanggal'>{formatDate(ticket.bookingDate)}</Row>
-            <Row label='Jadwal'>
-              {formatTime(ticket.startTime)}–{formatTime(ticket.endTime)}
-            </Row>
-            <Row label='Dokumen'>{ticket.referenceDocNo}</Row>
-            <Row label='Plat nomor'>{ticket.licensePlate ?? '-'}</Row>
-            <Row label='Supir'>{ticket.driverName ?? '-'}</Row>
-            <Row label='Dock'>{ticket.dockCode ?? 'Belum ditentukan'}</Row>
-            {ticket.lateMinutes > 0 && (
-              <Row label='Terlambat'>
-                <span className='text-orange-600'>{ticket.lateMinutes} menit</span>
-              </Row>
-            )}
-          </dl>
-
-          {!finished && (
-            <div className='flex flex-wrap gap-2 border-t pt-4'>
-              {qrVisible && (
-                <>
-                  <Button variant='outline' size='sm' onClick={() => downloadQr(ticket.bookingCode)}>
-                    <Download /> Unduh QR
-                  </Button>
-                  <Button variant='outline' size='sm' onClick={() => window.print()}>
-                    <Printer /> Cetak
-                  </Button>
-                </>
-              )}
-              <Button asChild size='sm' variant='outline'>
-                <a
-                  href={`https://wa.me/?text=${encodeURIComponent(
-                    `Tiket truk ${ticket.bookingCode} - ${ticket.warehouseName}\n${window.location.href}`
-                  )}`}
-                  target='_blank'
-                  rel='noreferrer'
-                >
-                  <MessageCircle /> Kirim WhatsApp
-                </a>
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            <Button className='mt-2 h-11' asChild variant='outline'>
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(
+                  `Tiket truk ${ticket.bookingCode} - ${ticket.warehouseName}\n${window.location.href}`
+                )}`}
+                target='_blank'
+                rel='noreferrer'
+              >
+                <MessageCircle /> Kirim WhatsApp
+              </a>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {!ticket.vehicleComplete && !finished && (
         <VehicleForm
@@ -192,13 +150,19 @@ export function TicketPage() {
       {ticket.timeLog?.gateInAt && (
         <Card>
           <CardContent className='space-y-2 pt-6 text-sm'>
-            <p className='text-xs uppercase tracking-wide text-muted-foreground'>
+            <p className='text-xs tracking-wide text-muted-foreground uppercase'>
               Riwayat
             </p>
             <Row label='Masuk gate'>{formatTime(ticket.timeLog.gateInAt)}</Row>
-            <Row label='Mulai proses'>{formatTime(ticket.timeLog.processStartedAt)}</Row>
-            <Row label='Selesai proses'>{formatTime(ticket.timeLog.processCompletedAt)}</Row>
-            <Row label='Keluar gate'>{formatTime(ticket.timeLog.gateOutAt)}</Row>
+            <Row label='Mulai proses'>
+              {formatTime(ticket.timeLog.processStartedAt)}
+            </Row>
+            <Row label='Selesai proses'>
+              {formatTime(ticket.timeLog.processCompletedAt)}
+            </Row>
+            <Row label='Keluar gate'>
+              {formatTime(ticket.timeLog.gateOutAt)}
+            </Row>
           </CardContent>
         </Card>
       )}
@@ -222,7 +186,9 @@ function VehicleForm({
       completeVehicleByTicket(qrToken, {
         licensePlate: licensePlate.trim().toUpperCase(),
         driverName: driverName.trim(),
-        driverPhone: driverPhone.trim() ? waNumber(driverPhone.trim()) : undefined,
+        driverPhone: driverPhone.trim()
+          ? waNumber(driverPhone.trim())
+          : undefined,
       }),
     onSuccess: () => {
       toast.success('Data kendaraan tersimpan, QR terbuka')
@@ -265,7 +231,11 @@ function VehicleForm({
         </div>
         <Button
           className='w-full'
-          disabled={save.isPending || licensePlate.trim().length < 3 || driverName.trim().length < 2}
+          disabled={
+            save.isPending ||
+            licensePlate.trim().length < 3 ||
+            driverName.trim().length < 2
+          }
           onClick={() => save.mutate()}
         >
           {save.isPending && <Loader2 className='animate-spin' />}
@@ -276,20 +246,17 @@ function VehicleForm({
   )
 }
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function Row({
+  label,
+  children,
+}: {
+  label: string
+  children: React.ReactNode
+}) {
   return (
     <div className='flex items-start justify-between gap-4'>
       <dt className='text-muted-foreground'>{label}</dt>
       <dd className='text-end font-medium'>{children}</dd>
     </div>
   )
-}
-
-function downloadQr(bookingCode: string) {
-  const canvas = document.getElementById('ticket-qr') as HTMLCanvasElement | null
-  if (!canvas) return
-  const link = document.createElement('a')
-  link.download = `tiket-${bookingCode}.png`
-  link.href = canvas.toDataURL('image/png')
-  link.click()
 }

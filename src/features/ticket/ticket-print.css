@@ -1,0 +1,31 @@
+/**
+ * Cetak hanya kartu tiket, bukan seluruh halaman. `ticket-print.ts` menandai
+ * elemen yang harus hilang sebelum dialog cetak dibuka; berkas ini mematikan
+ * elemen bertanda dan merapikan geometri kartu untuk kertas.
+ */
+@media print {
+  @page {
+    size: A5 portrait;
+    margin: 10mm;
+  }
+
+  body {
+    background: #fff !important;
+  }
+
+  [data-print-hidden] {
+    display: none !important;
+  }
+
+  [data-ticket-card] {
+    width: 90mm;
+    max-width: 90mm;
+    margin: 0 auto;
+    border-radius: 0;
+    box-shadow: none !important;
+  }
+
+  [data-ticket-card] * {
+    box-shadow: none !important;
+  }
+}
