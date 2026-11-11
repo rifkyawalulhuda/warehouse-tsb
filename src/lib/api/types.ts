@@ -377,7 +377,7 @@ export type ActivityItem = {
 /* ----------------------------- riwayat gate ---------------------------- */
 
 /** Jenis peristiwa di riwayat gate. Satu baris = satu peristiwa. */
-export type GateHistoryEvent = 'GATE_IN' | 'GATE_OUT' | 'REJECTED'
+export type GateHistoryEvent = 'GATE_IN' | 'GATE_OUT'
 
 export type GateHistoryRow = {
   id: string
@@ -395,10 +395,6 @@ export type GateHistoryRow = {
   minutesInside: number | null
   officerName: string | null
   officerRole: Role | null
-  /** Kode alasan untuk baris REJECTED, mis. `EARLY_ARRIVAL`. */
-  reason: string | null
-  message: string | null
-  qrToken: string | null
 }
 
 export type GateHistoryResponse = {

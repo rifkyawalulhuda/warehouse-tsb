@@ -25,7 +25,6 @@ import { ErrorBlock, LoadingBlock } from '@/components/query-state'
 const eventLabels: Record<GateHistoryEvent, string> = {
   GATE_IN: 'Masuk',
   GATE_OUT: 'Keluar',
-  REJECTED: 'Ditolak',
 }
 
 /**
@@ -161,7 +160,7 @@ export function GateHistoryPage() {
         total[row.event] += 1
         return total
       },
-      { GATE_IN: 0, GATE_OUT: 0, REJECTED: 0 }
+      { GATE_IN: 0, GATE_OUT: 0 }
     )
   }, [rows])
 
@@ -169,7 +168,7 @@ export function GateHistoryPage() {
     <Main className='flex flex-1 flex-col gap-6'>
       <PageHeader
         title='Riwayat Gate'
-        description='Truk yang sudah masuk dan keluar gate, beserta pemindaian yang ditolak.'
+        description='Truk yang sudah masuk dan keluar gate, dalam urutan kejadian.'
       />
 
       <Card>
@@ -254,10 +253,9 @@ export function GateHistoryPage() {
         />
       ) : (
         <>
-          <div className='grid grid-cols-3 gap-2 sm:gap-4'>
+          <div className='grid grid-cols-2 gap-2 sm:gap-4'>
             <Summary label='Masuk' value={counts.GATE_IN} />
             <Summary label='Keluar' value={counts.GATE_OUT} />
-            <Summary label='Ditolak' value={counts.REJECTED} tone='danger' />
           </div>
 
           {history.data.truncated && (
@@ -279,8 +277,7 @@ export function GateHistoryPage() {
                     Belum ada aktivitas gate
                   </p>
                   <p className='mt-1'>
-                    Tidak ada truk yang masuk, keluar, atau ditolak pada rentang
-                    ini.
+                    Tidak ada truk yang masuk atau keluar pada rentang ini.
                   </p>
                 </div>
               ) : (
@@ -300,26 +297,12 @@ export function GateHistoryPage() {
   )
 }
 
-function Summary({
-  label,
-  value,
-  tone,
-}: {
-  label: string
-  value: number
-  tone?: 'danger'
-}) {
+function Summary({ label, value }: { label: string; value: number }) {
   return (
     <Card>
       <CardContent className='space-y-1 px-4 sm:px-6'>
         <p className='text-xs text-muted-foreground sm:text-sm'>{label}</p>
-        <p
-          className={
-            tone === 'danger'
-              ? 'text-2xl font-semibold text-rose-600 tabular-nums sm:text-3xl dark:text-rose-400'
-              : 'text-2xl font-semibold tabular-nums sm:text-3xl'
-          }
-        >
+        <p className='text-2xl font-semibold tabular-nums sm:text-3xl'>
           {value}
         </p>
       </CardContent>
@@ -328,9 +311,6 @@ function Summary({
 }
 
 function EventBadge({ event }: { event: GateHistoryEvent }) {
-  if (event === 'REJECTED') {
-    return <Badge variant='destructive'>{eventLabels.REJECTED}</Badge>
-  }
   return (
     <Badge variant={event === 'GATE_IN' ? 'default' : 'secondary'}>
       {eventLabels[event]}
@@ -339,13 +319,6 @@ function EventBadge({ event }: { event: GateHistoryEvent }) {
 }
 
 function Description({ row }: { row: GateHistoryRow }) {
-  if (row.event === 'REJECTED') {
-    return (
-      <span className='text-rose-700 dark:text-rose-400'>
-        {row.message ?? 'Ditolak'}
-      </span>
-    )
-  }
   if (row.event === 'GATE_OUT' && row.minutesInside !== null) {
     return (
       <span className='text-muted-foreground'>

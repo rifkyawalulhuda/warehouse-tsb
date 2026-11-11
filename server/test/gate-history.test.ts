@@ -113,7 +113,7 @@ describe('riwayat gate', () => {
     expect(await prisma.scanAttempt.count()).toBe(1)
   })
 
-  it('menggabungkan gate-in, gate-out, dan penolakan dalam satu kronologi', async () => {
+  it('menggabungkan gate-in dan gate-out dalam satu kronologi', async () => {
     await resetDatabase(prisma)
     const { customer, truckTypes, gate } = await seedBase(prisma)
     const cookie = await loginCookie(app, 'gate@test.local')
@@ -135,6 +135,31 @@ describe('riwayat gate', () => {
       },
     })
 
+    const response = await request(app)
+      .get('/api/ops/gate-history')
+      .query({ from: date, to: date })
+      .set('Cookie', cookie)
+
+    expect(response.status).toBe(200)
+    const rows = response.body.data.rows
+    expect(rows.map((row: { event: string }) => row.event)).toEqual([
+      'GATE_OUT',
+      'GATE_IN',
+    ])
+
+    const gateOut = rows[0]
+    expect(gateOut.minutesInside).toBe(120)
+    expect(gateOut.bookingCode).toBe(booking.bookingCode)
+    expect(gateOut.customer).toBe('PT Alpha Logistik')
+    expect(gateOut.officerName).toBe('Gate Tes')
+  })
+
+  it('tidak menampilkan pemindaian yang ditolak di riwayat gate', async () => {
+    await resetDatabase(prisma)
+    const { gate } = await seedBase(prisma)
+    const cookie = await loginCookie(app, 'gate@test.local')
+    const date = todayISO()
+
     await prisma.scanAttempt.create({
       data: {
         qrToken: 'qr-palsu',
@@ -152,23 +177,9 @@ describe('riwayat gate', () => {
       .set('Cookie', cookie)
 
     expect(response.status).toBe(200)
-    const rows = response.body.data.rows
-    expect(rows.map((row: { event: string }) => row.event)).toEqual([
-      'GATE_OUT',
-      'REJECTED',
-      'GATE_IN',
-    ])
-
-    const gateOut = rows[0]
-    expect(gateOut.minutesInside).toBe(120)
-    expect(gateOut.bookingCode).toBe(booking.bookingCode)
-    expect(gateOut.customer).toBe('PT Alpha Logistik')
-    expect(gateOut.officerName).toBe('Gate Tes')
-
-    const rejected = rows[1]
-    expect(rejected.reason).toBe('NOT_FOUND')
-    expect(rejected.bookingCode).toBeNull()
-    expect(rejected.qrToken).toBe('qr-palsu')
+    expect(response.body.data.rows).toEqual([])
+    // Catatan audit tetap ada, hanya tidak ditampilkan.
+    expect(await prisma.scanAttempt.count()).toBe(1)
   })
 
   it('menyaring menurut tanggal dan kata kunci', async () => {
@@ -213,7 +224,7 @@ describe('riwayat gate', () => {
     expect(dicari.body.data.rows[0].bookingCode).toBe(kemarin.bookingCode)
   })
 
-  it('pencarian plat juga menemukan penolakan yang punya tiket', async () => {
+  it('pencarian plat menemukan peristiwa gate-in', async () => {
     await resetDatabase(prisma)
     const { customer, truckTypes, gate } = await seedBase(prisma)
     const cookie = await loginCookie(app, 'gate@test.local')
@@ -225,15 +236,11 @@ describe('riwayat gate', () => {
       startTime: jakartaInstant(today, 9 * 60),
     })
 
-    await prisma.scanAttempt.create({
+    await prisma.bookingTimeLog.create({
       data: {
-        qrToken: booking.qrToken,
-        reason: 'EARLY_ARRIVAL',
-        message: 'Truk datang terlalu awal',
-        userId: gate.id,
-        userRole: 'GATE_OFFICER',
         bookingId: booking.id,
-        createdAt: jakartaInstant(today, 8 * 60),
+        gateInAt: jakartaInstant(today, 8 * 60),
+        gateInBy: gate.id,
       },
     })
 
@@ -245,8 +252,7 @@ describe('riwayat gate', () => {
     expect(response.status).toBe(200)
     const rows = response.body.data.rows
     expect(rows).toHaveLength(1)
-    expect(rows[0].event).toBe('REJECTED')
-    expect(rows[0].reason).toBe('EARLY_ARRIVAL')
+    expect(rows[0].event).toBe('GATE_IN')
     expect(rows[0].licensePlate).toBe('B 1234 TSB')
   })
 

@@ -951,13 +951,17 @@ opsRouter.get('/activity', requireRole('CHECKER'), async (req, res, next) => {
 })
 
 /**
- * Riwayat gate: kronologi truk yang masuk, keluar, dan pemindaian yang ditolak.
+ * Riwayat gate: kronologi truk yang masuk dan keluar.
  *
  * Satu baris = satu peristiwa, bukan satu booking. Truk yang masuk pukul 08:00
  * dan keluar pukul 10:00 muncul dua kali, karena petugas perlu melihat kedua
  * momen itu di urutan kejadiannya.
  *
- * Tiga kueri terpisah lalu digabung di memori: tiap kueri hanya mengambil
+ * Pemindaian yang ditolak sengaja tidak ikut ditampilkan — catatannya tetap
+ * tersimpan di `scan_attempts` untuk audit, tetapi bukan bagian dari riwayat
+ * kunjungan gate.
+ *
+ * Dua kueri terpisah lalu digabung di memori: tiap kueri hanya mengambil
  * `limit` baris terbaru dari jenisnya, jadi biayanya tetap terbatas walaupun
  * rentang tanggalnya lebar.
  */
@@ -1003,7 +1007,7 @@ opsRouter.get('/gate-history', requireRole('GATE_OFFICER', 'CHECKER'), async (re
       customer: { select: { name: true } },
     } satisfies Prisma.BookingSelect
 
-    const [gateIns, gateOuts, rejected] = await Promise.all([
+    const [gateIns, gateOuts] = await Promise.all([
       prisma.bookingTimeLog.findMany({
         where: {
           gateInAt: { gte: fromInstant, lt: toInstant },
@@ -1034,29 +1038,6 @@ opsRouter.get('/gate-history', requireRole('GATE_OFFICER', 'CHECKER'), async (re
           gateOutUser: { select: { name: true, role: true } },
         },
       }),
-      prisma.scanAttempt.findMany({
-        where: {
-          createdAt: { gte: fromInstant, lt: toInstant },
-          // Kode QR untuk tiket palsu, data booking untuk penolakan yang punya
-          // tiket (mis. datang terlalu awal) — supaya pencarian plat juga
-          // menemukan penolakannya, bukan hanya pemindaian yang gagal total.
-          ...(search && bookingFilter
-            ? { OR: [{ qrToken: search }, { booking: bookingFilter }] }
-            : {}),
-        },
-        orderBy: { createdAt: 'desc' },
-        take: query.limit,
-        select: {
-          id: true,
-          qrToken: true,
-          reason: true,
-          message: true,
-          createdAt: true,
-          userRole: true,
-          user: { select: { name: true } },
-          booking: { select: bookingPreview },
-        },
-      }),
     ])
 
     const rows = [
@@ -1075,9 +1056,6 @@ opsRouter.get('/gate-history', requireRole('GATE_OFFICER', 'CHECKER'), async (re
         minutesInside: diffMinutes(log.gateInAt, log.gateOutAt),
         officerName: log.gateInUser?.name ?? null,
         officerRole: log.gateInUser?.role ?? null,
-        reason: null as string | null,
-        message: null as string | null,
-        qrToken: null as string | null,
       })),
       ...gateOuts.map((log) => ({
         id: `out:${log.id}`,
@@ -1094,28 +1072,6 @@ opsRouter.get('/gate-history', requireRole('GATE_OFFICER', 'CHECKER'), async (re
         minutesInside: diffMinutes(log.gateInAt, log.gateOutAt),
         officerName: log.gateOutUser?.name ?? null,
         officerRole: log.gateOutUser?.role ?? null,
-        reason: null as string | null,
-        message: null as string | null,
-        qrToken: null as string | null,
-      })),
-      ...rejected.map((attempt) => ({
-        id: `rejected:${attempt.id}`,
-        event: 'REJECTED' as const,
-        at: attempt.createdAt,
-        bookingCode: attempt.booking?.bookingCode ?? null,
-        customer: attempt.booking?.customer.name ?? null,
-        licensePlate: attempt.booking?.licensePlate ?? null,
-        driverName: attempt.booking?.driverName ?? null,
-        activityType: attempt.booking?.activityType ?? null,
-        dockCode: attempt.booking?.assignedDock?.dockCode ?? null,
-        gateInAt: null as Date | null,
-        gateOutAt: null as Date | null,
-        minutesInside: null as number | null,
-        officerName: attempt.user?.name ?? null,
-        officerRole: attempt.userRole,
-        reason: attempt.reason,
-        message: attempt.message,
-        qrToken: attempt.qrToken,
       })),
     ].sort((a, b) => b.at.getTime() - a.at.getTime())
 

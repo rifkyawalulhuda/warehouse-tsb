@@ -30,7 +30,7 @@ describe('halaman riwayat gate', () => {
     fetchMock.mockReset()
   })
 
-  it('menampilkan masuk, keluar, dan penolakan beserta keterangannya', async () => {
+  it('menampilkan masuk dan keluar beserta keterangannya', async () => {
     fetchMock.mockResolvedValue({
       from: today,
       to: today,
@@ -51,28 +51,6 @@ describe('halaman riwayat gate', () => {
           minutesInside: 120,
           officerName: 'Gate Tes',
           officerRole: 'GATE_OFFICER',
-          reason: null,
-          message: null,
-          qrToken: null,
-        },
-        {
-          id: 'rejected:2',
-          event: 'REJECTED',
-          at: `${today}T03:00:00.000Z`,
-          bookingCode: null,
-          customer: null,
-          licensePlate: null,
-          driverName: null,
-          activityType: null,
-          dockCode: null,
-          gateInAt: null,
-          gateOutAt: null,
-          minutesInside: null,
-          officerName: 'Gate Tes',
-          officerRole: 'GATE_OFFICER',
-          reason: 'NOT_FOUND',
-          message: 'QR Code tidak dikenali atau tiket sudah tidak berlaku',
-          qrToken: 'qr-palsu',
         },
       ],
     })
@@ -80,11 +58,6 @@ describe('halaman riwayat gate', () => {
     const { getByText, getByRole } = await renderPage()
 
     await expect.element(getByText('120 menit di dalam')).toBeInTheDocument()
-    await expect
-      .element(
-        getByText('QR Code tidak dikenali atau tiket sudah tidak berlaku')
-      )
-      .toBeInTheDocument()
     await expect
       .element(getByRole('cell', { name: 'T-ABC123' }))
       .toBeInTheDocument()
