@@ -311,6 +311,82 @@ export type ReportResponse = {
   arrivalsByHour: ArrivalHour[]
 }
 
+/** Satu baris laporan milik customer. Durasi kosong bila peristiwanya belum terjadi. */
+export type CustomerReportRow = {
+  bookingCode: string
+  bookingDate: string
+  activityType: ActivityType
+  truckType: string
+  licensePlate: string | null
+  driverName: string | null
+  referenceDocNo: string
+  dockCode: string | null
+  status: BookingStatus
+  approvalStatus: ApprovalStatus
+  scheduledStart: string
+  gateInAt: string | null
+  processStartedAt: string | null
+  processCompletedAt: string | null
+  gateOutAt: string | null
+  waitingMinutes: number | null
+  processingMinutes: number | null
+  turnaroundMinutes: number | null
+  lateMinutes: number
+  blocksLocked: number
+  /** Blok yang customer kunci dikali menit per blok. */
+  slotMinutes: number
+  /** Pemakaian dock dibanding blok sendiri; di atas 100 berarti melewati blok. */
+  slotUsedPercent: number | null
+  slotOverrunMinutes: number | null
+}
+
+export type CustomerReportKpi = {
+  totalBookings: number
+  completed: number
+  cancelled: number
+  noShow: number
+  expiredPending: number
+  onTimeRate: number
+  averageWaitingMinutes: number
+  averageProcessingMinutes: number
+  averageTurnaroundMinutes: number
+  averageLateMinutes: number
+  averageSlotUsedPercent: number
+  overrunCount: number
+}
+
+export type CustomerReportDay = {
+  date: string
+  total: number
+  completed: number
+  late: number
+  averageWaitingMinutes: number
+  averageProcessingMinutes: number
+  averageTurnaroundMinutes: number
+  averageSlotUsedPercent: number
+}
+
+export type CustomerReportHour = {
+  hour: number
+  label: string
+  arrivals: number
+}
+
+/**
+ * Laporan customer tidak memuat kapasitas gudang: `capacity`, `utilization`,
+ * dan `byDock` sengaja tidak ada di kontrak ini.
+ */
+export type CustomerReportResponse = {
+  from: string
+  to: string
+  customer: { code: string; name: string }
+  kpi: CustomerReportKpi
+  rows: CustomerReportRow[]
+  byDay: CustomerReportDay[]
+  byHour: CustomerReportHour[]
+  byActivity: { activity: ActivityType; total: number }[]
+}
+
 export type ManagedUser = {
   id: string
   name: string

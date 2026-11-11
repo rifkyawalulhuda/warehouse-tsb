@@ -17,6 +17,7 @@ import type {
   Customer,
   CustomerDetail,
   CustomerAccount,
+  CustomerReportResponse,
   Dock,
   DockInput,
   DockWithBooking,
@@ -286,6 +287,24 @@ export function reportExportUrl(from: string, to: string, customerId?: string) {
   const params = new URLSearchParams({ from, to })
   if (customerId) params.set('customerId', customerId)
   return `${api.defaults.baseURL}/reports/export.xlsx?${params.toString()}`
+}
+
+/* -------------------------- laporan customer -------------------------- */
+
+/**
+ * Tanpa parameter customer: server memakai `customerId` dari sesi. Endpoint
+ * staf (`fetchKpi`/`reportExportUrl`) tetap terpisah agar tidak ada jalur
+ * query yang bisa dipakai customer untuk memilih perusahaan lain.
+ */
+export function fetchMyReport(from: string, to: string) {
+  return getData<CustomerReportResponse>('/reports/my', {
+    params: { from, to },
+  })
+}
+
+export function myReportExportUrl(from: string, to: string) {
+  const params = new URLSearchParams({ from, to })
+  return `${api.defaults.baseURL}/reports/my/export.xlsx?${params.toString()}`
 }
 
 /* -------------------------------- users ------------------------------ */

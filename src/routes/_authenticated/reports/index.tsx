@@ -1,8 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { ReportsPage } from '@/features/reports'
 import { RequireAuth } from '@/components/require-auth'
+import { ReportsPage } from '@/features/reports'
 
-export const Route = createFileRoute('/_authenticated/reports')({
+export const Route = createFileRoute('/_authenticated/reports/')({
   component: () => (
     <RequireAuth roles={['ADMIN', 'CHECKER']}>
       <ReportsPage />

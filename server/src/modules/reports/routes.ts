@@ -1,15 +1,31 @@
 import { Router } from 'express'
 import { z } from 'zod'
 import ExcelJS from 'exceljs'
+import dayjs from 'dayjs'
 import { prisma } from '../../lib/prisma'
+import { badRequest, forbidden } from '../../lib/http-error'
 import { parse } from '../../lib/validate'
 import { requireAuth, requireExactRole } from '../../middleware/auth'
-import { diffMinutes, minuteOfDayJakarta, utcToDateOnly } from '../../lib/time'
+import {
+  TZ,
+  diffMinutes,
+  isDateISO,
+  minuteOfDayJakarta,
+  utcToDateOnly,
+} from '../../lib/time'
 import { getSettings } from '../../lib/settings'
 
 export const reportsRouter = Router()
 
-reportsRouter.use(requireAuth, requireExactRole('ADMIN', 'CHECKER'))
+reportsRouter.use(requireAuth)
+
+/**
+ * Laporan staf dan laporan customer hidup di router yang sama, tetapi dijaga
+ * oleh middleware yang berbeda per rute. Penjagaan di level router tidak bisa
+ * dipakai lagi: satu `use` akan menutup salah satu dari keduanya.
+ */
+const staffOnly = requireExactRole('ADMIN', 'CHECKER')
+const customerOnly = requireExactRole('CUSTOMER')
 
 const rangeSchema = z.object({
   from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -17,6 +33,42 @@ const rangeSchema = z.object({
   /// Kosong = semua customer.
   customerId: z.uuid().optional(),
 })
+
+/** Laporan customer hanya menerima tanggal; kepemilikan datang dari sesi. */
+const customerRangeSchema = z.object({
+  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+})
+
+export const MAX_CUSTOMER_RANGE_DAYS = 366
+
+function rangeDayCount(from: string, to: string): number {
+  const start = Date.parse(`${from}T00:00:00.000Z`)
+  const end = Date.parse(`${to}T00:00:00.000Z`)
+  return Math.round((end - start) / 86_400_000) + 1
+}
+
+/**
+ * Rentang customer dibatasi karena ekspornya menghasilkan berkas: satu tahun
+ * cukup untuk rekap tahunan, dan batas ini menjaga waktu hitung server.
+ */
+function assertCustomerRange(from: string, to: string) {
+  if (!isDateISO(from) || !isDateISO(to)) {
+    throw badRequest('VALIDATION_ERROR', 'Rentang tanggal tidak valid', [
+      { path: 'from', message: 'Tanggal tidak dikenal' },
+    ])
+  }
+  if (from > to) {
+    throw badRequest('VALIDATION_ERROR', 'Rentang tanggal tidak valid', [
+      { path: 'to', message: 'Tanggal awal tidak boleh melewati tanggal akhir' },
+    ])
+  }
+  if (rangeDayCount(from, to) > MAX_CUSTOMER_RANGE_DAYS) {
+    throw badRequest('VALIDATION_ERROR', 'Rentang tanggal tidak valid', [
+      { path: 'to', message: `Rentang maksimal ${MAX_CUSTOMER_RANGE_DAYS} hari` },
+    ])
+  }
+}
 
 type ReportRow = {
   bookingCode: string
@@ -282,7 +334,7 @@ async function buildReport(from: string, to: string, customerId?: string) {
   }
 }
 
-reportsRouter.get('/kpi', async (req, res, next) => {
+reportsRouter.get('/kpi', staffOnly, async (req, res, next) => {
   try {
     const query = parse(rangeSchema, req.query, 'Rentang tanggal')
     const report = await buildReport(query.from, query.to, query.customerId)
@@ -292,7 +344,7 @@ reportsRouter.get('/kpi', async (req, res, next) => {
   }
 })
 
-reportsRouter.get('/export.xlsx', async (req, res, next) => {
+reportsRouter.get('/export.xlsx', staffOnly, async (req, res, next) => {
   try {
     const query = parse(rangeSchema, req.query, 'Rentang tanggal')
     const { rows, kpi } = await buildReport(query.from, query.to, query.customerId)
@@ -345,6 +397,498 @@ reportsRouter.get('/export.xlsx', async (req, res, next) => {
     sheet.autoFilter = { from: 'A1', to: 'P1' }
 
     const fileName = `laporan-tsb-${query.from}-${query.to}.xlsx`
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`)
+
+    await workbook.xlsx.write(res)
+    res.end()
+  } catch (error) {
+    next(error)
+  }
+})
+
+/* --------------------------- laporan customer --------------------------- */
+
+type CustomerReportRow = {
+  bookingCode: string
+  bookingDate: string
+  activityType: string
+  truckType: string
+  licensePlate: string | null
+  driverName: string | null
+  referenceDocNo: string
+  dockCode: string | null
+  status: string
+  approvalStatus: string
+  scheduledStart: string
+  gateInAt: string | null
+  processStartedAt: string | null
+  processCompletedAt: string | null
+  gateOutAt: string | null
+  waitingMinutes: number | null
+  processingMinutes: number | null
+  turnaroundMinutes: number | null
+  lateMinutes: number
+  blocksLocked: number
+  slotMinutes: number
+  slotUsedPercent: number | null
+  slotOverrunMinutes: number | null
+}
+
+/**
+ * Label Indonesia untuk berkas yang dibaca di luar aplikasi. Enum mentah
+ * (CHECKED_OUT, NOT_REQUIRED) tidak berarti apa pun bagi customer.
+ */
+const bookingStatusLabels: Record<string, string> = {
+  BOOKED_INCOMPLETE: 'Menunggu data kendaraan',
+  BOOKED_READY: 'Siap masuk',
+  CHECKED_IN_ON_TIME: 'Check-in tepat waktu',
+  LATE_WAITING_LIST: 'Antrean terlambat',
+  DOCK_ASSIGNED: 'Dapat dock',
+  IN_PROGRESS: 'Sedang diproses',
+  COMPLETED: 'Selesai bongkar/muat',
+  CHECKED_OUT: 'Sudah keluar',
+  CANCELLED: 'Dibatalkan',
+  NO_SHOW: 'Tidak datang',
+}
+
+const approvalStatusLabels: Record<string, string> = {
+  NOT_REQUIRED: 'Tidak perlu persetujuan',
+  PENDING: 'Menunggu persetujuan',
+  APPROVED: 'Disetujui',
+  REJECTED: 'Ditolak',
+  EXPIRED: 'Kedaluwarsa',
+}
+
+const activityTypeLabels: Record<string, string> = {
+  LOADING: 'Muat',
+  UNLOADING: 'Bongkar',
+}
+
+/**
+ * Waktu di berkas Excel memakai bentuk yang bisa diurutkan apa adanya,
+ * bukan `toLocaleString` yang menyelipkan detik dan pemisah berbeda-beda.
+ */
+function formatReportInstant(value: Date | null): string | null {
+  if (!value) return null
+  return dayjs(value).tz(TZ).format('YYYY-MM-DD HH:mm')
+}
+
+/**
+ * Laporan milik satu perusahaan.
+ *
+ * Penyebut "pemakaian slot" adalah blok yang customer booking sendiri
+ * (`blocksLocked` snapshot), bukan kapasitas gudang. Menyalin `capacity` dan
+ * `utilization` dari laporan staf akan membocorkan jumlah dock sekaligus
+ * menghasilkan persentase yang tidak bisa ditafsirkan customer.
+ */
+async function buildCustomerReport(from: string, to: string, customerId: string) {
+  const [customer, bookings, settings] = await Promise.all([
+    prisma.customer.findUnique({
+      where: { id: customerId },
+      select: { code: true, name: true },
+    }),
+    prisma.booking.findMany({
+      where: {
+        customerId,
+        bookingDate: {
+          gte: new Date(`${from}T00:00:00.000Z`),
+          lte: new Date(`${to}T00:00:00.000Z`),
+        },
+      },
+      select: {
+        bookingCode: true,
+        bookingDate: true,
+        activityType: true,
+        status: true,
+        approvalStatus: true,
+        startTime: true,
+        lateMinutes: true,
+        blocksLocked: true,
+        licensePlate: true,
+        driverName: true,
+        referenceDocNo: true,
+        truckType: { select: { truckName: true } },
+        assignedDock: { select: { dockCode: true } },
+        timeLog: true,
+      },
+      orderBy: [{ bookingDate: 'asc' }, { startTime: 'asc' }],
+    }),
+    getSettings(),
+  ])
+
+  if (!customer) throw forbidden('Akun tidak terhubung ke customer')
+
+  const slotUnitMinutes = Math.max(1, settings.slotUnitMinutes)
+
+  const rows: CustomerReportRow[] = bookings.map((booking) => {
+    const log = booking.timeLog
+    const processingMinutes = diffMinutes(
+      log?.processStartedAt,
+      log?.processCompletedAt
+    )
+    const slotMinutes = booking.blocksLocked * slotUnitMinutes
+
+    return {
+      bookingCode: booking.bookingCode,
+      bookingDate: utcToDateOnly(booking.bookingDate),
+      activityType: booking.activityType,
+      truckType: booking.truckType.truckName,
+      licensePlate: booking.licensePlate,
+      driverName: booking.driverName,
+      referenceDocNo: booking.referenceDocNo,
+      dockCode: booking.assignedDock?.dockCode ?? null,
+      status: booking.status,
+      approvalStatus: booking.approvalStatus,
+      scheduledStart: formatReportInstant(booking.startTime) ?? '',
+      gateInAt: formatReportInstant(log?.gateInAt ?? null),
+      processStartedAt: formatReportInstant(log?.processStartedAt ?? null),
+      processCompletedAt: formatReportInstant(log?.processCompletedAt ?? null),
+      gateOutAt: formatReportInstant(log?.gateOutAt ?? null),
+      waitingMinutes: diffMinutes(log?.gateInAt, log?.processStartedAt),
+      processingMinutes,
+      turnaroundMinutes: diffMinutes(log?.gateInAt, log?.gateOutAt),
+      lateMinutes: booking.lateMinutes,
+      blocksLocked: booking.blocksLocked,
+      slotMinutes,
+      slotUsedPercent:
+        processingMinutes === null || slotMinutes === 0
+          ? null
+          : Math.round((processingMinutes / slotMinutes) * 100),
+      // Nol berarti pemakaian tepat di dalam blok; angka positif adalah
+      // menit yang dipakai melewati blok yang customer kunci.
+      slotOverrunMinutes:
+        processingMinutes === null
+          ? null
+          : Math.max(0, processingMinutes - slotMinutes),
+    }
+  })
+
+  const average = (values: number[]) =>
+    values.length === 0
+      ? 0
+      : Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
+
+  const gatedIn = rows.filter((row) => row.gateInAt !== null)
+
+  const kpi = {
+    totalBookings: rows.length,
+    completed: rows.filter((row) => row.status === 'CHECKED_OUT').length,
+    cancelled: rows.filter((row) => row.status === 'CANCELLED').length,
+    noShow: rows.filter((row) => row.status === 'NO_SHOW').length,
+    expiredPending: rows.filter((row) => row.approvalStatus === 'EXPIRED').length,
+    onTimeRate:
+      gatedIn.length === 0
+        ? 0
+        : Math.round(
+            (gatedIn.filter((row) => row.lateMinutes === 0).length /
+              gatedIn.length) *
+              100
+          ),
+    averageWaitingMinutes: average(
+      rows.map((row) => row.waitingMinutes).filter((v): v is number => v !== null)
+    ),
+    averageProcessingMinutes: average(
+      rows
+        .map((row) => row.processingMinutes)
+        .filter((v): v is number => v !== null)
+    ),
+    averageTurnaroundMinutes: average(
+      rows
+        .map((row) => row.turnaroundMinutes)
+        .filter((v): v is number => v !== null)
+    ),
+    averageLateMinutes: average(
+      rows.filter((row) => row.lateMinutes > 0).map((row) => row.lateMinutes)
+    ),
+    averageSlotUsedPercent: average(
+      rows
+        .map((row) => row.slotUsedPercent)
+        .filter((v): v is number => v !== null)
+    ),
+    overrunCount: rows.filter((row) => (row.slotOverrunMinutes ?? 0) > 0).length,
+  }
+
+  type DayEntry = {
+    date: string
+    total: number
+    completed: number
+    late: number
+    waitingSum: number
+    waitingCount: number
+    processingSum: number
+    processingCount: number
+    turnaroundSum: number
+    turnaroundCount: number
+    slotSum: number
+    slotCount: number
+  }
+
+  const byDayMap = new Map<string, DayEntry>()
+  for (const row of rows) {
+    const entry = byDayMap.get(row.bookingDate) ?? {
+      date: row.bookingDate,
+      total: 0,
+      completed: 0,
+      late: 0,
+      waitingSum: 0,
+      waitingCount: 0,
+      processingSum: 0,
+      processingCount: 0,
+      turnaroundSum: 0,
+      turnaroundCount: 0,
+      slotSum: 0,
+      slotCount: 0,
+    }
+    entry.total += 1
+    if (row.status === 'CHECKED_OUT') entry.completed += 1
+    if (row.lateMinutes > 0) entry.late += 1
+    if (row.waitingMinutes !== null) {
+      entry.waitingSum += row.waitingMinutes
+      entry.waitingCount += 1
+    }
+    if (row.processingMinutes !== null) {
+      entry.processingSum += row.processingMinutes
+      entry.processingCount += 1
+    }
+    if (row.turnaroundMinutes !== null) {
+      entry.turnaroundSum += row.turnaroundMinutes
+      entry.turnaroundCount += 1
+    }
+    if (row.slotUsedPercent !== null) {
+      entry.slotSum += row.slotUsedPercent
+      entry.slotCount += 1
+    }
+    byDayMap.set(row.bookingDate, entry)
+  }
+
+  const byDay = [...byDayMap.values()]
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map((entry) => ({
+      date: entry.date,
+      total: entry.total,
+      completed: entry.completed,
+      late: entry.late,
+      averageWaitingMinutes:
+        entry.waitingCount === 0
+          ? 0
+          : Math.round(entry.waitingSum / entry.waitingCount),
+      averageProcessingMinutes:
+        entry.processingCount === 0
+          ? 0
+          : Math.round(entry.processingSum / entry.processingCount),
+      averageTurnaroundMinutes:
+        entry.turnaroundCount === 0
+          ? 0
+          : Math.round(entry.turnaroundSum / entry.turnaroundCount),
+      averageSlotUsedPercent:
+        entry.slotCount === 0 ? 0 : Math.round(entry.slotSum / entry.slotCount),
+    }))
+
+  // Kedatangan per jam, tanpa pembanding kapasitas: garis kapasitas adalah
+  // angka internal gudang dan sengaja tidak ikut ke laporan customer.
+  const arrivalsByHourMap = new Map<number, number>()
+  for (const booking of bookings) {
+    const gateInAt = booking.timeLog?.gateInAt
+    if (!gateInAt) continue
+    const hour = Math.floor(minuteOfDayJakarta(gateInAt) / 60)
+    arrivalsByHourMap.set(hour, (arrivalsByHourMap.get(hour) ?? 0) + 1)
+  }
+
+  const firstHour = Math.floor(settings.operatingStartMinute / 60)
+  const lastHour = Math.ceil(settings.operatingEndMinute / 60)
+  const byHour = Array.from(
+    { length: Math.max(0, lastHour - firstHour) },
+    (_, index) => {
+      const hour = firstHour + index
+      return {
+        hour,
+        label: `${String(hour).padStart(2, '0')}.00`,
+        arrivals: arrivalsByHourMap.get(hour) ?? 0,
+      }
+    }
+  )
+
+  return {
+    customer,
+    from,
+    to,
+    kpi,
+    rows,
+    byDay,
+    byHour,
+    byActivity: [
+      {
+        activity: 'LOADING' as const,
+        total: rows.filter((row) => row.activityType === 'LOADING').length,
+      },
+      {
+        activity: 'UNLOADING' as const,
+        total: rows.filter((row) => row.activityType === 'UNLOADING').length,
+      },
+    ],
+  }
+}
+
+reportsRouter.get('/my', customerOnly, async (req, res, next) => {
+  try {
+    const query = parse(customerRangeSchema, req.query, 'Rentang tanggal')
+    assertCustomerRange(query.from, query.to)
+
+    // Kepemilikan tidak pernah datang dari klien. Tanpa baris ini, seorang
+    // customer bisa membaca laporan perusahaan lain lewat query string.
+    const customerId = req.user?.customerId
+    if (!customerId) throw forbidden('Akun tidak terhubung ke customer')
+
+    const report = await buildCustomerReport(query.from, query.to, customerId)
+    res.json({ data: report })
+  } catch (error) {
+    next(error)
+  }
+})
+
+reportsRouter.get('/my/export.xlsx', customerOnly, async (req, res, next) => {
+  try {
+    const query = parse(customerRangeSchema, req.query, 'Rentang tanggal')
+    assertCustomerRange(query.from, query.to)
+
+    const customerId = req.user?.customerId
+    if (!customerId) throw forbidden('Akun tidak terhubung ke customer')
+
+    const report = await buildCustomerReport(
+      query.from,
+      query.to,
+      customerId
+    )
+
+    const workbook = new ExcelJS.Workbook()
+    workbook.creator = 'Warehouse TSB'
+    workbook.created = new Date()
+
+    const summary = workbook.addWorksheet('Ringkasan')
+    summary.columns = [
+      { header: 'Keterangan', key: 'metric', width: 34 },
+      { header: 'Nilai', key: 'value', width: 22 },
+    ]
+    summary.addRows([
+      { metric: 'Perusahaan', value: report.customer.name },
+      { metric: 'Kode customer', value: report.customer.code },
+      { metric: 'Periode', value: `${query.from} s/d ${query.to}` },
+      { metric: 'Total booking', value: report.kpi.totalBookings },
+      { metric: 'Selesai (gate-out)', value: report.kpi.completed },
+      { metric: 'Dibatalkan', value: report.kpi.cancelled },
+      { metric: 'No-show', value: report.kpi.noShow },
+      {
+        metric: 'Kedaluwarsa (tidak disetujui)',
+        value: report.kpi.expiredPending,
+      },
+      { metric: 'Tingkat on-time (%)', value: report.kpi.onTimeRate },
+      {
+        metric: 'Rata-rata waktu tunggu (menit)',
+        value: report.kpi.averageWaitingMinutes,
+      },
+      {
+        metric: 'Rata-rata waktu proses (menit)',
+        value: report.kpi.averageProcessingMinutes,
+      },
+      {
+        metric: 'Rata-rata turnaround (menit)',
+        value: report.kpi.averageTurnaroundMinutes,
+      },
+      {
+        metric: 'Rata-rata keterlambatan (menit)',
+        value: report.kpi.averageLateMinutes,
+      },
+      {
+        metric: 'Rata-rata pemakaian slot (%)',
+        value: report.kpi.averageSlotUsedPercent,
+      },
+      {
+        metric: 'Booking melewati blok',
+        value: report.kpi.overrunCount,
+      },
+    ])
+    summary.getRow(1).font = { bold: true }
+    summary.views = [{ state: 'frozen', ySplit: 1 }]
+
+    const sheet = workbook.addWorksheet('Detail')
+    sheet.columns = [
+      { header: 'Kode', key: 'bookingCode', width: 22 },
+      { header: 'Tanggal', key: 'bookingDate', width: 12 },
+      { header: 'Aktivitas', key: 'activity', width: 11 },
+      { header: 'Jenis Truk', key: 'truckType', width: 18 },
+      { header: 'Plat Nomor', key: 'licensePlate', width: 14 },
+      { header: 'Supir', key: 'driverName', width: 20 },
+      { header: 'No. Dokumen', key: 'referenceDocNo', width: 20 },
+      { header: 'Dock', key: 'dockCode', width: 9 },
+      { header: 'Status', key: 'status', width: 22 },
+      { header: 'Persetujuan', key: 'approvalStatus', width: 22 },
+      { header: 'Jadwal', key: 'scheduledStart', width: 20 },
+      { header: 'Gate In', key: 'gateInAt', width: 20 },
+      { header: 'Mulai Proses', key: 'processStartedAt', width: 20 },
+      { header: 'Selesai Proses', key: 'processCompletedAt', width: 20 },
+      { header: 'Gate Out', key: 'gateOutAt', width: 20 },
+      { header: 'Tunggu (mnt)', key: 'waitingMinutes', width: 13 },
+      { header: 'Proses (mnt)', key: 'processingMinutes', width: 13 },
+      { header: 'Turnaround (mnt)', key: 'turnaroundMinutes', width: 16 },
+      { header: 'Terlambat (mnt)', key: 'lateMinutes', width: 15 },
+      { header: 'Blok', key: 'blocksLocked', width: 8 },
+      { header: 'Menit Slot', key: 'slotMinutes', width: 11 },
+      { header: 'Pemakaian Slot (%)', key: 'slotUsedPercent', width: 18 },
+      { header: 'Lewat Blok (mnt)', key: 'slotOverrunMinutes', width: 16 },
+    ]
+    sheet.addRows(
+      report.rows.map((row) => ({
+        ...row,
+        activity: activityTypeLabels[row.activityType] ?? row.activityType,
+        status: bookingStatusLabels[row.status] ?? row.status,
+        approvalStatus:
+          approvalStatusLabels[row.approvalStatus] ?? row.approvalStatus,
+        licensePlate: row.licensePlate ?? '-',
+        driverName: row.driverName ?? '-',
+        dockCode: row.dockCode ?? '-',
+      }))
+    )
+    sheet.getRow(1).font = { bold: true }
+    sheet.views = [{ state: 'frozen', ySplit: 1 }]
+    sheet.autoFilter = { from: 'A1', to: 'W1' }
+
+    const daily = workbook.addWorksheet('per Hari')
+    daily.columns = [
+      { header: 'Tanggal', key: 'date', width: 12 },
+      { header: 'Total', key: 'total', width: 9 },
+      { header: 'Selesai', key: 'completed', width: 10 },
+      { header: 'Terlambat', key: 'late', width: 11 },
+      {
+        header: 'Rata-rata Tunggu (mnt)',
+        key: 'averageWaitingMinutes',
+        width: 22,
+      },
+      {
+        header: 'Rata-rata Proses (mnt)',
+        key: 'averageProcessingMinutes',
+        width: 22,
+      },
+      {
+        header: 'Rata-rata Turnaround (mnt)',
+        key: 'averageTurnaroundMinutes',
+        width: 26,
+      },
+      {
+        header: 'Rata-rata Pemakaian Slot (%)',
+        key: 'averageSlotUsedPercent',
+        width: 28,
+      },
+    ]
+    daily.addRows(report.byDay)
+    daily.getRow(1).font = { bold: true }
+    daily.views = [{ state: 'frozen', ySplit: 1 }]
+    daily.autoFilter = { from: 'A1', to: 'H1' }
+
+    const fileName = `laporan-${report.customer.code}-${query.from}-${query.to}.xlsx`
     res.setHeader(
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'

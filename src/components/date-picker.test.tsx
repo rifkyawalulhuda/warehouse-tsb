@@ -66,10 +66,11 @@ describe('DatePicker', () => {
     await expect
       .element(getByRole('button', { name: 'Bulan berikutnya' }))
       .toBeInTheDocument()
+    // Nama hari tombol tanggal tidak memakai prefiks "Hari ini": prefiks itu
+    // hanya menempel pada tanggal hari ini, sehingga tes tidak boleh
+    // bergantung pada tanggal sistem saat dijalankan.
     await expect
-      .element(
-        getByRole('button', { name: /^Hari ini, Selasa, 10 November 2026$/ })
-      )
+      .element(getByRole('button', { name: /Selasa, 10 November 2026$/ }))
       .toBeInTheDocument()
   })
 

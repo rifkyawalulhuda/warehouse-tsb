@@ -21,6 +21,7 @@ const customerNav: NavGroup[] = [
     items: [
       { title: 'Jadwal Saya', url: '/bookings', icon: CalendarClock },
       { title: 'Buat Booking', url: '/bookings/new', icon: ClipboardList },
+      { title: 'Laporan', url: '/reports/customer', icon: BarChart3 },
     ],
   },
 ]

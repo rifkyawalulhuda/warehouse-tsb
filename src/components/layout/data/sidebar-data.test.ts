@@ -28,4 +28,14 @@ describe('menu samping per peran', () => {
       expect.arrayContaining(['/scan', '/checker/scan'])
     )
   })
+
+  it('menaruh laporan customer di jalurnya sendiri', () => {
+    expect(links('CUSTOMER')).toEqual([
+      '/bookings',
+      '/bookings/new',
+      '/reports/customer',
+    ])
+    expect(links('CHECKER')).toContain('/reports')
+    expect(links('CHECKER')).not.toContain('/reports/customer')
+  })
 })

@@ -22,7 +22,7 @@ import { Route as AuthenticatedDockRouteImport } from './routes/_authenticated/d
 import { Route as AuthenticatedHistoryRouteImport } from './routes/_authenticated/history'
 import { Route as AuthenticatedMasterRouteImport } from './routes/_authenticated/master'
 import { Route as AuthenticatedQueueRouteImport } from './routes/_authenticated/queue'
-import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
+import { Route as AuthenticatedReportsRouteRouteImport } from './routes/_authenticated/reports/route'
 import { Route as AuthenticatedScanRouteImport } from './routes/_authenticated/scan'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
@@ -32,6 +32,8 @@ import { Route as AuthenticatedBookingsBookingIdRouteImport } from './routes/_au
 import { Route as AuthenticatedBookingsNewRouteImport } from './routes/_authenticated/bookings/new'
 import { Route as AuthenticatedCheckerScanRouteImport } from './routes/_authenticated/checker/scan'
 import { Route as AuthenticatedErrorsErrorRouteImport } from './routes/_authenticated/errors/$error'
+import { Route as AuthenticatedReportsIndexRouteImport } from './routes/_authenticated/reports/index'
+import { Route as AuthenticatedReportsCustomerRouteImport } from './routes/_authenticated/reports/customer'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
@@ -97,11 +99,12 @@ const AuthenticatedQueueRoute = AuthenticatedQueueRouteImport.update({
   path: '/queue',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
-  id: '/reports',
-  path: '/reports',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
+const AuthenticatedReportsRouteRoute =
+  AuthenticatedReportsRouteRouteImport.update({
+    id: '/reports',
+    path: '/reports',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedScanRoute = AuthenticatedScanRouteImport.update({
   id: '/scan',
   path: '/scan',
@@ -152,9 +155,22 @@ const AuthenticatedErrorsErrorRoute =
     path: '/errors/$error',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedReportsIndexRoute =
+  AuthenticatedReportsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedReportsRouteRoute,
+  } as any)
+const AuthenticatedReportsCustomerRoute =
+  AuthenticatedReportsCustomerRouteImport.update({
+    id: '/customer',
+    path: '/customer',
+    getParentRoute: () => AuthenticatedReportsRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
+  '/reports': typeof AuthenticatedReportsRouteRouteWithChildren
   '/sign-in': typeof authSignInRoute
   '/401': typeof errors401Route
   '/403': typeof errors403Route
@@ -166,7 +182,6 @@ export interface FileRoutesByFullPath {
   '/history': typeof AuthenticatedHistoryRoute
   '/master': typeof AuthenticatedMasterRoute
   '/queue': typeof AuthenticatedQueueRoute
-  '/reports': typeof AuthenticatedReportsRoute
   '/scan': typeof AuthenticatedScanRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/users': typeof AuthenticatedUsersRoute
@@ -175,7 +190,9 @@ export interface FileRoutesByFullPath {
   '/bookings/new': typeof AuthenticatedBookingsNewRoute
   '/checker/scan': typeof AuthenticatedCheckerScanRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
+  '/reports/customer': typeof AuthenticatedReportsCustomerRoute
   '/bookings/': typeof AuthenticatedBookingsIndexRoute
+  '/reports/': typeof AuthenticatedReportsIndexRoute
 }
 export interface FileRoutesByTo {
   '/sign-in': typeof authSignInRoute
@@ -189,7 +206,6 @@ export interface FileRoutesByTo {
   '/history': typeof AuthenticatedHistoryRoute
   '/master': typeof AuthenticatedMasterRoute
   '/queue': typeof AuthenticatedQueueRoute
-  '/reports': typeof AuthenticatedReportsRoute
   '/scan': typeof AuthenticatedScanRoute
   '/settings': typeof AuthenticatedSettingsRoute
   '/users': typeof AuthenticatedUsersRoute
@@ -199,11 +215,14 @@ export interface FileRoutesByTo {
   '/bookings/new': typeof AuthenticatedBookingsNewRoute
   '/checker/scan': typeof AuthenticatedCheckerScanRoute
   '/errors/$error': typeof AuthenticatedErrorsErrorRoute
+  '/reports/customer': typeof AuthenticatedReportsCustomerRoute
   '/bookings': typeof AuthenticatedBookingsIndexRoute
+  '/reports': typeof AuthenticatedReportsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/_authenticated/reports': typeof AuthenticatedReportsRouteRouteWithChildren
   '/(auth)/sign-in': typeof authSignInRoute
   '/(errors)/401': typeof errors401Route
   '/(errors)/403': typeof errors403Route
@@ -215,7 +234,6 @@ export interface FileRoutesById {
   '/_authenticated/history': typeof AuthenticatedHistoryRoute
   '/_authenticated/master': typeof AuthenticatedMasterRoute
   '/_authenticated/queue': typeof AuthenticatedQueueRoute
-  '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/scan': typeof AuthenticatedScanRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/users': typeof AuthenticatedUsersRoute
@@ -225,12 +243,15 @@ export interface FileRoutesById {
   '/_authenticated/bookings/new': typeof AuthenticatedBookingsNewRoute
   '/_authenticated/checker/scan': typeof AuthenticatedCheckerScanRoute
   '/_authenticated/errors/$error': typeof AuthenticatedErrorsErrorRoute
+  '/_authenticated/reports/customer': typeof AuthenticatedReportsCustomerRoute
   '/_authenticated/bookings/': typeof AuthenticatedBookingsIndexRoute
+  '/_authenticated/reports/': typeof AuthenticatedReportsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/reports'
     | '/sign-in'
     | '/401'
     | '/403'
@@ -242,7 +263,6 @@ export interface FileRouteTypes {
     | '/history'
     | '/master'
     | '/queue'
-    | '/reports'
     | '/scan'
     | '/settings'
     | '/users'
@@ -251,7 +271,9 @@ export interface FileRouteTypes {
     | '/bookings/new'
     | '/checker/scan'
     | '/errors/$error'
+    | '/reports/customer'
     | '/bookings/'
+    | '/reports/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/sign-in'
@@ -265,7 +287,6 @@ export interface FileRouteTypes {
     | '/history'
     | '/master'
     | '/queue'
-    | '/reports'
     | '/scan'
     | '/settings'
     | '/users'
@@ -275,10 +296,13 @@ export interface FileRouteTypes {
     | '/bookings/new'
     | '/checker/scan'
     | '/errors/$error'
+    | '/reports/customer'
     | '/bookings'
+    | '/reports'
   id:
     | '__root__'
     | '/_authenticated'
+    | '/_authenticated/reports'
     | '/(auth)/sign-in'
     | '/(errors)/401'
     | '/(errors)/403'
@@ -290,7 +314,6 @@ export interface FileRouteTypes {
     | '/_authenticated/history'
     | '/_authenticated/master'
     | '/_authenticated/queue'
-    | '/_authenticated/reports'
     | '/_authenticated/scan'
     | '/_authenticated/settings'
     | '/_authenticated/users'
@@ -300,7 +323,9 @@ export interface FileRouteTypes {
     | '/_authenticated/bookings/new'
     | '/_authenticated/checker/scan'
     | '/_authenticated/errors/$error'
+    | '/_authenticated/reports/customer'
     | '/_authenticated/bookings/'
+    | '/_authenticated/reports/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -411,7 +436,7 @@ declare module '@tanstack/react-router' {
       id: '/_authenticated/reports'
       path: '/reports'
       fullPath: '/reports'
-      preLoaderRoute: typeof AuthenticatedReportsRouteImport
+      preLoaderRoute: typeof AuthenticatedReportsRouteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/scan': {
@@ -477,16 +502,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedErrorsErrorRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/reports/': {
+      id: '/_authenticated/reports/'
+      path: '/'
+      fullPath: '/reports/'
+      preLoaderRoute: typeof AuthenticatedReportsIndexRouteImport
+      parentRoute: typeof AuthenticatedReportsRouteRoute
+    }
+    '/_authenticated/reports/customer': {
+      id: '/_authenticated/reports/customer'
+      path: '/customer'
+      fullPath: '/reports/customer'
+      preLoaderRoute: typeof AuthenticatedReportsCustomerRouteImport
+      parentRoute: typeof AuthenticatedReportsRouteRoute
+    }
   }
 }
 
+interface AuthenticatedReportsRouteRouteChildren {
+  AuthenticatedReportsCustomerRoute: typeof AuthenticatedReportsCustomerRoute
+  AuthenticatedReportsIndexRoute: typeof AuthenticatedReportsIndexRoute
+}
+
+const AuthenticatedReportsRouteRouteChildren: AuthenticatedReportsRouteRouteChildren =
+  {
+    AuthenticatedReportsCustomerRoute: AuthenticatedReportsCustomerRoute,
+    AuthenticatedReportsIndexRoute: AuthenticatedReportsIndexRoute,
+  }
+
+const AuthenticatedReportsRouteRouteWithChildren =
+  AuthenticatedReportsRouteRoute._addFileChildren(
+    AuthenticatedReportsRouteRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedReportsRouteRoute: typeof AuthenticatedReportsRouteRouteWithChildren
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedDockRoute: typeof AuthenticatedDockRoute
   AuthenticatedHistoryRoute: typeof AuthenticatedHistoryRoute
   AuthenticatedMasterRoute: typeof AuthenticatedMasterRoute
   AuthenticatedQueueRoute: typeof AuthenticatedQueueRoute
-  AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedScanRoute: typeof AuthenticatedScanRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedUsersRoute: typeof AuthenticatedUsersRoute
@@ -499,12 +554,12 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedReportsRouteRoute: AuthenticatedReportsRouteRouteWithChildren,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedDockRoute: AuthenticatedDockRoute,
   AuthenticatedHistoryRoute: AuthenticatedHistoryRoute,
   AuthenticatedMasterRoute: AuthenticatedMasterRoute,
   AuthenticatedQueueRoute: AuthenticatedQueueRoute,
-  AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedScanRoute: AuthenticatedScanRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedUsersRoute: AuthenticatedUsersRoute,
