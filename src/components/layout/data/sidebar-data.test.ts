@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { navGroupsForRole } from './sidebar-data'
+import { buildSidebarData, navGroupsForRole } from './sidebar-data'
 
 function links(role: Parameters<typeof navGroupsForRole>[0]) {
   return navGroupsForRole(role).flatMap((group) =>
@@ -37,5 +37,21 @@ describe('menu samping per peran', () => {
     ])
     expect(links('CHECKER')).toContain('/reports')
     expect(links('CHECKER')).not.toContain('/reports/customer')
+  })
+
+  it('meneruskan nama perusahaan ke kartu pengguna di kaki sidebar', () => {
+    const customer = buildSidebarData('CUSTOMER', {
+      name: 'Budi Santoso',
+      email: 'budi@sinarjaya.co.id',
+      company: 'PT Sinar Jaya Logistik',
+    })
+    expect(customer.user.company).toBe('PT Sinar Jaya Logistik')
+
+    // Staf tidak punya perusahaan; kartunya tetap memakai label peran.
+    const admin = buildSidebarData('ADMIN', {
+      name: 'Admin Gudang',
+      email: 'admin@warehouse.test',
+    })
+    expect(admin.user.company).toBeUndefined()
   })
 })

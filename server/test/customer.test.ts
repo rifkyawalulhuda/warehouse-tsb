@@ -198,6 +198,19 @@ describe('akun login di dalam customer', () => {
     expect(me.body.data.customerId).toBe(customer.id)
   })
 
+  it('sesi membawa nama perusahaan akun customer, dan null untuk staf', async () => {
+    const customerCookie = await loginCookie(app, 'customer1@test.local')
+    const me = await request(app).get('/api/auth/me').set('Cookie', customerCookie)
+    expect(me.status).toBe(200)
+    expect(me.body.data.customerName).toBe('PT Alpha Logistik')
+
+    // Staf tidak punya perusahaan; frontend memakai null ini untuk tidak
+    // menampilkan baris perusahaan di halaman mereka.
+    const adminMe = await request(app).get('/api/auth/me').set('Cookie', adminCookie)
+    expect(adminMe.status).toBe(200)
+    expect(adminMe.body.data.customerName).toBeNull()
+  })
+
   it('menolak menambah akun ke customer yang nonaktif', async () => {
     const customer = await prisma.customer.findUniqueOrThrow({
       where: { name: 'PT Alpha Logistik' },

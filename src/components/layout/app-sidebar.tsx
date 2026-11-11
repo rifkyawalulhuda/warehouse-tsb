@@ -20,6 +20,7 @@ export function AppSidebar() {
   const data = buildSidebarData(user?.role ?? null, {
     name: user?.name ?? 'Pengguna',
     email: user?.email ?? '',
+    company: user?.customerName ?? undefined,
   })
 
   return (

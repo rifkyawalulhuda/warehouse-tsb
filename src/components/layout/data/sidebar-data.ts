@@ -92,7 +92,7 @@ export function navGroupsForRole(role: Role | null): NavGroup[] {
 
 export function buildSidebarData(
   role: Role | null,
-  user: { name: string; email: string }
+  user: { name: string; email: string; company?: string }
 ): SidebarData {
   return {
     user: { ...user, avatar: '' },

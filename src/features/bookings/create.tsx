@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { AlertTriangle, ArrowLeft, Check, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useCustomerName } from '@/stores/auth-store'
 import { apiErrorMessage } from '@/lib/api/client'
 import {
   createBooking,
@@ -70,6 +71,7 @@ type FormValues = z.infer<typeof formSchema>
 export function CreateBooking() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const company = useCustomerName()
 
   const settings = useQuery({ queryKey: ['settings'], queryFn: fetchSettings })
 
@@ -150,6 +152,7 @@ export function CreateBooking() {
   return (
     <Main className='flex flex-1 flex-col gap-6'>
       <PageHeader
+        eyebrow={company ?? undefined}
         title='Buat Booking'
         description='Pilih jadwal kedatangan truk Anda. Slot yang penuh otomatis tidak bisa dipilih.'
         actions={

@@ -1,18 +1,19 @@
 import { useMemo, useState } from 'react'
-import { Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
+import { Link } from '@tanstack/react-router'
 import { CalendarX2, Plus, Search } from 'lucide-react'
+import { useCustomerName } from '@/stores/auth-store'
 import { fetchMyBookings } from '@/lib/api/endpoints'
 import type { Booking } from '@/lib/api/types'
-import { useRealtimeSync } from '@/hooks/use-realtime'
 import { useNow } from '@/hooks/use-now'
-import { Main } from '@/components/layout/main'
-import { PageHeader } from '@/components/page-header'
-import { ErrorBlock } from '@/components/query-state'
+import { useRealtimeSync } from '@/hooks/use-realtime'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Main } from '@/components/layout/main'
+import { PageHeader } from '@/components/page-header'
+import { ErrorBlock } from '@/components/query-state'
 import {
   filterCounts,
   filtersFor,
@@ -42,6 +43,7 @@ export function MyBookings() {
   const [filter, setFilter] = useState<BookingFilter>('all')
   const [search, setSearch] = useState('')
   const now = useNow()
+  const company = useCustomerName()
   useRealtimeSync()
 
   const { data, isPending, isError, error, refetch } = useQuery({
@@ -86,7 +88,10 @@ export function MyBookings() {
   // daftar — kecuali saat customer sedang memfilter/mencari, karena di situ
   // daftar harus utuh sesuai kata kunci.
   const listItems = useMemo(
-    () => (next && filter === 'all' && !search.trim() ? visible.filter((b) => b.id !== next.id) : visible),
+    () =>
+      next && filter === 'all' && !search.trim()
+        ? visible.filter((b) => b.id !== next.id)
+        : visible,
     [visible, next, filter, search]
   )
 
@@ -95,13 +100,16 @@ export function MyBookings() {
   // Tampilan jadwal mengelompokkan per hari; tanggal di tiap baris daftar jadi
   // mubazir hanya jika semua booking ada di hari yang sama.
   const multiDay = useMemo(
-    () => new Set(listItems.map((booking) => booking.bookingDate.slice(0, 10))).size > 1,
+    () =>
+      new Set(listItems.map((booking) => booking.bookingDate.slice(0, 10)))
+        .size > 1,
     [listItems]
   )
 
   return (
     <Main className='flex flex-1 flex-col gap-6'>
       <PageHeader
+        eyebrow={company ?? undefined}
         title='Jadwal Saya'
         description='Semua booking truk yang Anda buat. Pilih tampilan yang paling nyaman.'
         actions={
@@ -113,7 +121,10 @@ export function MyBookings() {
         }
       />
 
-      <Tabs value={scope} onValueChange={(value) => changeScope(value as Scope)}>
+      <Tabs
+        value={scope}
+        onValueChange={(value) => changeScope(value as Scope)}
+      >
         <TabsList>
           <TabsTrigger value='active'>Aktif</TabsTrigger>
           <TabsTrigger value='past'>Riwayat</TabsTrigger>
@@ -203,7 +214,10 @@ export function MyBookings() {
 function LoadingState({ view }: { view: BookingsView }) {
   return (
     <div className='space-y-4'>
-      <div className='h-40 animate-pulse rounded-xl border bg-muted/40' aria-hidden />
+      <div
+        className='h-40 animate-pulse rounded-xl border bg-muted/40'
+        aria-hidden
+      />
       {view === 'grid' ? (
         <div className='grid gap-3 lg:grid-cols-2'>
           {[0, 1, 2, 3].map((index) => (
@@ -239,7 +253,9 @@ function EmptyState({ scope }: { scope: Scope }) {
         </div>
         <div className='space-y-1'>
           <p className='text-sm font-medium'>
-            {scope === 'active' ? 'Belum ada booking aktif' : 'Belum ada riwayat booking'}
+            {scope === 'active'
+              ? 'Belum ada booking aktif'
+              : 'Belum ada riwayat booking'}
           </p>
           <p className='text-sm text-muted-foreground'>
             {scope === 'active'

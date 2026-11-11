@@ -1,8 +1,8 @@
 import { Link } from '@tanstack/react-router'
 import { BadgeCheck, ChevronsUpDown, LogOut } from 'lucide-react'
-import useDialogState from '@/hooks/use-dialog-state'
 import { useAuthStore } from '@/stores/auth-store'
 import { roleLabels } from '@/lib/format'
+import useDialogState from '@/hooks/use-dialog-state'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   DropdownMenu,
@@ -26,6 +26,8 @@ type NavUserProps = {
     name: string
     email: string
     avatar: string
+    /** Nama perusahaan untuk akun customer; kosong untuk staf. */
+    company?: string
   }
 }
 
@@ -59,8 +61,12 @@ export function NavUser({ user }: NavUserProps) {
                 </Avatar>
                 <div className='grid flex-1 text-start text-sm leading-tight'>
                   <span className='truncate font-semibold'>{user.name}</span>
-                  <span className='truncate text-xs'>
-                    {role ? roleLabels[role] : user.email}
+                  {/*
+                    Untuk customer, nama perusahaan lebih berguna daripada
+                    label "Customer" — peran itu sudah jelas dari menunya.
+                  */}
+                  <span className='truncate text-xs' title={user.company}>
+                    {user.company ?? (role ? roleLabels[role] : user.email)}
                   </span>
                 </div>
                 <ChevronsUpDown className='ms-auto size-4' />

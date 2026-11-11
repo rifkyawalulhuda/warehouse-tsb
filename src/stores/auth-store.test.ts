@@ -13,6 +13,7 @@ const sampleUser: SessionUser = {
   role: 'CUSTOMER',
   customerId: 'c1',
   canApproveBooking: false,
+  customerName: 'PT Contoh Logistik',
 }
 
 describe('useAuthStore', () => {

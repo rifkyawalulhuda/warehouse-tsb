@@ -4,6 +4,8 @@ type User = {
   name: string
   email: string
   avatar: string
+  /** Nama perusahaan; hanya ada untuk akun customer. */
+  company?: string
 }
 
 type Team = {

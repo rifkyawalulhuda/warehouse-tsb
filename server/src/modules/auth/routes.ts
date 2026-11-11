@@ -13,7 +13,7 @@ import {
 import { env } from '../../config/env'
 import { parse } from '../../lib/validate'
 import { unauthorized } from '../../lib/http-error'
-import { requireAuth } from '../../middleware/auth'
+import { requireAuth, type RequestUser } from '../../middleware/auth'
 
 export const authRouter = Router()
 
@@ -35,20 +35,17 @@ function setSessionCookies(res: Response, payload: SessionPayload) {
   )
 }
 
-function publicUser(user: {
-  id: string
-  name: string
-  email: string
-  role: Role
-  customerId: string | null
-  canApproveBooking: boolean
-}) {
+function publicUser(user: RequestUser) {
   return {
     id: user.id,
     name: user.name,
     email: user.email,
     role: user.role,
     customerId: user.customerId,
+    // Nama perusahaan milik akun customer. Layar customer memakainya untuk
+    // menyebut "perusahaan Anda" tanpa perlu endpoint master customers, yang
+    // memang hanya untuk Admin.
+    customerName: user.customerName,
     // Frontend memakainya untuk menyembunyikan tab Persetujuan dari pengguna
     // yang memang tidak berhak. Server tetap menolak sendiri (403).
     canApproveBooking: user.canApproveBooking,
@@ -58,7 +55,10 @@ function publicUser(user: {
 authRouter.post('/login', async (req, res, next) => {
   try {
     const body = parse(loginSchema, req.body, 'Data login')
-    const user = await prisma.user.findUnique({ where: { email: body.email } })
+    const user = await prisma.user.findUnique({
+      where: { email: body.email },
+      include: { customer: { select: { name: true } } },
+    })
 
     // Pesan sama untuk email tidak ada dan password salah, agar tidak bisa ditebak.
     if (!user || !user.isActive) throw unauthorized('Email atau password salah')
@@ -72,7 +72,17 @@ authRouter.post('/login', async (req, res, next) => {
       email: user.email,
     })
 
-    res.json({ data: publicUser(user) })
+    res.json({
+      data: publicUser({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        customerId: user.customerId,
+        customerName: user.customer?.name ?? null,
+        canApproveBooking: user.canApproveBooking,
+      }),
+    })
   } catch (error) {
     next(error)
   }
@@ -90,7 +100,10 @@ authRouter.post('/refresh', async (req, res, next) => {
       throw unauthorized('Sesi sudah berakhir, silakan masuk lagi')
     }
 
-    const user = await prisma.user.findUnique({ where: { id: claims.sub } })
+    const user = await prisma.user.findUnique({
+      where: { id: claims.sub },
+      include: { customer: { select: { name: true } } },
+    })
     if (!user || !user.isActive) throw unauthorized('Akun tidak aktif')
 
     setSessionCookies(res, {
@@ -100,7 +113,17 @@ authRouter.post('/refresh', async (req, res, next) => {
       email: user.email,
     })
 
-    res.json({ data: publicUser(user) })
+    res.json({
+      data: publicUser({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        customerId: user.customerId,
+        customerName: user.customer?.name ?? null,
+        canApproveBooking: user.canApproveBooking,
+      }),
+    })
   } catch (error) {
     next(error)
   }

@@ -33,6 +33,8 @@ export type SessionUser = {
   email: string
   role: Role
   customerId: string | null
+  /** Nama perusahaan pemilik akun; hanya terisi untuk role CUSTOMER. */
+  customerName: string | null
   canApproveBooking: boolean
 }
 

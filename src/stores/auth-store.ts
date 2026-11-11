@@ -30,6 +30,11 @@ export function useRole(): Role | null {
   return useAuthStore((state) => state.user?.role ?? null)
 }
 
+/** Nama perusahaan pemilik akun customer; null untuk staf. */
+export function useCustomerName(): string | null {
+  return useAuthStore((state) => state.user?.customerName ?? null)
+}
+
 /** Halaman beranda tiap peran setelah login. */
 export function homeForRole(role: Role): string {
   switch (role) {

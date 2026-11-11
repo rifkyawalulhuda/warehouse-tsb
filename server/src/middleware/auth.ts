@@ -4,14 +4,21 @@ import { prisma } from '../lib/prisma'
 import { cookieNames, verifyAccessToken } from '../lib/auth'
 import { forbidden, unauthorized } from '../lib/http-error'
 
+/**
+ * Profil yang ikut di setiap request. `customerName` bukan kolom `User`: ia
+ * diambil dari relasi supaya layar customer bisa menyebut perusahaannya tanpa
+ * memanggil endpoint lain.
+ */
+export type RequestUser = Pick<
+  User,
+  'id' | 'name' | 'email' | 'role' | 'customerId' | 'canApproveBooking'
+> & { customerName: string | null }
+
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
-      user?: Pick<
-        User,
-        'id' | 'name' | 'email' | 'role' | 'customerId' | 'canApproveBooking'
-      >
+      user?: RequestUser
       actingAsRole?: Role
     }
   }
@@ -33,6 +40,7 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
         customerId: true,
         isActive: true,
         canApproveBooking: true,
+        customer: { select: { name: true } },
       },
     })
     if (!user || !user.isActive) throw unauthorized('Akun tidak aktif')
@@ -43,6 +51,7 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
       email: user.email,
       role: user.role,
       customerId: user.customerId,
+      customerName: user.customer?.name ?? null,
       canApproveBooking: user.canApproveBooking,
     }
     next()

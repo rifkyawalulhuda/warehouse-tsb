@@ -12,6 +12,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { useCustomerName } from '@/stores/auth-store'
 import { fetchMyReport, myReportExportUrl } from '@/lib/api/endpoints'
 import type { CustomerReportRow } from '@/lib/api/types'
 import { addDaysISO, formatDate, formatDateShort, todayISO } from '@/lib/format'
@@ -162,6 +163,7 @@ const DEFAULT_RANGE_DAYS = 6
 export function CustomerReportsPage() {
   useRealtimeSync()
   const isMobile = useIsMobile()
+  const company = useCustomerName()
   const today = todayISO()
   const defaultFrom = addDaysISO(today, -DEFAULT_RANGE_DAYS)
   const [from, setFrom] = useState(defaultFrom)
@@ -192,6 +194,7 @@ export function CustomerReportsPage() {
   return (
     <Main className='flex flex-1 flex-col gap-6'>
       <PageHeader
+        eyebrow={company ?? undefined}
         title='Laporan'
         description='Rekap booking perusahaan Anda: ketepatan waktu, durasi layanan, dan pemakaian slot.'
       />
