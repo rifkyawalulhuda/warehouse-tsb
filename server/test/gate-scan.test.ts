@@ -88,6 +88,28 @@ describe('pindai tiket di gate', () => {
     expect(response.body.data.booking.bookingCode).toBe(BOOKING_CODE)
   })
 
+  it('menerima kode booking lama yang urutannya kurang dari tiga digit', async () => {
+    await resetDatabase(prisma)
+    const seed = await seedBase(prisma)
+    const cookie = await loginCookie(app, 'gate@test.local')
+
+    await seedBooking({
+      customerId: seed.customer.id,
+      truckTypeId: seed.truckTypes[0]!.id,
+      bookingCode: 'TSB-20261111-92',
+      qrToken: QR_TOKEN,
+      startTime: new Date(Date.now() + 5 * 60_000),
+    })
+
+    const response = await request(app)
+      .get('/api/ops/scan/TSB-20261111-92')
+      .set('Cookie', cookie)
+
+    expect(response.status).toBe(200)
+    expect(response.body.data.booking.bookingCode).toBe('TSB-20261111-92')
+    expect(response.body.data.canGateIn).toBe(true)
+  })
+
   it('tetap menerima token QR hasil pindai kamera', async () => {
     await prepare()
     const cookie = await loginCookie(app, 'gate@test.local')

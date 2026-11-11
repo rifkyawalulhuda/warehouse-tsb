@@ -61,8 +61,13 @@ export function getBookingByQrToken(qrToken: string) {
   return prisma.booking.findUnique({ where: { qrToken }, select: bookingSelect })
 }
 
-/** Bentuk kode booking yang dibuat `buildBookingCode`: `TSB-YYYYMMDD-NNN`. */
-const BOOKING_CODE_PATTERN = /^TSB-\d{8}-\d{3}$/i
+/**
+ * Bentuk kode booking yang dibuat `buildBookingCode`: `TSB-YYYYMMDD-NNN`.
+ *
+ * Urutan 1–3 digit ditoleransi agar tiket lama yang tercetak tanpa nol di
+ * depan (`...-92`) tetap bisa dipindai. Kode baru selalu 3 digit.
+ */
+const BOOKING_CODE_PATTERN = /^TSB-\d{8}-\d{1,3}$/i
 
 /** Apakah masukan berbentuk kode booking (bukan token QR)? */
 export function isBookingCode(value: string): boolean {

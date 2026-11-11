@@ -15,6 +15,17 @@ describe('parseScanInput', () => {
     })
   })
 
+  it('menerima kode booking lama yang urutannya kurang dari tiga digit', () => {
+    expect(parseScanInput('TSB-20261111-92')).toEqual({
+      kind: 'booking-code',
+      value: 'TSB-20261111-92',
+    })
+    expect(parseScanInput('tsb-20261111-9')).toEqual({
+      kind: 'booking-code',
+      value: 'TSB-20261111-9',
+    })
+  })
+
   it('menerima token QR apa adanya', () => {
     expect(parseScanInput(TOKEN)).toEqual({ kind: 'token', value: TOKEN })
   })
