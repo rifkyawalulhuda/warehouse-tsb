@@ -141,6 +141,12 @@ model User {
 model WarehouseSetting {
   id                       Int    @id @default(1)
   warehouseName            String @default("Gudang Utama") @map("warehouse_name") @db.VarChar(120)
+
+  /// Judul aplikasi yang tampil di header, halaman masuk, dan judul tab.
+  appName                  String  @default("Warehouse TSB") @map("app_name") @db.VarChar(60)
+  appTagline               String  @default("Time Slot Booking") @map("app_tagline") @db.VarChar(80)
+  /// Nama pendek untuk judul tab dan layar sempit. Kosong = pakai appName.
+  appShortName             String? @map("app_short_name") @db.VarChar(20)
   operatingStartMinute     Int    @default(480) @map("operating_start_minute")
   operatingEndMinute       Int    @default(1020) @map("operating_end_minute")
   slotUnitMinutes          Int    @default(30) @map("slot_unit_minutes")

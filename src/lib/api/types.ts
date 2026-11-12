@@ -158,6 +158,9 @@ export type AvailabilitySlot = {
 
 export type Settings = {
   warehouseName: string
+  appName: string
+  appTagline: string
+  appShortName: string | null
   operatingStartMinute: number
   operatingEndMinute: number
   operatingStartLabel: string

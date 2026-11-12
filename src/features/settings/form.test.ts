@@ -13,6 +13,9 @@ import {
 
 const settings: Settings = {
   warehouseName: 'Gudang TSB Cikarang',
+  appName: 'Warehouse TSB',
+  appTagline: 'Time Slot Booking',
+  appShortName: null,
   operatingStartMinute: 480,
   operatingEndMinute: 1020,
   operatingStartLabel: '08:00',
@@ -62,6 +65,60 @@ describe('status kotor per seksi', () => {
     expect(restored.open).toBe('08:00')
     expect(restored.bookingWindowDays).toBe('14')
     expect(dirtySections(restored, saved)).toEqual(['window'])
+  })
+})
+
+describe('seksi nama aplikasi', () => {
+  const saved = toForm(settings)
+
+  it('memisahkan draf merek dari identitas gudang', () => {
+    const form = { ...saved, appName: 'TSB Dock' }
+    expect(dirtySections(form, saved)).toEqual(['branding'])
+
+    const restored = restoreSection(
+      { ...form, warehouseName: 'Gudang Lain' },
+      saved,
+      'branding'
+    )
+    expect(restored.appName).toBe('Warehouse TSB')
+    expect(restored.warehouseName).toBe('Gudang Lain')
+  })
+
+  it('menolak judul kosong — header tidak boleh tanpa nama', () => {
+    expect(sectionError('branding', { ...saved, appName: '   ' })).toBe(
+      'Judul aplikasi wajib diisi.'
+    )
+    expect(sectionError('branding', saved)).toBeNull()
+  })
+
+  it('menolak teks yang lebih panjang dari kolom database', () => {
+    expect(
+      sectionError('branding', { ...saved, appName: 'a'.repeat(61) })
+    ).toContain('maksimal 60')
+    expect(
+      sectionError('branding', { ...saved, appTagline: 'a'.repeat(81) })
+    ).toContain('Subjudul maksimal 80')
+    expect(
+      sectionError('branding', { ...saved, appShortName: 'a'.repeat(21) })
+    ).toContain('Nama pendek maksimal 20')
+  })
+
+  it('mengirim nama pendek kosong sebagai null, bukan string kosong', () => {
+    expect(sectionPayload('branding', { ...saved, appShortName: '  ' })).toEqual(
+      {
+        appName: 'Warehouse TSB',
+        appTagline: 'Time Slot Booking',
+        appShortName: null,
+      }
+    )
+    expect(
+      sectionPayload('branding', { ...saved, appShortName: ' TSB ' })
+    ).toMatchObject({ appShortName: 'TSB' })
+  })
+
+  it('membaca null dari server sebagai kolom kosong di form', () => {
+    expect(toForm(settings).appShortName).toBe('')
+    expect(toForm({ ...settings, appShortName: 'TSB' }).appShortName).toBe('TSB')
   })
 })
 

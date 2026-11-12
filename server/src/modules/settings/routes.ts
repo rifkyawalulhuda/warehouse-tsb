@@ -33,6 +33,9 @@ async function settingsPayload() {
 
   return {
     warehouseName: settings.warehouseName,
+    appName: settings.appName,
+    appTagline: settings.appTagline,
+    appShortName: settings.appShortName,
     operatingStartMinute: settings.operatingStartMinute,
     operatingEndMinute: settings.operatingEndMinute,
     operatingStartLabel: minuteToLabel(settings.operatingStartMinute),
@@ -61,6 +64,12 @@ settingsRouter.get('/', requireAuth, async (_req, res, next) => {
 
 const updateSchema = z.object({
   warehouseName: z.string().trim().min(2).max(120).optional(),
+  // Batas panjang mengikuti kolom database: lebih baik ditolak di sini dengan
+  // pesan jelas daripada gagal saat menyimpan.
+  appName: z.string().trim().min(1).max(60).optional(),
+  appTagline: z.string().trim().max(80).optional(),
+  // Null/"" melepas nama pendek, sehingga judul tab kembali memakai appName.
+  appShortName: z.string().trim().max(20).nullable().optional(),
   operatingStartMinute: z.number().int().min(0).max(1439).optional(),
   operatingEndMinute: z.number().int().min(1).max(1440).optional(),
   slotUnitMinutes: z.number().int().min(15).max(120).optional(),
@@ -102,7 +111,13 @@ settingsRouter.put('/', requireAuth, requireExactRole('ADMIN'), async (req, res,
     // Dalam satu transaksi: kalau penamaan gudang gagal, pengaturan tidak
     // boleh ikut berubah supaya kedua tempat tidak berakhir beda nama.
     await prisma.$transaction(async (tx) => {
-      await tx.warehouseSetting.update({ where: { id: current.id }, data: body })
+      const data = { ...body }
+      // String kosong dari formulir berarti "tidak ada", bukan nama pendek
+      // sepanjang satu spasi.
+      if (data.appShortName !== undefined) {
+        data.appShortName = data.appShortName?.trim() ? data.appShortName.trim() : null
+      }
+      await tx.warehouseSetting.update({ where: { id: current.id }, data })
       if (body.warehouseName !== undefined) {
         await tx.warehouse.updateMany({
           where: { id: DEFAULT_WAREHOUSE_ID },

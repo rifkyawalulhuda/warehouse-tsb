@@ -8,6 +8,9 @@ import { labelToMinute } from '@/lib/format'
  */
 export type FormState = {
   warehouseName: string
+  appName: string
+  appTagline: string
+  appShortName: string
   open: string
   close: string
   slotUnitMinutes: string
@@ -22,10 +25,11 @@ export type FormState = {
 
 /** Seksi yang disimpan lewat `PUT /api/settings`, satu permintaan per seksi. */
 export type SectionKey =
-  'identity' | 'hours' | 'arrival' | 'window' | 'approval'
+  'identity' | 'branding' | 'hours' | 'arrival' | 'window' | 'approval'
 
 export const FIELD_GROUPS = {
   identity: ['warehouseName'],
+  branding: ['appName', 'appTagline', 'appShortName'],
   hours: ['open', 'close', 'slotUnitMinutes'],
   arrival: ['gracePeriodMinutes', 'earlyArrivalLimitMinutes'],
   window: ['bookingWindowDays'],
@@ -45,6 +49,9 @@ export const ALL_FIELDS = SECTION_KEYS.flatMap(
 
 export type SettingsPayload = {
   warehouseName?: string
+  appName?: string
+  appTagline?: string
+  appShortName?: string | null
   operatingStartMinute?: number
   operatingEndMinute?: number
   slotUnitMinutes?: number
@@ -60,6 +67,9 @@ export type SettingsPayload = {
 export function toForm(settings: Settings): FormState {
   return {
     warehouseName: settings.warehouseName,
+    appName: settings.appName,
+    appTagline: settings.appTagline,
+    appShortName: settings.appShortName ?? '',
     open: settings.operatingStartLabel,
     close: settings.operatingEndLabel,
     slotUnitMinutes: String(settings.slotUnitMinutes),
@@ -85,6 +95,13 @@ export function restoreSection(
   switch (section) {
     case 'identity':
       return { ...current, warehouseName: saved.warehouseName }
+    case 'branding':
+      return {
+        ...current,
+        appName: saved.appName,
+        appTagline: saved.appTagline,
+        appShortName: saved.appShortName,
+      }
     case 'hours':
       return {
         ...current,
@@ -159,6 +176,20 @@ export function sectionError(
       if (name.length > 120) return 'Nama gudang maksimal 120 karakter.'
       return null
     }
+    case 'branding': {
+      const appName = form.appName.trim()
+      // Nama kosong akan membuat header dan judul tab tampak rusak, jadi
+      // ditolak di sini — bukan diam-diam diganti nilai bawaan.
+      if (appName.length === 0) return 'Judul aplikasi wajib diisi.'
+      if (appName.length > 60) return 'Judul aplikasi maksimal 60 karakter.'
+      if (form.appTagline.trim().length > 80) {
+        return 'Subjudul maksimal 80 karakter.'
+      }
+      if (form.appShortName.trim().length > 20) {
+        return 'Nama pendek maksimal 20 karakter.'
+      }
+      return null
+    }
     case 'hours': {
       if (!isIntegerIn(form.slotUnitMinutes, 15, 120)) {
         return 'Satuan blok harus angka 15–120 menit.'
@@ -214,6 +245,14 @@ export function sectionPayload(
   switch (section) {
     case 'identity':
       return { warehouseName: form.warehouseName.trim() }
+    case 'branding':
+      return {
+        appName: form.appName.trim(),
+        appTagline: form.appTagline.trim(),
+        // String kosong dikirim sebagai null: server lalu memakai judul penuh
+        // untuk tab, bukan nama pendek sepanjang nol karakter.
+        appShortName: form.appShortName.trim() || null,
+      }
     case 'hours':
       return {
         operatingStartMinute: labelToMinute(form.open),

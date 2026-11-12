@@ -6,11 +6,13 @@ import {
   Palette,
   ShieldCheck,
   Truck,
+  Type,
   Warehouse,
   type LucideIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { apiErrorMessage } from '@/lib/api/client'
+import { brandInitial, tabTitle } from '@/lib/branding'
 import { fetchSettings, saveSettings } from '@/lib/api/endpoints'
 import type { Settings } from '@/lib/api/types'
 import { cn } from '@/lib/utils'
@@ -53,6 +55,12 @@ const TABS: {
     key: 'identity',
     label: 'Identitas gudang',
     icon: Warehouse,
+    group: 'Gudang',
+  },
+  {
+    key: 'branding',
+    label: 'Nama aplikasi',
+    icon: Type,
     group: 'Gudang',
   },
   { key: 'hours', label: 'Jam operasional', icon: Clock, group: 'Operasional' },
@@ -125,6 +133,8 @@ function SettingsForm({ settings }: { settings: Settings }) {
       toast.success(MESSAGE_BY_SECTION[section])
       void queryClient.invalidateQueries({ queryKey: ['settings'] })
       void queryClient.invalidateQueries({ queryKey: ['availability'] })
+      // Judul di sidebar, halaman masuk, dan tab peramban dibaca dari sini.
+      void queryClient.invalidateQueries({ queryKey: ['branding'] })
     },
     onError: (error) => toast.error(apiErrorMessage(error)),
   })
@@ -224,6 +234,76 @@ function SettingsForm({ settings }: { settings: Settings }) {
                     autoComplete='off'
                   />
                 </FieldRow>
+              </SectionPanel>
+            )}
+
+            {activeTab.key === 'branding' && (
+              <SectionPanel
+                icon={Type}
+                title='Nama aplikasi'
+                description='Tampil di kepala sidebar, halaman masuk, dan judul tab peramban. Bukan nama gudang — identitas gudang tetap di seksi Identitas gudang.'
+                error={sectionError('branding', form)}
+                dirty={isDirty('branding', form, saved)}
+                pending={save.isPending && save.variables === 'branding'}
+                onSave={() => save.mutate('branding')}
+                onReset={() => resetSection('branding')}
+                footerNote='Berlaku untuk semua pengguna setelah disimpan. Halaman tiket supir memakai nama perusahaan customer, bukan nama ini.'
+              >
+                <FieldRow
+                  label='Judul aplikasi'
+                  htmlFor='app-name'
+                  hint='1–60 karakter. Huruf pertama dipakai sebagai huruf lencana logo.'
+                >
+                  <Input
+                    id='app-name'
+                    value={form.appName}
+                    onChange={(event) => setField('appName', event.target.value)}
+                    className='w-full sm:w-72'
+                    maxLength={60}
+                    autoComplete='off'
+                  />
+                </FieldRow>
+
+                <FieldRow
+                  label='Subjudul'
+                  htmlFor='app-tagline'
+                  hint='Baris kecil di bawah judul. Boleh dikosongkan untuk menampilkan judul saja.'
+                >
+                  <Input
+                    id='app-tagline'
+                    value={form.appTagline}
+                    onChange={(event) =>
+                      setField('appTagline', event.target.value)
+                    }
+                    className='w-full sm:w-72'
+                    maxLength={80}
+                    autoComplete='off'
+                  />
+                </FieldRow>
+
+                <FieldRow
+                  label='Nama pendek'
+                  htmlFor='app-short'
+                  hint='Untuk judul tab peramban dan layar sempit. Kosongkan agar memakai judul aplikasi.'
+                >
+                  <Input
+                    id='app-short'
+                    value={form.appShortName}
+                    onChange={(event) =>
+                      setField('appShortName', event.target.value)
+                    }
+                    className='w-full sm:w-48'
+                    maxLength={20}
+                    placeholder='Opsional'
+                    autoComplete='off'
+                  />
+                </FieldRow>
+
+                <BrandPreview
+                  appName={form.appName}
+                  appTagline={form.appTagline}
+                  appShortName={form.appShortName}
+                />
               </SectionPanel>
             )}
 
@@ -543,8 +623,52 @@ function SettingsForm({ settings }: { settings: Settings }) {
   )
 }
 
+/**
+ * Pratinjau memakai ukuran dan pemotongan yang sama dengan sidebar sungguhan,
+ * supaya judul yang terlalu panjang terlihat terpotong di sini — bukan setelah
+ * disimpan dan semua orang melihatnya.
+ */
+function BrandPreview({
+  appName,
+  appTagline,
+  appShortName,
+}: {
+  appName: string
+  appTagline: string
+  appShortName: string
+}) {
+  const short = appShortName.trim()
+  return (
+    <div className='mt-4 rounded-lg border border-dashed px-4 py-3'>
+      <p className='text-[11px] font-medium tracking-wide text-muted-foreground uppercase'>
+        Pratinjau
+      </p>
+      <div className='mt-2 flex items-center gap-2'>
+        <div className='flex size-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground'>
+          <span className='text-sm font-bold'>{brandInitial(appName)}</span>
+        </div>
+        <div className='grid min-w-0 leading-tight'>
+          <span className='truncate font-bold'>{appName.trim() || '—'}</span>
+          {appTagline.trim() && (
+            <span className='truncate text-xs text-muted-foreground'>
+              {appTagline.trim()}
+            </span>
+          )}
+        </div>
+      </div>
+      <p className='mt-3 text-xs text-muted-foreground'>
+        Judul tab peramban:{' '}
+        <span className='font-medium text-foreground'>
+          {tabTitle(appName.trim() || '—', short || null)}
+        </span>
+      </p>
+    </div>
+  )
+}
+
 const MESSAGE_BY_SECTION: Record<SectionKey, string> = {
   identity: 'Identitas gudang disimpan',
+  branding: 'Nama aplikasi disimpan',
   hours: 'Jam operasional disimpan',
   arrival: 'Aturan kedatangan disimpan',
   window: 'Jendela pemesanan disimpan',

@@ -54,8 +54,19 @@ export function fetchSettings() {
   return getData<Settings>('/settings')
 }
 
+/** Judul aplikasi untuk halaman sebelum masuk; tidak butuh sesi. */
+export type Branding = Pick<Settings, 'appName' | 'appTagline' | 'appShortName'>
+
+export async function fetchBranding(): Promise<Branding | null> {
+  // Server mengirim `null` bila pengaturan belum pernah dibuat.
+  return getData<Branding | null>('/branding')
+}
+
 export function saveSettings(payload: {
   warehouseName?: string
+  appName?: string
+  appTagline?: string
+  appShortName?: string | null
   operatingStartMinute?: number
   operatingEndMinute?: number
   slotUnitMinutes?: number

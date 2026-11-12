@@ -1,8 +1,10 @@
 import { Outlet } from '@tanstack/react-router'
 import { getCookie } from '@/lib/cookies'
+import { tabTitle, useBranding } from '@/lib/branding'
+import { useDocumentTitle } from '@/lib/use-document-title'
 import { cn } from '@/lib/utils'
 import { LayoutProvider } from '@/context/layout-provider'
-import { PageTitleProvider } from '@/context/page-title-provider'
+import { PageTitleProvider, usePageTitle } from '@/context/page-title-provider'
 import { SearchProvider } from '@/context/search-provider'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { AppSidebar } from '@/components/layout/app-sidebar'
@@ -43,9 +45,26 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
               </div>
               <Footer />
             </SidebarInset>
+            <DocumentTitle />
           </SidebarProvider>
         </LayoutProvider>
       </PageTitleProvider>
     </SearchProvider>
   )
+}
+
+/**
+ * Judul tab peramban: "Antrean Hari Ini · <aplikasi>". Harus berada di dalam
+ * `SidebarProvider` karena memakai React Query lewat `useBranding`, dan di
+ * dalam `PageTitleProvider` untuk membaca judul halaman.
+ *
+ * `useBranding` berbagi cache React Query lewat kunci yang sama dengan sidebar,
+ * jadi tidak ada permintaan tambahan saat tata letak ini dipasang.
+ */
+function DocumentTitle() {
+  const pageTitle = usePageTitle()
+  const brand = useBranding()
+  const app = tabTitle(brand.appName, brand.appShortName)
+  useDocumentTitle(pageTitle ? `${pageTitle} · ${app}` : app)
+  return null
 }

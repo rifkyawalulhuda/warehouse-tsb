@@ -6,6 +6,7 @@ import { env } from './config/env'
 import { authRouter } from './modules/auth/routes'
 import { usersRouter } from './modules/users/routes'
 import { settingsRouter } from './modules/settings/routes'
+import { brandingRouter } from './modules/settings/branding'
 import { masterRouter } from './modules/master/routes'
 import { bookingsRouter } from './modules/bookings/routes'
 import { approvalsRouter } from './modules/approvals/routes'
@@ -38,6 +39,7 @@ export function createApp() {
   app.use('/api/auth', authRouter)
   app.use('/api/users', usersRouter)
   app.use('/api/settings', settingsRouter)
+  app.use('/api/branding', brandingRouter)
   app.use('/api/master', masterRouter)
   app.use('/api/bookings', bookingsRouter)
   app.use('/api/approvals', approvalsRouter)
