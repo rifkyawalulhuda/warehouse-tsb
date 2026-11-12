@@ -68,6 +68,22 @@ export const laneDot: Record<QueueLaneKey, string> = {
   upcoming: 'bg-slate-400',
 }
 
+/** Label tahap yang muat di kolom sempit: tab ponsel dan tabel Daftar. */
+export const laneShortTitle: Record<QueueLaneKey, string> = {
+  late: 'Telat',
+  onTime: 'Tepat',
+  atDock: 'Di dock',
+  upcoming: 'Belum',
+}
+
+/** Judul penuh tahap, dipakai bila ruang cukup. */
+export const laneTitle: Record<QueueLaneKey, string> = {
+  late: 'Terlambat',
+  onTime: 'Tepat waktu',
+  atDock: 'Di dock',
+  upcoming: 'Belum datang',
+}
+
 export type QueueLane = {
   key: QueueLaneKey
   title: string
@@ -76,6 +92,28 @@ export type QueueLane = {
   description: string
   emptyLabel: string
   bookings: Booking[]
+}
+
+/**
+ * Satu truk beserta tahapnya. Tampilan Daftar, Kartu, dan Ringkas tidak memakai
+ * kolom tahap, jadi ketiganya membutuhkan daftar datar yang masih tahu asal
+ * lane-nya — urutannya tetap: terlambat, tepat waktu, di dock, belum datang.
+ */
+export type QueueRow = {
+  booking: Booking
+  laneKey: QueueLaneKey
+}
+
+export function queueRows(
+  lanes: QueueLane[],
+  filter: QueueLaneKey | 'all'
+): QueueRow[] {
+  const shown =
+    filter === 'all' ? lanes : lanes.filter((lane) => lane.key === filter)
+
+  return shown.flatMap((lane) =>
+    lane.bookings.map((booking) => ({ booking, laneKey: lane.key }))
+  )
 }
 
 function timeOf(value: string | null | undefined) {
@@ -115,32 +153,32 @@ export function queueLanes(queue: QueueResponse): QueueLane[] {
   return [
     {
       key: 'late',
-      title: 'Terlambat',
-      shortTitle: 'Telat',
+      title: laneTitle.late,
+      shortTitle: laneShortTitle.late,
       description: 'Sudah gate-in melewati tenggang waktu. Dahulukan.',
       emptyLabel: 'Tidak ada truk terlambat',
       bookings: [...queue.late].sort(byLongestWait),
     },
     {
       key: 'onTime',
-      title: 'Tepat waktu',
-      shortTitle: 'Tepat',
+      title: laneTitle.onTime,
+      shortTitle: laneShortTitle.onTime,
       description: 'Sudah gate-in sesuai jadwal, menunggu dock kosong.',
       emptyLabel: 'Tidak ada truk menunggu dock',
       bookings: [...queue.onTime].sort(byLongestWait),
     },
     {
       key: 'atDock',
-      title: 'Di dock',
-      shortTitle: 'Di dock',
+      title: laneTitle.atDock,
+      shortTitle: laneShortTitle.atDock,
       description: 'Truk sudah menempati dock — proses dimulai dari Papan Dock.',
       emptyLabel: 'Belum ada truk di dock',
       bookings: [...queue.atDock].sort(byDockThenWait),
     },
     {
       key: 'upcoming',
-      title: 'Belum datang',
-      shortTitle: 'Belum',
+      title: laneTitle.upcoming,
+      shortTitle: laneShortTitle.upcoming,
       description: 'Booking hari ini yang belum dipindai di gate.',
       emptyLabel: 'Semua truk sudah datang',
       bookings: [...queue.upcoming].sort((a, b) =>

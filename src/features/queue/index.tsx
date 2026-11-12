@@ -1,7 +1,7 @@
 ﻿import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { CalendarCheck2 } from 'lucide-react'
+import { CalendarCheck2, SearchX } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/auth-store'
 import { apiErrorMessage } from '@/lib/api/client'
@@ -26,14 +26,21 @@ import { Main } from '@/components/layout/main'
 import { PageHeader } from '@/components/page-header'
 import { ErrorBlock, LoadingBlock } from '@/components/query-state'
 import { ApprovalsPanel } from '@/features/approvals'
+import { QueueCompact } from './queue-compact'
+import { QueueGrid } from './queue-grid'
 import { QueueCardList, QueueLane } from './queue-lane'
 import {
   defaultLaneKey,
+  laneTitle,
   queueLanes,
+  queueRows,
   queueTotals,
   type QueueLaneKey,
 } from './queue-model'
 import { QueueSummary, type QueueFilter } from './queue-summary'
+import { QueueTable } from './queue-table'
+import { useQueueView } from './use-queue-view'
+import { QueueViewSwitch } from './queue-view-switch'
 
 type AssignVars = { bookingId: string; dockId: number; dockCode: string }
 
@@ -82,6 +89,9 @@ export function QueuePage() {
   })
   const docks = useQuery({ queryKey: ['ops', 'docks'], queryFn: fetchOpsDocks })
 
+  /** Tampilan disimpan per akun; papan lane tetap jadi bawaan. */
+  const { view, setView } = useQueueView()
+
   const lanes = useMemo(
     () => (queue.data ? queueLanes(queue.data) : []),
     [queue.data]
@@ -96,6 +106,9 @@ export function QueuePage() {
     filter === 'all'
       ? null
       : (lanes.find((lane) => lane.key === filter) ?? null)
+
+  /** Daftar datar untuk tampilan selain papan, tetap urut tahap. */
+  const rows = useMemo(() => queueRows(lanes, filter), [lanes, filter])
 
   // Jam tunggu hanya perlu berdetak saat tab antrean tampil.
   const now = useNow(30_000, tab === 'queue')
@@ -171,7 +184,10 @@ export function QueuePage() {
         description='Truk hari ini menurut tahap: terlambat, menunggu dock, di dock, dan belum datang.'
         actions={
           tab === 'queue' ? (
-            <DatePicker value={date} onChange={setDate} className='w-44' />
+            <>
+              <QueueViewSwitch value={view} onChange={setView} />
+              <DatePicker value={date} onChange={setDate} className='w-44' />
+            </>
           ) : undefined
         }
       />
@@ -198,22 +214,39 @@ export function QueuePage() {
         <EmptyDay date={date} onToday={() => setDate(todayISO())} />
       ) : (
         <>
-          {/* Desktop: chip berisi hitungan, sekaligus menyaring papan. */}
+          {/*
+            Saringan tahap. Di papan versi ponsel, tab lane sudah memilih satu
+            tahap, jadi chip cukup tampil di desktop. Di tampilan lain chip
+            adalah satu-satunya penyaring, jadi ia tampil di semua lebar dan
+            digeser mendatar alih-alih melipat jadi tiga baris.
+          */}
           <QueueSummary
             lanes={lanes}
             total={totals?.total ?? 0}
             value={filter}
             onChange={setFilter}
-            className='hidden md:flex'
+            className={
+              view === 'board'
+                ? 'hidden md:flex'
+                : 'max-md:flex-nowrap max-md:overflow-x-auto max-md:pb-1'
+            }
           />
 
           <p aria-live='polite' className='sr-only'>
-            {filteredLane
+            {view === 'board' && filteredLane
               ? `${filteredLane.bookings.length} truk di tahap ${filteredLane.title}`
-              : `${totals?.total ?? 0} truk hari ini, ${totals?.waiting ?? 0} menunggu dock`}
+              : `${rows.length} truk ditampilkan dari ${totals?.total ?? 0} hari ini`}
           </p>
 
-          {filteredLane ? (
+          {view !== 'board' && rows.length === 0 ? (
+            <NoRows filter={filter} onReset={() => setFilter('all')} />
+          ) : view === 'list' ? (
+            <QueueTable rows={rows} now={now} {...cardHandlers} />
+          ) : view === 'cards' ? (
+            <QueueGrid rows={rows} now={now} {...cardHandlers} />
+          ) : view === 'compact' ? (
+            <QueueCompact rows={rows} now={now} {...cardHandlers} />
+          ) : filteredLane ? (
             <QueueLane
               lane={filteredLane}
               now={now}
@@ -234,34 +267,38 @@ export function QueuePage() {
             </div>
           )}
 
-          {/* Layar sempit: satu lane sekaligus, tab bisa digeser. */}
-          <Tabs
-            value={activeLane}
-            onValueChange={(value) => {
-              if (value) setMobileLane(value as QueueLaneKey)
-            }}
-            className='md:hidden'
-          >
-            <TabsList className='w-full justify-start overflow-x-auto'>
+          {/* Papan di layar sempit: satu lane sekaligus, tab bisa digeser.
+              Tampilan lain sudah berupa daftar datar, jadi tab ini hanya
+              milik papan. */}
+          {view === 'board' && (
+            <Tabs
+              value={activeLane}
+              onValueChange={(value) => {
+                if (value) setMobileLane(value as QueueLaneKey)
+              }}
+              className='md:hidden'
+            >
+              <TabsList className='w-full justify-start overflow-x-auto'>
+                {lanes.map((lane) => (
+                  <TabsTrigger
+                    key={lane.key}
+                    value={lane.key}
+                    className='shrink-0 gap-1.5'
+                  >
+                    {lane.shortTitle}
+                    <span className='text-xs text-muted-foreground tabular-nums'>
+                      {lane.bookings.length}
+                    </span>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
               {lanes.map((lane) => (
-                <TabsTrigger
-                  key={lane.key}
-                  value={lane.key}
-                  className='shrink-0 gap-1.5'
-                >
-                  {lane.shortTitle}
-                  <span className='text-xs text-muted-foreground tabular-nums'>
-                    {lane.bookings.length}
-                  </span>
-                </TabsTrigger>
+                <TabsContent key={lane.key} value={lane.key} className='mt-3'>
+                  <QueueCardList lane={lane} now={now} {...cardHandlers} />
+                </TabsContent>
               ))}
-            </TabsList>
-            {lanes.map((lane) => (
-              <TabsContent key={lane.key} value={lane.key} className='mt-3'>
-                <QueueCardList lane={lane} now={now} {...cardHandlers} />
-              </TabsContent>
-            ))}
-          </Tabs>
+            </Tabs>
+          )}
         </>
       )}
 
@@ -312,6 +349,37 @@ export function QueuePage() {
         handleConfirm={() => noShowTarget && noShow.mutate(noShowTarget.id)}
       />
     </Main>
+  )
+}
+
+/**
+ * Saringan yang tidak menyisakan satu pun truk. Kotak kosong tanpa penjelasan
+ * membuat checker mengira datanya hilang; di sini ia diberi satu jalan keluar.
+ */
+function NoRows({
+  filter,
+  onReset,
+}: {
+  filter: QueueFilter
+  onReset: () => void
+}) {
+  return (
+    <div className='flex flex-col items-center gap-3 rounded-xl border border-dashed px-6 py-10 text-center'>
+      <SearchX className='size-8 text-muted-foreground/70' aria-hidden />
+      <div className='space-y-1'>
+        <p className='font-medium'>Tidak ada truk di tahap ini</p>
+        <p className='max-w-sm text-sm text-muted-foreground'>
+          {filter === 'all'
+            ? 'Belum ada truk yang cocok pada tanggal ini.'
+            : `Tidak satu pun truk berada di tahap ${laneTitle[filter]} pada tanggal ini.`}
+        </p>
+      </div>
+      {filter !== 'all' && (
+        <Button variant='outline' onClick={onReset}>
+          Tampilkan semua tahap
+        </Button>
+      )}
+    </div>
   )
 }
 
