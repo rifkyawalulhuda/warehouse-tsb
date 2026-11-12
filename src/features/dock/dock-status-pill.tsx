@@ -24,11 +24,21 @@ const phaseStyles: Record<DockPhase, { pill: string; dot: string }> = {
   },
 }
 
+const phaseShortLabels: Record<DockPhase, string> = {
+  starting: 'Siap',
+  serving: 'Diproses',
+  available: 'Kosong',
+  maintenance: 'Perawatan',
+}
+
 export function DockStatusPill({
   phase,
+  compact = false,
   className,
 }: {
   phase: DockPhase
+  /** Di layar sempit label panjang dipendekkan agar tabel muat tanpa geser. */
+  compact?: boolean
   className?: string
 }) {
   return (
@@ -43,7 +53,14 @@ export function DockStatusPill({
         aria-hidden
         className={cn('size-1.5 rounded-full', phaseStyles[phase].dot)}
       />
-      {dockPhaseLabels[phase]}
+      {compact ? (
+        <>
+          <span className='sm:hidden'>{phaseShortLabels[phase]}</span>
+          <span className='max-sm:hidden'>{dockPhaseLabels[phase]}</span>
+        </>
+      ) : (
+        dockPhaseLabels[phase]
+      )}
     </span>
   )
 }

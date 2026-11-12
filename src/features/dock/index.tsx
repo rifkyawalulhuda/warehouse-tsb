@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { DockCard } from './dock-card'
+import { DockGrid } from './dock-grid'
 import {
   dockFilterCounts,
   dockFilterLabels,
@@ -33,7 +34,10 @@ import {
   type DockPhase,
 } from './dock-model'
 import { DockSummary, DockQueueStrip } from './dock-summary'
+import { DockTable } from './dock-table'
 import { DockTile } from './dock-tile'
+import { DockViewSwitch } from './dock-view-switch'
+import { useDockView } from './use-dock-view'
 
 const groupTitles: Record<DockPhase, string> = {
   starting: 'Perlu dimulai',
@@ -56,6 +60,7 @@ export function DockBoard() {
   useRealtimeSync()
   const queryClient = useQueryClient()
   const today = todayISO()
+  const { view, setView } = useDockView()
 
   const docks = useQuery({ queryKey: ['ops', 'docks'], queryFn: fetchOpsDocks })
 
@@ -121,6 +126,7 @@ export function DockBoard() {
       <PageHeader
         title='Papan Dock'
         description={`${counts.serving} sedang diproses · ${counts.action} perlu dimulai · ${counts.empty} kosong.`}
+        actions={<DockViewSwitch value={view} onChange={setView} />}
       />
 
       <DockSummary docks={docks.data} waiting={waiting} />
@@ -214,6 +220,30 @@ export function DockBoard() {
             </Button>
           </div>
         </Card>
+      ) : view === 'table' ? (
+        <DockTable
+          groups={groups}
+          now={now}
+          actionPending={start.isPending || finish.isPending}
+          onStart={(booking, targetDock) =>
+            setPending({ kind: 'start', booking, dock: targetDock })
+          }
+          onFinish={(booking, targetDock) =>
+            setPending({ kind: 'finish', booking, dock: targetDock })
+          }
+        />
+      ) : view === 'grid' ? (
+        <DockGrid
+          groups={groups}
+          now={now}
+          actionPending={start.isPending || finish.isPending}
+          onStart={(booking, targetDock) =>
+            setPending({ kind: 'start', booking, dock: targetDock })
+          }
+          onFinish={(booking, targetDock) =>
+            setPending({ kind: 'finish', booking, dock: targetDock })
+          }
+        />
       ) : (
         groups.map((group) => (
           <section

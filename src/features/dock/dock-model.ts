@@ -157,6 +157,14 @@ export function processClock(booking: Booking, now: Date): ProcessClock {
 }
 
 /** Ringkas menit menjadi "42 mnt" atau "1 j 05 mnt" tanpa kata "jam" panjang. */
+/** Label jam ringkas untuk ruang sempit: "3j 35m" alih-alih "3 j 35 mnt". */
+export function shortClock(minutes: number) {
+  const hours = Math.floor(minutes / 60)
+  const rest = minutes % 60
+  if (hours === 0) return `${rest}m`
+  return rest === 0 ? `${hours}j` : `${hours}j ${rest}m`
+}
+
 export function clockLabel(minutes: number) {
   if (minutes < 60) return `${minutes} mnt`
   const hours = Math.floor(minutes / 60)
