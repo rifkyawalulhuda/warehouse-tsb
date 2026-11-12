@@ -14,6 +14,7 @@ import {
 } from '@/lib/api/endpoints'
 import type { Booking, DockWithBooking } from '@/lib/api/types'
 import { todayISO } from '@/lib/format'
+import { dockOptionLabel } from '@/lib/dock-label'
 import { cn } from '@/lib/utils'
 import { useNow } from '@/hooks/use-now'
 import { useRealtimeSync } from '@/hooks/use-realtime'
@@ -36,15 +37,19 @@ import { QueueSummary, type QueueFilter } from './queue-summary'
 
 type AssignVars = { bookingId: string; dockId: number; dockCode: string }
 
+/** Pilih dock yang menunggu konfirmasi sebelum benar-benar ditugaskan. */
+type PendingAssign = { booking: Booking; dock: DockWithBooking }
+
 /**
  * Papan antrean satu hari: empat lane menurut tahap kerja, bukan tiga tabel
  * bertumpuk. Kartu diurutkan dari yang paling lama menunggu, dan jam tunggu
  * berdetak dari gate-in supaya truk yang tertahan terlihat tanpa dibuka dulu.
  *
- * Penugasan dock satu klik dengan pembatalan dari toast: penempatan truk adalah
- * kerja berulang, dan dialog konfirmasi per truk membuat satu keputusan butuh
- * dua kali tekan. Kesalahan klik dipulihkan lewat "Urungkan", yang memanggil
- * endpoint pelepas dock di server.
+ * Penugasan dock selalu lewat satu konfirmasi: tombol utama dan pemilih dock
+ * sama-sama membuka dialog yang menyebut kode dock, area, dan gudangnya. Toasts
+ * tidak dipakai untuk konfirmasi karena hilang sendiri dalam beberapa detik —
+ * keputusan yang mengubah kuota slot tidak boleh bergantung pada kecepatan mata.
+ * Setelah truk ditempatkan, toast tetap memberi jalan "Urungkan".
  */
 export function QueuePage() {
   useRealtimeSync()
@@ -53,6 +58,7 @@ export function QueuePage() {
   const [date, setDate] = useState(todayISO())
   const [tab, setTab] = useState<'queue' | 'approvals'>('queue')
   const [noShowTarget, setNoShowTarget] = useState<Booking | null>(null)
+  const [pendingAssign, setPendingAssign] = useState<PendingAssign | null>(null)
   /** Dinaikkan setiap penugasan dipakai, supaya pemilih dock kembali kosong. */
   const [assignReset, setAssignReset] = useState(0)
 
@@ -113,10 +119,13 @@ export function QueuePage() {
       assignDock(bookingId, dockId),
     onSuccess: (booking, variables) => {
       setAssignReset((n) => n + 1)
+      setPendingAssign(null)
       void queryClient.invalidateQueries({ queryKey: ['ops'] })
       toast.success(`${booking.bookingCode} ke ${variables.dockCode}`, {
         description:
           'Truk menempati dock. Proses bisa dimulai dari Papan Dock.',
+        // Pembatalan salah pilih butuh waktu membaca; 4 detik bawaan terlalu cepat.
+        duration: 8_000,
         action: {
           label: 'Urungkan',
           onClick: () => unassign.mutate(booking.id),
@@ -143,11 +152,7 @@ export function QueuePage() {
   )
 
   function assignTo(booking: Booking, dock: DockWithBooking) {
-    assign.mutate({
-      bookingId: booking.id,
-      dockId: dock.id,
-      dockCode: dock.dockCode,
-    })
+    setPendingAssign({ booking, dock })
   }
 
   const cardHandlers = {
@@ -259,6 +264,37 @@ export function QueuePage() {
           </Tabs>
         </>
       )}
+
+      <ConfirmDialog
+        open={pendingAssign !== null}
+        onOpenChange={(open) => {
+          if (open) return
+          setPendingAssign(null)
+          // Pemilih dock dikosongkan lagi: pilihan tadi batal atau sudah dipakai.
+          setAssignReset((n) => n + 1)
+        }}
+        title={
+          pendingAssign
+            ? `Tugaskan ke ${dockOptionLabel(pendingAssign.dock)}?`
+            : ''
+        }
+        desc={
+          pendingAssign
+            ? `${pendingAssign.booking.bookingCode} · ${pendingAssign.booking.customer.name} · ${pendingAssign.booking.licensePlate ?? 'tanpa plat'} akan menempati dock ini.`
+            : ''
+        }
+        confirmText='Ya, tugaskan'
+        cancelBtnText='Batal'
+        isLoading={assign.isPending}
+        handleConfirm={() =>
+          pendingAssign &&
+          assign.mutate({
+            bookingId: pendingAssign.booking.id,
+            dockId: pendingAssign.dock.id,
+            dockCode: pendingAssign.dock.dockCode,
+          })
+        }
+      />
 
       <ConfirmDialog
         open={noShowTarget !== null}
