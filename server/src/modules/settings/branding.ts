@@ -16,7 +16,13 @@ brandingRouter.get('/', async (_req, res, next) => {
   try {
     const settings = await prisma.warehouseSetting.findUnique({
       where: { id: 1 },
-      select: { appName: true, appTagline: true, appShortName: true },
+      select: {
+        appName: true,
+        appTagline: true,
+        appShortName: true,
+        loginCoverUrl: true,
+        loginBrandColor: true,
+      },
     })
 
     res.json({ data: settings ?? null })

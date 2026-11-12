@@ -18,6 +18,17 @@ export const settingsRouter = Router()
  */
 const DEFAULT_WAREHOUSE_ID = 1
 
+/** Gambar halaman masuk hanya dari unggahan kita sendiri atau http(s). */
+function isSafeImageUrl(value: string): boolean {
+  if (value.startsWith('/api/uploads/')) return true
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' || url.protocol === 'http:'
+  } catch {
+    return false
+  }
+}
+
 /** Satu bentuk respons untuk GET dan PUT supaya UI tidak perlu dua tipe. */
 async function settingsPayload() {
   const settings = await getSettings()
@@ -36,6 +47,8 @@ async function settingsPayload() {
     appName: settings.appName,
     appTagline: settings.appTagline,
     appShortName: settings.appShortName,
+    loginCoverUrl: settings.loginCoverUrl,
+    loginBrandColor: settings.loginBrandColor,
     operatingStartMinute: settings.operatingStartMinute,
     operatingEndMinute: settings.operatingEndMinute,
     operatingStartLabel: minuteToLabel(settings.operatingStartMinute),
@@ -70,6 +83,26 @@ const updateSchema = z.object({
   appTagline: z.string().trim().max(80).optional(),
   // Null/"" melepas nama pendek, sehingga judul tab kembali memakai appName.
   appShortName: z.string().trim().max(20).nullable().optional(),
+  // Gambar sisi kanan halaman masuk. Hanya URL yang berasal dari unggahan kita
+  // sendiri (atau http/https biasa) yang diterima: nilai ini dirender sebagai
+  // CSS `url()` di halaman tanpa sesi, jadi skema seperti `javascript:` tidak
+  // boleh lolos.
+  loginCoverUrl: z
+    .string()
+    .trim()
+    .max(2048)
+    .refine((value) => value === '' || isSafeImageUrl(value), {
+      message: 'URL gambar harus diawali /api/uploads/ atau http(s)://',
+    })
+    .nullable()
+    .optional(),
+  // Hex 6 digit; null/"" berarti kembali ke gradien bawaan.
+  loginBrandColor: z
+    .string()
+    .trim()
+    .regex(/^#(?:[0-9a-fA-F]{6})$/, 'Warna harus berupa hex, misalnya #1D4ED8')
+    .nullable()
+    .optional(),
   operatingStartMinute: z.number().int().min(0).max(1439).optional(),
   operatingEndMinute: z.number().int().min(1).max(1440).optional(),
   slotUnitMinutes: z.number().int().min(15).max(120).optional(),
@@ -116,6 +149,15 @@ settingsRouter.put('/', requireAuth, requireExactRole('ADMIN'), async (req, res,
       // sepanjang satu spasi.
       if (data.appShortName !== undefined) {
         data.appShortName = data.appShortName?.trim() ? data.appShortName.trim() : null
+      }
+      // Sama untuk gambar dan warna: isian kosong berarti "pakai bawaan".
+      if (data.loginCoverUrl !== undefined) {
+        data.loginCoverUrl = data.loginCoverUrl?.trim() ? data.loginCoverUrl.trim() : null
+      }
+      if (data.loginBrandColor !== undefined) {
+        data.loginBrandColor = data.loginBrandColor?.trim()
+          ? data.loginBrandColor.trim()
+          : null
       }
       await tx.warehouseSetting.update({ where: { id: current.id }, data })
       if (body.warehouseName !== undefined) {

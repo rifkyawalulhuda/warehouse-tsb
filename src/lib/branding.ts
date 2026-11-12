@@ -15,6 +15,8 @@ export const DEFAULT_BRANDING: Branding = {
   appName: 'Warehouse TSB',
   appTagline: 'Time Slot Booking',
   appShortName: null,
+  loginCoverUrl: null,
+  loginBrandColor: null,
 }
 
 /**
@@ -52,5 +54,9 @@ export function useBranding(): Branding {
     appName: data.appName || DEFAULT_BRANDING.appName,
     appTagline: data.appTagline,
     appShortName: data.appShortName,
+    // Kosong berarti Admin belum mengunggah apa pun; halaman masuk lalu memakai
+    // gradien bawaan, bukan gambar kosong yang tampak rusak.
+    loginCoverUrl: data.loginCoverUrl?.trim() || null,
+    loginBrandColor: data.loginBrandColor?.trim() || null,
   }
 }

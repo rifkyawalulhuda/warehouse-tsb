@@ -11,6 +11,10 @@ export type FormState = {
   appName: string
   appTagline: string
   appShortName: string
+  /** URL gambar sisi kanan halaman masuk; kosong = gradien bawaan. */
+  loginCoverUrl: string
+  /** Warna aksen halaman masuk, hex; kosong = warna bawaan tema. */
+  loginBrandColor: string
   open: string
   close: string
   slotUnitMinutes: string
@@ -29,7 +33,13 @@ export type SectionKey =
 
 export const FIELD_GROUPS = {
   identity: ['warehouseName'],
-  branding: ['appName', 'appTagline', 'appShortName'],
+  branding: [
+    'appName',
+    'appTagline',
+    'appShortName',
+    'loginCoverUrl',
+    'loginBrandColor',
+  ],
   hours: ['open', 'close', 'slotUnitMinutes'],
   arrival: ['gracePeriodMinutes', 'earlyArrivalLimitMinutes'],
   window: ['bookingWindowDays'],
@@ -52,6 +62,8 @@ export type SettingsPayload = {
   appName?: string
   appTagline?: string
   appShortName?: string | null
+  loginCoverUrl?: string | null
+  loginBrandColor?: string | null
   operatingStartMinute?: number
   operatingEndMinute?: number
   slotUnitMinutes?: number
@@ -70,6 +82,8 @@ export function toForm(settings: Settings): FormState {
     appName: settings.appName,
     appTagline: settings.appTagline,
     appShortName: settings.appShortName ?? '',
+    loginCoverUrl: settings.loginCoverUrl ?? '',
+    loginBrandColor: settings.loginBrandColor ?? '',
     open: settings.operatingStartLabel,
     close: settings.operatingEndLabel,
     slotUnitMinutes: String(settings.slotUnitMinutes),
@@ -101,6 +115,8 @@ export function restoreSection(
         appName: saved.appName,
         appTagline: saved.appTagline,
         appShortName: saved.appShortName,
+        loginCoverUrl: saved.loginCoverUrl,
+        loginBrandColor: saved.loginBrandColor,
       }
     case 'hours':
       return {
@@ -152,8 +168,20 @@ function isIntegerIn(value: string, min: number, max: number) {
   return Number.isInteger(parsed) && parsed >= min && parsed <= max
 }
 
-function minutesBetween(open: string, close: string) {
-  if (open === '' || close === '') return null
+/** #RRGGBB saja: nilai ini dipakai sebagai variabel CSS di halaman masuk. */
+export function isHexColor(value: string) {
+  return /^#[0-9a-fA-F]{6}$/.test(value)
+}
+
+/**
+ * Gambar hanya boleh berasal dari unggahan sendiri (`/api/uploads/…`) atau
+ * https. Alamat `javascript:` atau `data:` di properti CSS latar akan lolos
+ * dari pemeriksaan biasa, jadi ditolak di sini dan juga di server.
+ */
+export function isSafeImageUrl(value: string) {
+  return value.startsWith('/api/uploads/') || /^https:\/\//i.test(value)}
+
+function minutesBetween(open: string, close: string) {  if (open === '' || close === '') return null
   const start = labelToMinute(open)
   const end = labelToMinute(close)
   if (!Number.isFinite(start) || !Number.isFinite(end)) return null
@@ -187,6 +215,14 @@ export function sectionError(
       }
       if (form.appShortName.trim().length > 20) {
         return 'Nama pendek maksimal 20 karakter.'
+      }
+      const cover = form.loginCoverUrl.trim()
+      if (cover !== '' && !isSafeImageUrl(cover)) {
+        return 'Gambar harus PNG atau JPG yang diunggah dari sini, atau alamat https.'
+      }
+      const color = form.loginBrandColor.trim()
+      if (color !== '' && !isHexColor(color)) {
+        return 'Warna aksen harus format #RRGGBB.'
       }
       return null
     }
@@ -252,6 +288,8 @@ export function sectionPayload(
         // String kosong dikirim sebagai null: server lalu memakai judul penuh
         // untuk tab, bukan nama pendek sepanjang nol karakter.
         appShortName: form.appShortName.trim() || null,
+        loginCoverUrl: form.loginCoverUrl.trim() || null,
+        loginBrandColor: form.loginBrandColor.trim() || null,
       }
     case 'hours':
       return {

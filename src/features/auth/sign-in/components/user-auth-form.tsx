@@ -1,8 +1,8 @@
 import { useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useNavigate } from '@tanstack/react-router'
 import { Loader2, LogIn } from 'lucide-react'
 import { toast } from 'sonner'
 import { apiErrorMessage } from '@/lib/api/client'
@@ -57,14 +57,20 @@ export function UserAuthForm({
     }
   }
 
+  // Dimatikan setelah berhasil karena tombol "Masuk" sedang menunggu server:
+  // mengganti labelnya di tengah isian akan terlihat seperti form yang
+  // kehilangan fokus.
+  const submitLabel = isLoading ? 'Memeriksa…' : 'Masuk'
+
   return (
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className={`grid gap-3 ${className ?? ''}`}
+        className={`grid gap-4 ${className ?? ''}`}
         // Validasi ditangani zod agar pesan galat konsisten berbahasa Indonesia;
         // tanpa ini browser memblokir submit lebih dulu dengan tooltip bawaannya.
         noValidate
+        aria-busy={isLoading}
         {...props}
       >
         <FormField
@@ -76,8 +82,13 @@ export function UserAuthForm({
               <FormControl>
                 <Input
                   type='email'
+                  inputMode='email'
                   autoComplete='username'
+                  autoCapitalize='none'
+                  autoFocus
+                  spellCheck={false}
                   placeholder='nama@perusahaan.com'
+                  className='h-11'
                   {...field}
                 />
               </FormControl>
@@ -94,7 +105,7 @@ export function UserAuthForm({
               <FormControl>
                 <PasswordInput
                   autoComplete='current-password'
-                  placeholder='********'
+                  className='[&_input]:h-11'
                   {...field}
                 />
               </FormControl>
@@ -102,9 +113,13 @@ export function UserAuthForm({
             </FormItem>
           )}
         />
-        <Button className='mt-2' disabled={isLoading}>
-          {isLoading ? <Loader2 className='animate-spin' /> : <LogIn />}
-          Masuk
+        <Button className='mt-1 h-11 w-full' disabled={isLoading}>
+          {isLoading ? (
+            <Loader2 className='animate-spin' aria-hidden='true' />
+          ) : (
+            <LogIn aria-hidden='true' />
+          )}
+          {submitLabel}
         </Button>
       </form>
     </Form>

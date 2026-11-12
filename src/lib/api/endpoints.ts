@@ -6,6 +6,7 @@ import {
   postData,
   putData,
 } from './client'
+
 import type {
   ActivityItem,
   ActivityType,
@@ -55,7 +56,10 @@ export function fetchSettings() {
 }
 
 /** Judul aplikasi untuk halaman sebelum masuk; tidak butuh sesi. */
-export type Branding = Pick<Settings, 'appName' | 'appTagline' | 'appShortName'>
+export type Branding = Pick<
+  Settings,
+  'appName' | 'appTagline' | 'appShortName' | 'loginCoverUrl' | 'loginBrandColor'
+>
 
 export async function fetchBranding(): Promise<Branding | null> {
   // Server mengirim `null` bila pengaturan belum pernah dibuat.
@@ -67,6 +71,8 @@ export function saveSettings(payload: {
   appName?: string
   appTagline?: string
   appShortName?: string | null
+  loginCoverUrl?: string | null
+  loginBrandColor?: string | null
   operatingStartMinute?: number
   operatingEndMinute?: number
   slotUnitMinutes?: number
@@ -82,6 +88,21 @@ export function saveSettings(payload: {
 }
 
 /* ------------------------------- master ------------------------------ */
+
+/**
+ * Unggahan gambar dikirim sebagai badan biner mentah, bukan multipart: hanya
+ * satu berkas, jadi pembungkus multipart hanya menambah parsing tanpa manfaat.
+ * `api` memakai `withCredentials`, dan itu penting di sini karena rute hanya
+ * terbuka untuk Admin yang sedang masuk.
+ */
+export async function uploadLoginCover(file: Blob) {
+  const response = await api.put<{ data: { url: string } }>(
+    '/uploads/login-cover',
+    file,
+    { headers: { 'Content-Type': file.type || 'application/octet-stream' } }
+  )
+  return response.data.data.url
+}
 
 export function fetchDocks() {
   return getData<{ docks: Dock[]; capacities: Record<ActivityType, number> }>(

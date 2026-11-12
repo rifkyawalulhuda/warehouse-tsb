@@ -16,6 +16,8 @@ const settings: Settings = {
   appName: 'Warehouse TSB',
   appTagline: 'Time Slot Booking',
   appShortName: null,
+  loginCoverUrl: null,
+  loginBrandColor: null,
   operatingStartMinute: 480,
   operatingEndMinute: 1020,
   operatingStartLabel: '08:00',
@@ -109,6 +111,8 @@ describe('seksi nama aplikasi', () => {
         appName: 'Warehouse TSB',
         appTagline: 'Time Slot Booking',
         appShortName: null,
+        loginCoverUrl: null,
+        loginBrandColor: null,
       }
     )
     expect(

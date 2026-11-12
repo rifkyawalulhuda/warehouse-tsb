@@ -42,6 +42,7 @@ import {
 } from './form'
 import { OperationsSummary, PolicyFlag } from './operations-summary'
 import { FieldRow, NumberField, SectionPanel } from './section-panel'
+import { LoginPanelFields } from './login-panel-fields'
 
 type Tab = SectionKey | 'appearance'
 
@@ -241,7 +242,7 @@ function SettingsForm({ settings }: { settings: Settings }) {
               <SectionPanel
                 icon={Type}
                 title='Nama aplikasi'
-                description='Tampil di kepala sidebar, halaman masuk, dan judul tab peramban. Bukan nama gudang — identitas gudang tetap di seksi Identitas gudang.'
+                description='Tampil di kepala sidebar, halaman masuk, dan judul tab peramban. Panel kanan halaman masuk bisa memakai gambar atau warna pilihan Anda. Bukan nama gudang — identitas gudang tetap di seksi Identitas gudang.'
                 error={sectionError('branding', form)}
                 dirty={isDirty('branding', form, saved)}
                 pending={save.isPending && save.variables === 'branding'}
@@ -299,10 +300,18 @@ function SettingsForm({ settings }: { settings: Settings }) {
                   />
                 </FieldRow>
 
+                <LoginPanelFields
+                  coverUrl={form.loginCoverUrl}
+                  brandColor={form.loginBrandColor}
+                  onChange={setField}
+                />
+
                 <BrandPreview
                   appName={form.appName}
                   appTagline={form.appTagline}
                   appShortName={form.appShortName}
+                  coverUrl={form.loginCoverUrl}
+                  brandColor={form.loginBrandColor}
                 />
               </SectionPanel>
             )}
@@ -632,12 +641,17 @@ function BrandPreview({
   appName,
   appTagline,
   appShortName,
+  coverUrl,
+  brandColor,
 }: {
   appName: string
   appTagline: string
   appShortName: string
+  coverUrl: string
+  brandColor: string
 }) {
   const short = appShortName.trim()
+  const hasPanel = Boolean(coverUrl || brandColor)
   return (
     <div className='mt-4 rounded-lg border border-dashed px-4 py-3'>
       <p className='text-[11px] font-medium tracking-wide text-muted-foreground uppercase'>
@@ -656,6 +670,31 @@ function BrandPreview({
           )}
         </div>
       </div>
+
+      {/* Panel sisi kanan halaman masuk hanya ada di layar lebar; pratinjau
+          mengikuti aturan itu supaya admin tidak menduga gambar akan tampil di
+          ponsel. Tanpa gambar maupun warna, halaman masuk memakai gradien tema. */}
+      <div
+        className='mt-3 flex h-16 items-center justify-center overflow-hidden rounded-md border'
+        style={
+          coverUrl
+            ? {
+                backgroundImage: `url("${coverUrl}")`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }
+            : brandColor
+              ? { backgroundColor: brandColor }
+              : undefined
+        }
+      >
+        <span className='text-[11px] text-muted-foreground'>
+          {hasPanel
+            ? 'Panel halaman masuk (layar lebar)'
+            : 'Tanpa gambar — memakai gradien tema'}
+        </span>
+      </div>
+
       <p className='mt-3 text-xs text-muted-foreground'>
         Judul tab peramban:{' '}
         <span className='font-medium text-foreground'>

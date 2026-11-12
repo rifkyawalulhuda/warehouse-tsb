@@ -7,6 +7,7 @@ import { authRouter } from './modules/auth/routes'
 import { usersRouter } from './modules/users/routes'
 import { settingsRouter } from './modules/settings/routes'
 import { brandingRouter } from './modules/settings/branding'
+import { uploadsRouter, uploadsDir, UPLOAD_PATH } from './modules/settings/uploads'
 import { masterRouter } from './modules/master/routes'
 import { bookingsRouter } from './modules/bookings/routes'
 import { approvalsRouter } from './modules/approvals/routes'
@@ -27,6 +28,13 @@ export function createApp() {
       credentials: true,
     })
   )
+  // Unggahan gambar memakai badan biner mentah, jadi parser-nya dipasang
+  // sebelum parser JSON dan hanya untuk jalur ini. `express.json` melewati
+  // permintaan yang sudah punya badan terbaca.
+  app.use(
+    `${UPLOAD_PATH}/login-cover`,
+    express.raw({ type: () => true, limit: '2mb' })
+  )
   app.use(express.json({ limit: '1mb' }))
   app.use(cookieParser())
 
@@ -40,6 +48,10 @@ export function createApp() {
   app.use('/api/users', usersRouter)
   app.use('/api/settings', settingsRouter)
   app.use('/api/branding', brandingRouter)
+  app.use(UPLOAD_PATH, uploadsRouter)
+  // Berkasnya publik karena dipakai halaman masuk sebelum ada sesi; namanya
+  // acak sehingga tidak bisa ditebak, dan tidak ada data operasional di sini.
+  app.use(UPLOAD_PATH, express.static(uploadsDir(), { maxAge: '7d', index: false }))
   app.use('/api/master', masterRouter)
   app.use('/api/bookings', bookingsRouter)
   app.use('/api/approvals', approvalsRouter)

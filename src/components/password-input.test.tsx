@@ -18,20 +18,20 @@ describe('PasswordInput', () => {
     )
 
     const passwordInput = getByPlaceholder('password')
-    const showPasswordButton = getByRole('button', { name: /show password/i })
+    const showPasswordButton = getByRole('button', { name: /Tampilkan password/i })
 
     await expect.element(passwordInput).toBeInTheDocument()
     await expect.element(passwordInput).toHaveAttribute('type', 'password')
     await expect.element(showPasswordButton).toBeVisible()
   })
 
-  it('toggles the password visibility when the show password button is clicked', async () => {
+  it('toggles the password visibility when the Tampilkan password button is clicked', async () => {
     const { getByPlaceholder, getByRole } = await render(
       <PasswordInput placeholder='password' />
     )
 
     const passwordInput = getByPlaceholder('password')
-    const showPasswordButton = getByRole('button', { name: /show password/i })
+    const showPasswordButton = getByRole('button', { name: /Tampilkan password/i })
 
     await expect.element(passwordInput).toHaveAttribute('type', 'password')
     await expect.element(showPasswordButton).toBeInTheDocument()
@@ -39,24 +39,24 @@ describe('PasswordInput', () => {
     await userEvent.click(showPasswordButton)
 
     await expect.element(passwordInput).toHaveAttribute('type', 'text')
-    const hidePasswordButton = getByRole('button', { name: /hide password/i })
+    const hidePasswordButton = getByRole('button', { name: /Sembunyikan password/i })
     await expect.element(hidePasswordButton).toBeInTheDocument()
 
     await userEvent.click(hidePasswordButton)
 
     await expect.element(passwordInput).toHaveAttribute('type', 'password')
     await expect
-      .element(getByRole('button', { name: /show password/i }))
+      .element(getByRole('button', { name: /Tampilkan password/i }))
       .toBeInTheDocument()
   })
 
-  it('disables the show password button when the password input is disabled', async () => {
+  it('disables the Tampilkan password button when the password input is disabled', async () => {
     const { getByPlaceholder, getByRole } = await render(
       <PasswordInput placeholder='password' disabled />
     )
 
     const passwordInput = getByPlaceholder('password')
-    const showPasswordButton = getByRole('button', { name: /show password/i })
+    const showPasswordButton = getByRole('button', { name: /Tampilkan password/i })
     await expect.element(showPasswordButton).toBeDisabled()
     await expect.element(passwordInput).toBeDisabled()
   })
