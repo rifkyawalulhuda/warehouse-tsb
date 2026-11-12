@@ -6,7 +6,6 @@ import {
   postData,
   putData,
 } from './client'
-
 import type {
   ActivityItem,
   ActivityType,
@@ -58,7 +57,11 @@ export function fetchSettings() {
 /** Judul aplikasi untuk halaman sebelum masuk; tidak butuh sesi. */
 export type Branding = Pick<
   Settings,
-  'appName' | 'appTagline' | 'appShortName' | 'loginCoverUrl' | 'loginBrandColor'
+  | 'appName'
+  | 'appTagline'
+  | 'appShortName'
+  | 'loginCoverUrl'
+  | 'loginBrandColor'
 >
 
 export async function fetchBranding(): Promise<Branding | null> {
@@ -362,7 +365,10 @@ export function createUser(payload: {
 export function updateUser(
   id: string,
   payload: Partial<
-    Pick<ManagedUser, 'name' | 'phone' | 'isActive' | 'canApproveBooking'>
+    Pick<
+      ManagedUser,
+      'name' | 'email' | 'role' | 'phone' | 'isActive' | 'canApproveBooking'
+    >
   > & { password?: string }
 ) {
   return patchData<ManagedUser>(`/users/${id}`, payload)
@@ -425,6 +431,7 @@ export function updateCustomerAccount(
   userId: string,
   payload: Partial<{
     name: string
+    email: string
     phone: string | null
     isActive: boolean
     password: string

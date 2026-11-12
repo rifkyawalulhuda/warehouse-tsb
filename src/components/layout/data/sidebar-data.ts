@@ -9,7 +9,6 @@ import {
   ScanLine,
   Settings,
   Truck,
-  Users,
   Warehouse,
 } from 'lucide-react'
 import type { Role } from '@/lib/api/types'
@@ -68,8 +67,9 @@ const adminNav: NavGroup[] = [
     title: 'Manajemen',
     items: [
       { title: 'Laporan', url: '/reports', icon: BarChart3 },
+      // Akun staf dan akun customer sama-sama dikelola dari Master Data.
+      // Rute /users masih hidup untuk tautan lama, tetapi bukan menu.
       { title: 'Master Data', url: '/master', icon: Warehouse },
-      { title: 'Pengguna', url: '/users', icon: Users },
       { title: 'Pengaturan', url: '/settings', icon: Settings },
     ],
   },

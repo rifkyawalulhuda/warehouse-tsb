@@ -241,6 +241,77 @@ describe('akun login di dalam customer', () => {
 
     expect(response.status).toBe(404)
   })
+
+  it('mengubah nama, email, dan No. HP akun customer', async () => {
+    const alpha = await prisma.customer.findUniqueOrThrow({
+      where: { name: 'PT Alpha Logistik' },
+    })
+    const account = await prisma.user.findUniqueOrThrow({
+      where: { email: 'customer1@test.local' },
+    })
+
+    const response = await request(app)
+      .patch(`/api/customers/${alpha.id}/users/${account.id}`)
+      .set('Cookie', adminCookie)
+      .send({
+        name: 'Staf Alpha Baru',
+        email: '  STAF.BARU@ALPHA.TEST ',
+        phone: '081299998888',
+      })
+
+    expect(response.status).toBe(200)
+    expect(response.body.data).toMatchObject({
+      name: 'Staf Alpha Baru',
+      email: 'staf.baru@alpha.test',
+      phone: '081299998888',
+    })
+
+    // Identitas login ikut pindah: email baru harus bisa dipakai masuk.
+    const login = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'staf.baru@alpha.test', password: TEST_PASSWORD })
+    expect(login.status).toBe(200)
+  })
+
+  it('menolak email akun customer yang sudah dipakai akun lain', async () => {
+    const alpha = await prisma.customer.findUniqueOrThrow({
+      where: { name: 'PT Alpha Logistik' },
+    })
+    const account = await prisma.user.findUniqueOrThrow({
+      where: { email: 'customer1@test.local' },
+    })
+
+    const taken = await request(app)
+      .patch(`/api/customers/${alpha.id}/users/${account.id}`)
+      .set('Cookie', adminCookie)
+      .send({ email: 'customer2@test.local' })
+    expect(taken.status).toBe(409)
+    expect(taken.body.error.code).toBe('EMAIL_TAKEN')
+
+    // Email yang tidak berubah harus lolos: layar mengirim seluruh isian.
+    const same = await request(app)
+      .patch(`/api/customers/${alpha.id}/users/${account.id}`)
+      .set('Cookie', adminCookie)
+      .send({ email: 'customer1@test.local', name: 'Staf Alpha Diperbarui' })
+    expect(same.status).toBe(200)
+    expect(same.body.data.name).toBe('Staf Alpha Diperbarui')
+  })
+
+  it('menolak email akun customer yang formatnya tidak valid', async () => {
+    const alpha = await prisma.customer.findUniqueOrThrow({
+      where: { name: 'PT Alpha Logistik' },
+    })
+    const account = await prisma.user.findUniqueOrThrow({
+      where: { email: 'customer1@test.local' },
+    })
+
+    const response = await request(app)
+      .patch(`/api/customers/${alpha.id}/users/${account.id}`)
+      .set('Cookie', adminCookie)
+      .send({ email: 'bukan-email' })
+
+    expect(response.status).toBe(400)
+  })
 })
 
 describe('POST /api/users tidak lagi membuat akun customer', () => {

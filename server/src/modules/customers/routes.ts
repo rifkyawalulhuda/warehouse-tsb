@@ -362,6 +362,14 @@ customersRouter.post(
 const accountUpdateSchema = z
   .object({
     name: z.string().trim().min(2).max(120).optional(),
+    /// Email adalah identitas login. Dinormalkan sama seperti saat akun dibuat.
+    /// Tidak bisa dikosongkan: akun tanpa email tidak bisa masuk lagi.
+    email: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .refine((v) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v), 'Format email tidak valid')
+      .optional(),
     phone: z.string().trim().max(24).nullable().optional(),
     isActive: z.boolean().optional(),
     password: z.string().min(7, 'Password minimal 7 karakter').optional(),
@@ -384,15 +392,23 @@ customersRouter.patch(
       })
       if (!user) throw notFound('Akun tidak ditemukan pada customer ini')
 
+      // Email tidak berubah tidak boleh ditolak sebagai "sudah dipakai" oleh
+      // akun ini sendiri: layar mengirim seluruh isian setiap kali menyimpan.
+      const emailChanged = body.email !== undefined && body.email !== user.email
+      if (emailChanged) {
+        const taken = await prisma.user.findUnique({ where: { email: body.email } })
+        if (taken) throw conflict('EMAIL_TAKEN', 'Email sudah dipakai akun lain')
+      }
+
       const flagsChanged =
         body.canApproveBooking !== undefined &&
         body.canApproveBooking !== user.canApproveBooking
 
-      const updated = await prisma.$transaction(async (tx) => {
-        const result = await tx.user.update({
+      const updated = await prisma.$transaction(async (tx) => {        const result = await tx.user.update({
           where: { id: userId },
           data: {
             ...(body.name !== undefined ? { name: body.name } : {}),
+            ...(emailChanged ? { email: body.email } : {}),
             ...(body.phone !== undefined ? { phone: body.phone } : {}),
             ...(body.isActive !== undefined ? { isActive: body.isActive } : {}),
             ...(body.canApproveBooking !== undefined
@@ -413,14 +429,32 @@ customersRouter.patch(
 
         if (flagsChanged) {
           await writeAudit(
-          {
-            userId: req.user!.id,
-            userRole: req.user!.role,
-            action: 'USER_APPROVAL_FLAGS_CHANGED',
-            meta: { targetUserId: userId, canApproveBooking: result.canApproveBooking },
-          },
-          tx
-        )
+            {
+              userId: req.user!.id,
+              userRole: req.user!.role,
+              action: 'USER_APPROVAL_FLAGS_CHANGED',
+              meta: { targetUserId: userId, canApproveBooking: result.canApproveBooking },
+            },
+            tx
+          )
+        }
+
+        // Email adalah identitas login; perubahannya dicatat terpisah dari
+        // flag approve supaya audit menjawab "akun ini bisa masuk pakai apa".
+        if (emailChanged) {
+          await writeAudit(
+            {
+              userId: req.user!.id,
+              userRole: req.user!.role,
+              action: 'USER_ACCESS_CHANGED',
+              meta: {
+                targetUserId: userId,
+                emailFrom: user.email,
+                emailTo: result.email,
+              },
+            },
+            tx
+          )
         }
 
         return result

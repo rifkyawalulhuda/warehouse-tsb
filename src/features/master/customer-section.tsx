@@ -309,6 +309,10 @@ export function CustomerDialog({
     password: '',
   })
   const [deleteOpen, setDeleteOpen] = useState(false)
+  // `undefined` = dialog akun tertutup; objek = akun yang sedang diubah.
+  const [editingAccount, setEditingAccount] = useState<
+    CustomerAccount | undefined
+  >(undefined)
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: ['master', 'customers'] })
@@ -437,6 +441,27 @@ export function CustomerDialog({
             })
           }
         />
+      ),
+    },
+    {
+      id: 'actions',
+      enableSorting: false,
+      enableHiding: false,
+      meta: {
+        label: 'Aksi',
+        headerClassName: 'text-end',
+        cellClassName: 'text-end',
+      },
+      header: () => <span>Aksi</span>,
+      cell: ({ row }) => (
+        <Button
+          size='sm'
+          variant='outline'
+          onClick={() => setEditingAccount(row.original)}
+        >
+          <PencilLine />
+          Ubah
+        </Button>
       ),
     },
   ]
@@ -683,6 +708,18 @@ export function CustomerDialog({
         </DialogFooter>
       </DialogContent>
 
+      {editingAccount && customer && (
+        <EditCustomerAccountDialog
+          key={editingAccount.id}
+          customerId={customer.id}
+          account={editingAccount}
+          onOpenChange={(open) => {
+            if (!open) setEditingAccount(undefined)
+          }}
+          onSaved={refresh}
+        />
+      )}
+
       <ConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
@@ -693,6 +730,152 @@ export function CustomerDialog({
         isLoading={removeCustomer.isPending}
         handleConfirm={() => removeCustomer.mutate()}
       />
+    </Dialog>
+  )
+}
+
+/**
+ * Edit satu akun login customer: nama, email, No. HP, status aktif, dan
+ * password (kosong = tidak diubah).
+ *
+ * Bukan `EditUserDialog` milik halaman Pengguna: akun customer diubah lewat
+ * rute `/customers/:id/users/:userId` supaya perubahan selalu terikat ke
+ * perusahaannya, dan peran tidak pernah ditawarkan — peran customer tetap.
+ */
+function EditCustomerAccountDialog({
+  customerId,
+  account,
+  onOpenChange,
+  onSaved,
+}: {
+  customerId: string
+  account: CustomerAccount
+  onOpenChange: (open: boolean) => void
+  onSaved: () => void
+}) {
+  const [form, setForm] = useState({
+    name: account.name,
+    email: account.email,
+    phone: account.phone ?? '',
+    isActive: account.isActive,
+    password: '',
+  })
+
+  const save = useMutation({
+    mutationFn: () =>
+      updateCustomerAccount(customerId, account.id, {
+        name: form.name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim() || null,
+        isActive: form.isActive,
+        // Password kosong berarti "jangan diubah", bukan "kosongkan".
+        ...(form.password ? { password: form.password } : {}),
+      }),
+    onSuccess: () => {
+      toast.success('Akun customer disimpan')
+      onSaved()
+      onOpenChange(false)
+    },
+    onError: (error) => toast.error(apiErrorMessage(error)),
+  })
+
+  const valid =
+    form.name.trim().length >= 2 &&
+    /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email.trim()) &&
+    (form.password === '' || form.password.length >= 7)
+
+  return (
+    <Dialog open onOpenChange={onOpenChange}>
+      <DialogContent className='sm:max-w-md'>
+        <DialogHeader>
+          <DialogTitle>Ubah akun customer</DialogTitle>
+          <DialogDescription>
+            {account.email}. Kosongkan password bila tidak ingin menggantinya.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className='grid gap-3'>
+          <div className='space-y-1'>
+            <Label htmlFor='acc-name'>Nama</Label>
+            <Input
+              id='acc-name'
+              value={form.name}
+              onChange={(event) =>
+                setForm({ ...form, name: event.target.value })
+              }
+            />
+          </div>
+          <div className='space-y-1'>
+            <Label htmlFor='acc-email'>Email login</Label>
+            <Input
+              id='acc-email'
+              type='email'
+              value={form.email}
+              onChange={(event) =>
+                setForm({ ...form, email: event.target.value })
+              }
+            />
+            <p className='text-xs text-muted-foreground'>
+              Email adalah identitas login. Mengubahnya berarti akun harus masuk
+              dengan email baru.
+            </p>
+          </div>
+          <div className='space-y-1'>
+            <Label htmlFor='acc-phone'>No. HP</Label>
+            <Input
+              id='acc-phone'
+              value={form.phone}
+              onChange={(event) =>
+                setForm({ ...form, phone: event.target.value })
+              }
+            />
+          </div>
+          <div className='space-y-1'>
+            <Label htmlFor='acc-password'>Password baru (opsional)</Label>
+            <Input
+              id='acc-password'
+              type='password'
+              value={form.password}
+              onChange={(event) =>
+                setForm({ ...form, password: event.target.value })
+              }
+              placeholder='Kosongkan bila tidak diubah'
+            />
+            {form.password !== '' && form.password.length < 7 && (
+              <p className='text-xs text-destructive'>
+                Password minimal 7 karakter.
+              </p>
+            )}
+          </div>
+          <div className='flex items-center justify-between rounded-md border p-3'>
+            <div>
+              <p className='text-sm font-medium'>Aktif</p>
+              <p className='text-xs text-muted-foreground'>
+                Nonaktif membuat akun ini tidak bisa masuk.
+              </p>
+            </div>
+            <Switch
+              checked={form.isActive}
+              onCheckedChange={(checked) =>
+                setForm({ ...form, isActive: checked })
+              }
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant='outline' onClick={() => onOpenChange(false)}>
+            Batal
+          </Button>
+          <Button
+            disabled={!valid || save.isPending}
+            onClick={() => save.mutate()}
+          >
+            {save.isPending && <Loader2 className='animate-spin' />}
+            Simpan
+          </Button>
+        </DialogFooter>
+      </DialogContent>
     </Dialog>
   )
 }

@@ -16,10 +16,12 @@ import {
   Plus,
   Search,
   Truck,
+  Users as UsersIcon,
   Warehouse as WarehouseIcon,
   type LucideIcon,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useAuthStore } from '@/stores/auth-store'
 import { apiErrorMessage } from '@/lib/api/client'
 import {
   createDock,
@@ -29,13 +31,21 @@ import {
   fetchDocks,
   fetchSettings,
   fetchTruckTypes,
+  fetchUsers,
   fetchWarehouses,
   updateDock,
   updateTruckType,
   updateWarehouse,
 } from '@/lib/api/endpoints'
-import type { Customer, Dock, TruckType, Warehouse } from '@/lib/api/types'
-import { durationLabel } from '@/lib/format'
+import type {
+  Customer,
+  Dock,
+  ManagedUser,
+  Role,
+  TruckType,
+  Warehouse,
+} from '@/lib/api/types'
+import { durationLabel, roleLabels } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { useRealtimeSync } from '@/hooks/use-realtime'
 import { Badge } from '@/components/ui/badge'
@@ -70,7 +80,13 @@ import { DataTable, DataTableColumnHeader } from '@/components/data-table'
 import { Main } from '@/components/layout/main'
 import { PageHeader } from '@/components/page-header'
 import { ErrorBlock, LoadingBlock } from '@/components/query-state'
+import {
+  CreateUserDialog,
+  STAFF_ROLES,
+} from '@/features/users/create-user-dialog'
+import { EditUserDialog } from '@/features/users/edit-user-dialog'
 import { CustomerDialog, CustomerSection } from './customer-section'
+import { MASTER_TABS, type MasterTab } from './tabs'
 
 /**
  * Kapasitas kuota tidak diatur manual di sini. Kuota per slot adalah jumlah dock
@@ -78,9 +94,17 @@ import { CustomerDialog, CustomerSection } from './customer-section'
  * mengubah kapasitas — satu sumber kebenaran, tidak ada dua angka yang bisa
  * saling bertentangan.
  */
-export function MasterData() {
+export function MasterData({ initialTab }: { initialTab?: MasterTab }) {
   useRealtimeSync()
   const queryClient = useQueryClient()
+  const currentUser = useAuthStore((state) => state.user)
+  const isAdmin = currentUser?.role === 'ADMIN'
+  // Tab awal datang dari `?tab=` di URL, supaya "Akun Customer dikelola di
+  // Master Data Customer" dan tautan sidebar mendarat di tab yang benar.
+  const [tab, setTab] = useState<MasterTab>(() => {
+    if (initialTab === 'users' && !isAdmin) return 'docks'
+    return MASTER_TABS.find((item) => item === initialTab) ?? 'docks'
+  })
 
   const docks = useQuery({ queryKey: ['master', 'docks'], queryFn: fetchDocks })
   const settings = useQuery({ queryKey: ['settings'], queryFn: fetchSettings })
@@ -111,6 +135,24 @@ export function MasterData() {
   const [customerDialog, setCustomerDialog] = useState<
     Customer | null | undefined
   >(undefined)
+  const [editingUser, setEditingUser] = useState<ManagedUser | undefined>(
+    undefined
+  )
+  const [creatingUser, setCreatingUser] = useState(false)
+  // Dihitung dari daftar yang sama dengan tabel Pengguna (satu key, tanpa
+  // filter), supaya dialog Ubah tahu kapan perubahan terakhir ini akan
+  // menghabiskan Admin aktif.
+  const users = useQuery({
+    queryKey: ['master', 'users'],
+    queryFn: () => fetchUsers(),
+    enabled: isAdmin,
+    // Saat kembali ke tab Pengguna, tampilkan daftar lama selama memuat ulang
+    // agar tabel tidak sempat berkedip "Belum ada akun staf".
+    placeholderData: (previous) => previous,
+  })
+  const activeAdminCount = (users.data ?? []).filter(
+    (user) => user.role === 'ADMIN' && user.isActive
+  ).length
 
   const refreshMaster = () => {
     void queryClient.invalidateQueries({ queryKey: ['master'] })
@@ -210,7 +252,11 @@ export function MasterData() {
         />
       </div>
 
-      <Tabs defaultValue='docks' className='gap-4'>
+      <Tabs
+        value={tab}
+        onValueChange={(value) => setTab(value as MasterTab)}
+        className='gap-4'
+      >
         <TabsList>
           <TabsTrigger value='docks'>
             <ClipboardList />
@@ -240,6 +286,15 @@ export function MasterData() {
               {summary.customersTotal}
             </Badge>
           </TabsTrigger>
+          {/* Tab Pengguna hanya untuk Admin: akun staf mengatur dirinya sendiri,
+              dan menyembunyikan tab lebih jujur daripada tab yang menolak dengan
+              UNAUTHORIZED saat diklik. */}
+          {isAdmin && (
+            <TabsTrigger value='users'>
+              <UsersIcon />
+              Pengguna
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value='docks'>
@@ -275,7 +330,44 @@ export function MasterData() {
             onCreate={() => setCustomerDialog(null)}
           />
         </TabsContent>
+        {isAdmin && (
+          <TabsContent value='users'>
+            <UsersSection
+              onCreate={() => setCreatingUser(true)}
+              onEdit={setEditingUser}
+              query={users}
+            />
+          </TabsContent>
+        )}
       </Tabs>
+
+      {isAdmin && creatingUser && (
+        <CreateUserDialog
+          key='new'
+          open
+          onOpenChange={(open) => {
+            if (!open) setCreatingUser(false)
+          }}
+        />
+      )}
+
+      {isAdmin && editingUser && (
+        <EditUserDialog
+          key={editingUser.id}
+          user={editingUser}
+          open
+          onOpenChange={(open) => {
+            if (!open) setEditingUser(undefined)
+          }}
+          isSelf={editingUser.id === currentUser?.id}
+          isLastActiveAdmin={
+            editingUser.role === 'ADMIN' &&
+            editingUser.isActive &&
+            activeAdminCount <= 1
+          }
+          withStatus
+        />
+      )}
 
       {customerDialog !== undefined && (
         <CustomerDialog
@@ -323,6 +415,216 @@ export function MasterData() {
         />
       )}
     </Main>
+  )
+}
+
+function UsersSection({
+  onCreate,
+  onEdit,
+  query,
+}: {
+  onCreate: () => void
+  onEdit: (user: ManagedUser) => void
+  query: UseQueryResult<ManagedUser[]>
+}) {
+  const currentUser = useAuthStore((state) => state.user)
+  const [search, setSearch] = useState('')
+  const [role, setRole] = useState<Role | 'ALL'>('ALL')
+
+  const users = query
+  const allUsers = users.data ?? []
+
+  const rows = useMemo(() => {
+    const term = search.trim().toLowerCase()
+    return allUsers.filter(
+      (user) =>
+        (role === 'ALL' || user.role === role) &&
+        (term === '' ||
+          user.name.toLowerCase().includes(term) ||
+          user.email.toLowerCase().includes(term))
+    )
+  }, [allUsers, search, role])
+  const activeCount = rows.filter((user) => user.isActive).length
+
+  const userColumns: ColumnDef<ManagedUser>[] = [
+    {
+      accessorKey: 'name',
+      meta: { label: 'Nama', cellClassName: 'font-medium' },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Nama' />
+      ),
+      cell: ({ row }) => (
+        <>
+          {row.original.name}
+          {row.original.id === currentUser?.id && (
+            <Badge variant='secondary' className='ms-2'>
+              Anda
+            </Badge>
+          )}
+        </>
+      ),
+    },
+    {
+      accessorKey: 'email',
+      meta: { label: 'Email', cellClassName: 'text-sm text-muted-foreground' },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Email' />
+      ),
+    },
+    {
+      accessorKey: 'phone',
+      meta: { label: 'No. HP', cellClassName: 'text-sm text-muted-foreground' },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='No. HP' />
+      ),
+      cell: ({ row }) =>
+        row.original.phone || (
+          <span className='text-muted-foreground'>Belum diisi</span>
+        ),
+    },
+    {
+      id: 'role',
+      accessorFn: (user) => roleLabels[user.role],
+      meta: { label: 'Peran' },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Peran' />
+      ),
+      cell: ({ row }) => (
+        <Badge variant='outline'>{roleLabels[row.original.role]}</Badge>
+      ),
+    },
+    {
+      id: 'approve',
+      accessorFn: (user) => user.canApproveBooking,
+      enableGlobalFilter: false,
+      meta: { label: 'Boleh menyetujui' },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Boleh menyetujui' />
+      ),
+      cell: ({ row }) =>
+        row.original.role === 'ADMIN'
+          ? 'Otomatis'
+          : row.original.canApproveBooking
+            ? 'Ya'
+            : 'Tidak',
+    },
+    {
+      id: 'active',
+      accessorFn: (user) => user.isActive,
+      enableGlobalFilter: false,
+      meta: { label: 'Status' },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='Status' />
+      ),
+      cell: ({ row }) => (
+        <Badge
+          variant='outline'
+          className={
+            row.original.isActive
+              ? 'border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-300'
+              : 'border-border text-muted-foreground'
+          }
+        >
+          {row.original.isActive ? 'Aktif' : 'Nonaktif'}
+        </Badge>
+      ),
+    },
+    {
+      id: 'actions',
+      enableSorting: false,
+      enableHiding: false,
+      meta: {
+        label: 'Aksi',
+        headerClassName: 'text-end',
+        cellClassName: 'text-end',
+      },
+      header: () => <span>Aksi</span>,
+      cell: ({ row }) => (
+        <Button
+          size='sm'
+          variant='outline'
+          onClick={() => onEdit(row.original)}
+        >
+          <PencilLine />
+          Ubah
+        </Button>
+      ),
+    },
+  ]
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className='text-base'>Pengguna</CardTitle>
+        <CardDescription>
+          Akun staf (Admin, Security, Checker). Akun Customer dikelola di tab
+          Customer karena selalu menempel ke satu perusahaan.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className='space-y-4'>
+        <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
+          <div className='flex flex-1 flex-col gap-2 sm:flex-row sm:items-center'>
+            <div className='relative w-full sm:max-w-xs'>
+              <Search className='pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground' />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder='Cari nama atau email'
+                className='pl-8'
+                aria-label='Cari nama atau email'
+              />
+            </div>
+            <Select
+              value={role}
+              onValueChange={(value) => setRole(value as Role | 'ALL')}
+            >
+              <SelectTrigger
+                className='w-full sm:w-44'
+                aria-label='Filter peran'
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='ALL'>Semua peran</SelectItem>
+                {STAFF_ROLES.map((item) => (
+                  <SelectItem key={item} value={item}>
+                    {roleLabels[item]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className='flex gap-2 sm:shrink-0'>
+            <Button size='sm' variant='outline' onClick={onCreate}>
+              <Plus />
+              Tambah pengguna
+            </Button>
+          </div>
+        </div>
+
+        <p className='text-xs text-muted-foreground'>
+          {users.data
+            ? `${rows.length} akun ditampilkan, ${activeCount} aktif. Kolom Aktif dan Boleh menyetujui diubah lewat tombol Ubah.`
+            : 'Memuat akun...'}
+        </p>
+
+        {users.isPending ? (
+          <LoadingBlock label='Memuat pengguna...' />
+        ) : users.isError ? (
+          <ErrorBlock
+            error={users.error}
+            onRetry={() => void users.refetch()}
+          />
+        ) : (
+          <DataTable
+            columns={userColumns}
+            data={rows}
+            getRowId={(user) => user.id}
+            emptyMessage='Belum ada akun staf.'
+          />
+        )}
+      </CardContent>
+    </Card>
   )
 }
 

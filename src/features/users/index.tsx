@@ -1,11 +1,12 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
 import type { ColumnDef } from '@tanstack/react-table'
-import { Loader2, Plus, Search } from 'lucide-react'
+import { Factory, PencilLine, Plus, Search } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/auth-store'
 import { apiErrorMessage } from '@/lib/api/client'
-import { createUser, fetchUsers, updateUser } from '@/lib/api/endpoints'
+import { fetchUsers, updateUser } from '@/lib/api/endpoints'
 import type { ManagedUser, Role } from '@/lib/api/types'
 import { formatDate, roleLabels } from '@/lib/format'
 import { Badge } from '@/components/ui/badge'
@@ -17,16 +18,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -39,23 +31,29 @@ import { DataTable, DataTableColumnHeader } from '@/components/data-table'
 import { Main } from '@/components/layout/main'
 import { PageHeader } from '@/components/page-header'
 import { ErrorBlock, LoadingBlock } from '@/components/query-state'
+import { CreateUserDialog } from './create-user-dialog'
+import { EditUserDialog } from './edit-user-dialog'
 
 /**
- * Halaman ini mengelola akun STAF (Admin, Security, Checker).
+ * Halaman ini mengelola akun STAF (Admin, Security, Checker) â€” versi penuh dari
+ * tab Pengguna di Master Data.
  *
  * Akun Customer sengaja tidak ada di sini: akun customer selalu menempel ke
- * satu perusahaan, dan perusahaan dikelola di Master Data Customer. Membuat
- * akun customer di sini akan menghasilkan akun tanpa perusahaan yang tidak
- * bisa booking sama sekali.
+ * satu perusahaan, dan perusahaan dikelola di Master Data Customer. Server
+ * menolak perubahan data akun customer dari rute ini; hanya kolom Aktif yang
+ * tetap bisa diubah dari tombol di tabel.
  */
 const ROLES: Role[] = ['ADMIN', 'GATE_OFFICER', 'CHECKER']
 
 export function UsersPage() {
   const currentUser = useAuthStore((state) => state.user)
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [q, setQ] = useState('')
   const [role, setRole] = useState<Role | 'ALL'>('ALL')
   const [createOpen, setCreateOpen] = useState(false)
+  // `undefined` = dialog tertutup; objek = akun yang sedang diubah.
+  const [editing, setEditing] = useState<ManagedUser | undefined>(undefined)
 
   const users = useQuery({
     queryKey: ['users', { q, role }],
@@ -89,6 +87,10 @@ export function UsersPage() {
     onError: (error) => toast.error(apiErrorMessage(error)),
   })
 
+  const activeAdminCount = (users.data ?? []).filter(
+    (user) => user.role === 'ADMIN' && user.isActive
+  ).length
+
   const columns: ColumnDef<ManagedUser>[] = [
     {
       accessorKey: 'name',
@@ -113,6 +115,17 @@ export function UsersPage() {
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title='Email' />
       ),
+    },
+    {
+      accessorKey: 'phone',
+      meta: { label: 'No. HP', cellClassName: 'text-sm text-muted-foreground' },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title='No. HP' />
+      ),
+      cell: ({ row }) =>
+        row.original.phone || (
+          <span className='text-muted-foreground'>Belum diisi</span>
+        ),
     },
     {
       id: 'role',
@@ -168,6 +181,36 @@ export function UsersPage() {
       cell: ({ row }) => formatDate(row.original.createdAt),
     },
     {
+      id: 'actions',
+      enableSorting: false,
+      enableHiding: false,
+      meta: {
+        label: 'Aksi',
+        headerClassName: 'text-right',
+        cellClassName: 'text-right',
+      },
+      header: () => <span>Aksi</span>,
+      cell: ({ row }) => (
+        <Button
+          size='sm'
+          variant='outline'
+          title={
+            row.original.role === 'CUSTOMER'
+              ? 'Akun customer diubah dari Master Data Customer'
+              : 'Ubah data pengguna'
+          }
+          // Nama, email, HP, peran, dan password akun customer dikelola di tab
+          // Customer. Satu-satunya "Ubah" yang bermakna di sini adalah status
+          // Aktif, dan itu sudah berupa tombol tersendiri di kolom Aktif.
+          disabled={row.original.role === 'CUSTOMER'}
+          onClick={() => setEditing(row.original)}
+        >
+          <PencilLine />
+          Ubah
+        </Button>
+      ),
+    },
+    {
       id: 'active',
       accessorFn: (user) => user.isActive,
       enableGlobalFilter: false,
@@ -204,9 +247,20 @@ export function UsersPage() {
         title='Manajemen Pengguna'
         description='Akun Admin, Security, dan Checker. Akun Customer dikelola di Master Data Customer.'
         actions={
-          <Button size='sm' onClick={() => setCreateOpen(true)}>
-            <Plus /> Tambah pengguna
-          </Button>
+          <div className='flex flex-wrap gap-2'>
+            <Button
+              size='sm'
+              variant='outline'
+              onClick={() =>
+                navigate({ to: '/master', search: { tab: 'customers' } })
+              }
+            >
+              <Factory /> Master Data Customer
+            </Button>
+            <Button size='sm' onClick={() => setCreateOpen(true)}>
+              <Plus /> Tambah pengguna
+            </Button>
+          </div>
         }
       />
 
@@ -264,150 +318,29 @@ export function UsersPage() {
         </CardContent>
       </Card>
 
-      <CreateUserDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <CreateUserDialog
+        open={createOpen}
+        onOpenChange={(open) => {
+          if (!open) setCreateOpen(false)
+        }}
+      />
+
+      {editing && (
+        <EditUserDialog
+          key={editing.id}
+          user={editing}
+          open
+          onOpenChange={(open) => {
+            if (!open) setEditing(undefined)
+          }}
+          isSelf={editing.id === currentUser?.id}
+          isLastActiveAdmin={
+            editing.role === 'ADMIN' &&
+            editing.isActive &&
+            activeAdminCount <= 1
+          }
+        />
+      )}
     </Main>
-  )
-}
-
-function CreateUserDialog({
-  open,
-  onOpenChange,
-}: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}) {
-  const queryClient = useQueryClient()
-  const [form, setForm] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    role: 'CHECKER' as Role,
-    password: '',
-  })
-
-  const reset = () =>
-    setForm({
-      name: '',
-      email: '',
-      phone: '',
-      role: 'CHECKER',
-      password: '',
-    })
-
-  const create = useMutation({
-    mutationFn: () =>
-      createUser({
-        name: form.name.trim(),
-        email: form.email.trim(),
-        role: form.role,
-        password: form.password,
-        phone: form.phone.trim() || undefined,
-      }),
-    onSuccess: (user: ManagedUser) => {
-      toast.success(`Akun ${user.email} dibuat`)
-      void queryClient.invalidateQueries({ queryKey: ['users'] })
-      reset()
-      onOpenChange(false)
-    },
-    onError: (error) => toast.error(apiErrorMessage(error)),
-  })
-
-  const valid =
-    form.name.trim().length >= 2 &&
-    /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email.trim()) &&
-    form.password.length >= 7
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className='sm:max-w-lg'>
-        <DialogHeader>
-          <DialogTitle>Tambah pengguna</DialogTitle>
-          <DialogDescription>
-            Akun staf gudang. Untuk akun Customer, buka Master Data → Customer.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className='grid gap-3'>
-          <div className='space-y-1'>
-            <Label htmlFor='new-name'>Nama</Label>
-            <Input
-              id='new-name'
-              value={form.name}
-              onChange={(event) =>
-                setForm({ ...form, name: event.target.value })
-              }
-            />
-          </div>
-          <div className='grid gap-3 sm:grid-cols-2'>
-            <div className='space-y-1'>
-              <Label htmlFor='new-email'>Email</Label>
-              <Input
-                id='new-email'
-                type='email'
-                value={form.email}
-                onChange={(event) =>
-                  setForm({ ...form, email: event.target.value })
-                }
-              />
-            </div>
-            <div className='space-y-1'>
-              <Label htmlFor='new-phone'>No. HP</Label>
-              <Input
-                id='new-phone'
-                value={form.phone}
-                onChange={(event) =>
-                  setForm({ ...form, phone: event.target.value })
-                }
-              />
-            </div>
-          </div>
-          <div className='space-y-1'>
-            <Label>Peran</Label>
-            <Select
-              value={form.role}
-              onValueChange={(value) =>
-                setForm({ ...form, role: value as Role })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {ROLES.map((item) => (
-                  <SelectItem key={item} value={item}>
-                    {roleLabels[item]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className='space-y-1'>
-            <Label htmlFor='new-password'>Password awal</Label>
-            <Input
-              id='new-password'
-              type='password'
-              value={form.password}
-              onChange={(event) =>
-                setForm({ ...form, password: event.target.value })
-              }
-              placeholder='Minimal 7 karakter'
-            />
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant='outline' onClick={() => onOpenChange(false)}>
-            Batal
-          </Button>
-          <Button
-            disabled={!valid || create.isPending}
-            onClick={() => create.mutate()}
-          >
-            {create.isPending && <Loader2 className='animate-spin' />}
-            Simpan
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   )
 }

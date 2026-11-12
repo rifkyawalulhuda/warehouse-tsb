@@ -39,10 +39,14 @@ describe('nama aplikasi', () => {
     })
 
     const branding = await request(app).get('/api/branding')
+    // `/api/branding` juga mengirim dua kolom halaman login. Nilainya null di
+    // tes ini karena tidak pernah diisi, tetapi kolomnya wajib ada.
     expect(branding.body.data).toEqual({
       appName: 'TSB Dock',
       appTagline: 'Antrean Gudang',
       appShortName: 'TSB',
+      loginCoverUrl: null,
+      loginBrandColor: null,
     })
   })
 
