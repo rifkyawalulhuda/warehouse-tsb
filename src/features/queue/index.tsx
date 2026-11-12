@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+﻿import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { ColumnDef } from '@tanstack/react-table'
+import { Link } from '@tanstack/react-router'
+import { CalendarCheck2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/auth-store'
 import { apiErrorMessage } from '@/lib/api/client'
@@ -9,29 +10,41 @@ import {
   fetchOpsDocks,
   fetchQueue,
   markNoShow,
+  unassignDock,
 } from '@/lib/api/endpoints'
 import type { Booking, DockWithBooking } from '@/lib/api/types'
-import { activityLabels, formatTime, todayISO } from '@/lib/format'
+import { todayISO } from '@/lib/format'
+import { cn } from '@/lib/utils'
+import { useNow } from '@/hooks/use-now'
 import { useRealtimeSync } from '@/hooks/use-realtime'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ApprovalBadge } from '@/components/approval-badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { DataTable, DataTableColumnHeader } from '@/components/data-table'
 import { DatePicker } from '@/components/date-picker'
-import { DockPicker } from '@/components/dock-picker'
 import { Main } from '@/components/layout/main'
 import { PageHeader } from '@/components/page-header'
 import { ErrorBlock, LoadingBlock } from '@/components/query-state'
-import { StatusBadge } from '@/components/status-badge'
 import { ApprovalsPanel } from '@/features/approvals'
+import { QueueCardList, QueueLane } from './queue-lane'
+import {
+  defaultLaneKey,
+  queueLanes,
+  queueTotals,
+  type QueueLaneKey,
+} from './queue-model'
+import { QueueSummary, type QueueFilter } from './queue-summary'
+
+type AssignVars = { bookingId: string; dockId: number; dockCode: string }
 
 /**
- * Satu layar untuk tiga antrean yang berbeda kepentingannya: yang tepat waktu,
- * yang terlambat (menunggu dock kosong), dan yang belum datang. Urutannya
- * mengikuti jam mulai, bukan urutan kedatangan, supaya adil terhadap jadwal.
+ * Papan antrean satu hari: empat lane menurut tahap kerja, bukan tiga tabel
+ * bertumpuk. Kartu diurutkan dari yang paling lama menunggu, dan jam tunggu
+ * berdetak dari gate-in supaya truk yang tertahan terlihat tanpa dibuka dulu.
+ *
+ * Penugasan dock satu klik dengan pembatalan dari toast: penempatan truk adalah
+ * kerja berulang, dan dialog konfirmasi per truk membuat satu keputusan butuh
+ * dua kali tekan. Kesalahan klik dipulihkan lewat "Urungkan", yang memanggil
+ * endpoint pelepas dock di server.
  */
 export function QueuePage() {
   useRealtimeSync()
@@ -40,21 +53,17 @@ export function QueuePage() {
   const [date, setDate] = useState(todayISO())
   const [tab, setTab] = useState<'queue' | 'approvals'>('queue')
   const [noShowTarget, setNoShowTarget] = useState<Booking | null>(null)
-  /**
-   * Penugasan dock menunggu konfirmasi. Memilih dock di dropdown langsung
-   * mengirim permintaan, padahal salah pilih berarti truk menempati dock yang
-   * salah dan harus ditugaskan ulang — jadi pilihan ditahan dulu di sini.
-   */
-  const [assignTarget, setAssignTarget] = useState<{
-    booking: Booking
-    dock: DockWithBooking
-  } | null>(null)
-  /**
-   * Dinaikkan setiap dialog dock ditutup, supaya pemilih dock per baris
-   * kembali ke placeholder. Tanpa ini pilihan yang dibatalkan tetap terlihat,
-   * dan petugas bisa mengira truk sudah punya dock padahal belum.
-   */
+  /** Dinaikkan setiap penugasan dipakai, supaya pemilih dock kembali kosong. */
   const [assignReset, setAssignReset] = useState(0)
+
+  /**
+   * Saringan papan (desktop) dan pemilih lane (layar sempit) sengaja terpisah:
+   * di desktop penyaring menyembunyikan lane lain, sedangkan di ponsel tab
+   * menampilkan satu lane dengan judulnya. Keduanya tidak pernah tampil
+   * bersamaan.
+   */
+  const [filter, setFilter] = useState<QueueFilter>('all')
+  const [mobileLane, setMobileLane] = useState<QueueLaneKey | null>(null)
 
   // Server tetap menolak sendiri (403). Ini hanya agar tab yang pasti gagal
   // tidak ditawarkan — Checker tanpa flag tidak punya hak menyetujui.
@@ -67,19 +76,52 @@ export function QueuePage() {
   })
   const docks = useQuery({ queryKey: ['ops', 'docks'], queryFn: fetchOpsDocks })
 
+  const lanes = useMemo(
+    () => (queue.data ? queueLanes(queue.data) : []),
+    [queue.data]
+  )
+  const totals = useMemo(
+    () => (queue.data ? queueTotals(queue.data) : null),
+    [queue.data]
+  )
+
+  const activeLane = mobileLane ?? defaultLaneKey(lanes)
+  const filteredLane =
+    filter === 'all'
+      ? null
+      : (lanes.find((lane) => lane.key === filter) ?? null)
+
+  // Jam tunggu hanya perlu berdetak saat tab antrean tampil.
+  const now = useNow(30_000, tab === 'queue')
+
+  /**
+   * Pembatalan penugasan. Kalau proses sudah berjalan, server menolak dan
+   * pesannya diteruskan apa adanya — checker perlu tahu truk itu tidak bisa
+   * dipindahkan lagi, bukan sekadar "gagal".
+   */
+  const unassign = useMutation({
+    mutationFn: (bookingId: string) => unassignDock(bookingId),
+    onSuccess: (booking) => {
+      void queryClient.invalidateQueries({ queryKey: ['ops'] })
+      toast.success(`Penugasan ${booking.bookingCode} dibatalkan`)
+    },
+    onError: (error) => toast.error(apiErrorMessage(error)),
+  })
+
   const assign = useMutation({
-    mutationFn: ({
-      bookingId,
-      dockId,
-    }: {
-      bookingId: string
-      dockId: number
-    }) => assignDock(bookingId, dockId),
-    onSuccess: () => {
-      toast.success('Dock ditugaskan')
-      setAssignTarget(null)
+    mutationFn: ({ bookingId, dockId }: AssignVars) =>
+      assignDock(bookingId, dockId),
+    onSuccess: (booking, variables) => {
       setAssignReset((n) => n + 1)
       void queryClient.invalidateQueries({ queryKey: ['ops'] })
+      toast.success(`${booking.bookingCode} ke ${variables.dockCode}`, {
+        description:
+          'Truk menempati dock. Proses bisa dimulai dari Papan Dock.',
+        action: {
+          label: 'Urungkan',
+          onClick: () => unassign.mutate(booking.id),
+        },
+      })
     },
     onError: (error) => toast.error(apiErrorMessage(error)),
   })
@@ -100,11 +142,28 @@ export function QueuePage() {
     [docks.data]
   )
 
+  function assignTo(booking: Booking, dock: DockWithBooking) {
+    assign.mutate({
+      bookingId: booking.id,
+      dockId: dock.id,
+      dockCode: dock.dockCode,
+    })
+  }
+
+  const cardHandlers = {
+    docks: availableDocks,
+    onQuickAssign: assignTo,
+    onPickDock: assignTo,
+    onNoShow: setNoShowTarget,
+    assigning: assign.isPending,
+    assignReset,
+  }
+
   return (
     <Main className='flex flex-1 flex-col gap-6'>
       <PageHeader
         title='Antrean Hari Ini'
-        description='Truk yang menunggu di area staging, dikelompokkan menurut status masuk.'
+        description='Truk hari ini menurut tahap: terlambat, menunggu dock, di dock, dan belum datang.'
         actions={
           tab === 'queue' ? (
             <DatePicker value={date} onChange={setDate} className='w-44' />
@@ -130,48 +189,74 @@ export function QueuePage() {
         <LoadingBlock label='Memuat antrean...' />
       ) : queue.isError ? (
         <ErrorBlock error={queue.error} onRetry={() => void queue.refetch()} />
+      ) : totals && totals.total === 0 ? (
+        <EmptyDay date={date} onToday={() => setDate(todayISO())} />
       ) : (
         <>
-          <div className='grid gap-4 sm:grid-cols-4'>
-            <Stat label='Tepat waktu' value={queue.data.onTime.length} />
-            <Stat
-              label='Terlambat'
-              value={queue.data.late.length}
-              tone='warning'
+          {/* Desktop: chip berisi hitungan, sekaligus menyaring papan. */}
+          <QueueSummary
+            lanes={lanes}
+            total={totals?.total ?? 0}
+            value={filter}
+            onChange={setFilter}
+            className='hidden md:flex'
+          />
+
+          <p aria-live='polite' className='sr-only'>
+            {filteredLane
+              ? `${filteredLane.bookings.length} truk di tahap ${filteredLane.title}`
+              : `${totals?.total ?? 0} truk hari ini, ${totals?.waiting ?? 0} menunggu dock`}
+          </p>
+
+          {filteredLane ? (
+            <QueueLane
+              lane={filteredLane}
+              now={now}
+              columns={3}
+              className={cn('hidden bg-card md:flex')}
+              {...cardHandlers}
             />
-            <Stat label='Di dock' value={queue.data.atDock.length} />
-            <Stat label='Belum datang' value={queue.data.upcoming.length} />
-          </div>
+          ) : (
+            <div className='hidden items-start gap-4 md:grid md:grid-cols-2 xl:grid-cols-4'>
+              {lanes.map((lane) => (
+                <QueueLane
+                  key={lane.key}
+                  lane={lane}
+                  now={now}
+                  {...cardHandlers}
+                />
+              ))}
+            </div>
+          )}
 
-          <QueueSection
-            title='Menunggu dock (terlambat)'
-            description='Sudah gate-in melewati masa tenggang. Dahulukan kelompok ini.'
-            bookings={queue.data.late}
-            docks={availableDocks}
-            onAssign={(booking, dock) => setAssignTarget({ booking, dock })}
-            onNoShow={setNoShowTarget}
-            assigning={assign.isPending}
-            assignReset={assignReset}
-            highlight
-          />
-
-          <QueueSection
-            title='Menunggu dock (tepat waktu)'
-            description='Sudah gate-in sesuai jadwal dan menunggu dock kosong.'
-            bookings={queue.data.onTime}
-            docks={availableDocks}
-            onAssign={(booking, dock) => setAssignTarget({ booking, dock })}
-            onNoShow={setNoShowTarget}
-            assigning={assign.isPending}
-            assignReset={assignReset}
-          />
-
-          <QueueSection
-            title='Belum datang'
-            description='Booking yang belum dipindai di gate.'
-            bookings={queue.data.upcoming}
-            onNoShow={setNoShowTarget}
-          />
+          {/* Layar sempit: satu lane sekaligus, tab bisa digeser. */}
+          <Tabs
+            value={activeLane}
+            onValueChange={(value) => {
+              if (value) setMobileLane(value as QueueLaneKey)
+            }}
+            className='md:hidden'
+          >
+            <TabsList className='w-full justify-start overflow-x-auto'>
+              {lanes.map((lane) => (
+                <TabsTrigger
+                  key={lane.key}
+                  value={lane.key}
+                  className='shrink-0 gap-1.5'
+                >
+                  {lane.shortTitle}
+                  <span className='text-xs text-muted-foreground tabular-nums'>
+                    {lane.bookings.length}
+                  </span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {lanes.map((lane) => (
+              <TabsContent key={lane.key} value={lane.key} className='mt-3'>
+                <QueueCardList lane={lane} now={now} {...cardHandlers} />
+              </TabsContent>
+            ))}
+          </Tabs>
         </>
       )}
 
@@ -190,269 +275,34 @@ export function QueuePage() {
         isLoading={noShow.isPending}
         handleConfirm={() => noShowTarget && noShow.mutate(noShowTarget.id)}
       />
-
-      <ConfirmDialog
-        open={assignTarget !== null}
-        onOpenChange={(open) => {
-          if (open) return
-          setAssignTarget(null)
-          setAssignReset((n) => n + 1)
-        }}
-        title='Tugaskan truk ke dock ini?'
-        desc={
-          assignTarget ? (
-            <div className='space-y-2'>
-              <p>
-                Truk menempati dock dan checker bisa memulai bongkar/muat dari
-                Papan Dock.
-              </p>
-              <div className='rounded-md border bg-muted/50 p-3 text-xs'>
-                <p className='font-mono text-sm font-semibold text-foreground'>
-                  {assignTarget.booking.bookingCode}
-                </p>
-                <p className='mt-1 text-foreground'>
-                  {assignTarget.dock.dockCode}
-                  {assignTarget.booking.licensePlate
-                    ? ` · ${assignTarget.booking.licensePlate}`
-                    : ' · plat belum diisi'}
-                </p>
-                <p className='mt-0.5'>
-                  {assignTarget.booking.customer.name} ·{' '}
-                  {activityLabels[assignTarget.booking.activityType]}
-                </p>
-              </div>
-            </div>
-          ) : (
-            ''
-          )
-        }
-        confirmText='Ya, tugaskan'
-        cancelBtnText='Batal'
-        isLoading={assign.isPending}
-        handleConfirm={() =>
-          assignTarget &&
-          assign.mutate({
-            bookingId: assignTarget.booking.id,
-            dockId: assignTarget.dock.id,
-          })
-        }
-      />
     </Main>
   )
 }
 
-function Stat({
-  label,
-  value,
-  tone,
-}: {
-  label: string
-  value: number
-  tone?: 'warning'
-}) {
+/** Hari tanpa satu pun booking: jelaskan, jangan tampilkan empat kotak kosong. */
+function EmptyDay({ date, onToday }: { date: string; onToday: () => void }) {
+  const isToday = date === todayISO()
+
   return (
-    <Card>
-      <CardContent className='space-y-1'>
-        <p className='text-sm text-muted-foreground'>{label}</p>
-        <p
-          className={
-            tone === 'warning'
-              ? 'text-3xl font-semibold text-orange-600 tabular-nums dark:text-orange-400'
-              : 'text-3xl font-semibold tabular-nums'
-          }
-        >
-          {value}
+    <div className='flex flex-col items-center gap-3 rounded-xl border border-dashed px-6 py-12 text-center'>
+      <CalendarCheck2 className='size-8 text-muted-foreground/70' aria-hidden />
+      <div className='space-y-1'>
+        <p className='font-medium'>Tidak ada antrean untuk tanggal ini</p>
+        <p className='max-w-sm text-sm text-muted-foreground'>
+          Belum ada booking yang dijadwalkan pada {date}. Pilih tanggal lain,
+          atau lihat booking yang menunggu persetujuan.
         </p>
-      </CardContent>
-    </Card>
-  )
-}
-
-function QueueSection({
-  title,
-  description,
-  bookings,
-  docks,
-  onAssign,
-  onNoShow,
-  assigning,
-  assignReset,
-  highlight,
-}: {
-  title: string
-  description: string
-  bookings: Booking[]
-  docks?: DockWithBooking[]
-  onAssign?: (booking: Booking, dock: DockWithBooking) => void
-  onNoShow?: (booking: Booking) => void
-  assigning?: boolean
-  assignReset?: number
-  highlight?: boolean
-}) {
-  const columns: ColumnDef<Booking>[] = [
-    {
-      accessorKey: 'bookingCode',
-      meta: { label: 'Kode', cellClassName: 'font-mono text-xs' },
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Kode' />
-      ),
-    },
-    {
-      id: 'customer',
-      accessorFn: (booking) => booking.customer.name,
-      meta: { label: 'Customer', cellClassName: 'text-sm' },
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Customer' />
-      ),
-      cell: ({ row }) => (
-        <>
-          {row.original.customer.name}
-          <span className='block text-xs text-muted-foreground'>
-            {activityLabels[row.original.activityType]}
-          </span>
-        </>
-      ),
-    },
-    {
-      accessorKey: 'startTime',
-      meta: { label: 'Jadwal', cellClassName: 'text-sm' },
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Jadwal' />
-      ),
-      cell: ({ row }) => (
-        <>
-          {formatTime(row.original.startTime)}–
-          {formatTime(row.original.endTime)}
-          {row.original.lateMinutes > 0 && (
-            <span className='ms-1 text-xs text-orange-600'>
-              +{row.original.lateMinutes}m
-            </span>
-          )}
-        </>
-      ),
-    },
-    {
-      id: 'vehicle',
-      accessorFn: (booking) => booking.licensePlate ?? '',
-      meta: { label: 'Kendaraan', cellClassName: 'text-sm' },
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Kendaraan' />
-      ),
-      cell: ({ row }) => (
-        <>
-          {row.original.licensePlate ?? '-'}
-          {row.original.driverName && (
-            <span className='block text-xs text-muted-foreground'>
-              {row.original.driverName}
-            </span>
-          )}
-        </>
-      ),
-    },
-    {
-      id: 'status',
-      accessorFn: (booking) => booking.status,
-      enableGlobalFilter: false,
-      meta: { label: 'Status' },
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Status' />
-      ),
-      cell: ({ row }) => (
-        <div className='flex flex-col items-start gap-1'>
-          <StatusBadge status={row.original.status} />
-          <ApprovalBadge status={row.original.approvalStatus} />
-        </div>
-      ),
-    },
-    {
-      id: 'actions',
-      enableSorting: false,
-      enableHiding: false,
-      meta: {
-        label: 'Aksi',
-        headerClassName: 'text-end',
-        cellClassName: 'text-end',
-      },
-      header: () => <span>Aksi</span>,
-      cell: ({ row }) => {
-        const booking = row.original
-        const compatible = (docks ?? []).filter(
-          (dock) =>
-            dock.allowedActivity === 'BOTH' ||
-            dock.allowedActivity === booking.activityType
-        )
-
-        return (
-          <div className='flex items-center justify-end gap-2'>
-            {booking.approvalStatus === 'PENDING' && (
-              <span className='text-xs text-muted-foreground'>
-                Menunggu persetujuan
-              </span>
-            )}
-            {onAssign &&
-              booking.approvalStatus !== 'PENDING' &&
-              (compatible.length > 0 ? (
-                <DockPicker
-                  // Pilihan ditahan secara internal, jadi setelah dialog
-                  // dibatalkan komponen ini di-remount lewat key agar kembali
-                  // ke placeholder. Tanpa ini pilihan yang batal tetap terlihat
-                  // dan petugas bisa mengira truk sudah punya dock.
-                  key={`${booking.id}-${assignReset}`}
-                  docks={compatible}
-                  disabled={assigning}
-                  label={`Pilih dock untuk ${booking.bookingCode}`}
-                  onSelect={(dock) => onAssign(booking, dock)}
-                />
-              ) : (
-                <span className='text-xs text-muted-foreground'>
-                  Tidak ada dock
-                </span>
-              ))}
-            {onNoShow && (
-              <Button
-                variant='ghost'
-                size='sm'
-                className='text-muted-foreground'
-                onClick={() => onNoShow(booking)}
-              >
-                No-show
-              </Button>
-            )}
-          </div>
-        )
-      },
-    },
-  ]
-
-  return (
-    <Card
-      className={
-        highlight && bookings.length > 0 ? 'border-orange-300/70' : undefined
-      }
-    >
-      <CardHeader>
-        <CardTitle className='text-base'>
-          {title}{' '}
-          <Badge variant='outline' className='ms-1 align-middle'>
-            {bookings.length}
-          </Badge>
-        </CardTitle>
-        <p className='text-sm text-muted-foreground'>{description}</p>
-      </CardHeader>
-      <CardContent>
-        {bookings.length === 0 ? (
-          <p className='py-6 text-center text-sm text-muted-foreground'>
-            Kosong.
-          </p>
-        ) : (
-          <DataTable
-            columns={columns}
-            data={bookings}
-            getRowId={(booking) => booking.id}
-            emptyMessage='Kosong.'
-          />
+      </div>
+      <div className='flex flex-wrap items-center justify-center gap-2'>
+        {!isToday && (
+          <Button variant='outline' onClick={onToday}>
+            Hari ini
+          </Button>
         )}
-      </CardContent>
-    </Card>
+        <Button asChild variant='ghost'>
+          <Link to='/bookings'>Lihat semua booking</Link>
+        </Button>
+      </div>
+    </div>
   )
 }

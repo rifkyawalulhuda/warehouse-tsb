@@ -30,6 +30,7 @@ import {
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { ConfirmDialog } from '@/components/confirm-dialog'
+import { dockOptionLabel, dockOptionPlace } from '@/lib/dock-label'
 import { Main } from '@/components/layout/main'
 import { PageHeader } from '@/components/page-header'
 import { StatusBadge } from '@/components/status-badge'
@@ -247,15 +248,23 @@ export function CheckerScanPage() {
                       <Label
                         key={dock.id}
                         className={cn(
-                          'flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border p-3 text-sm font-medium',
+                          'flex min-h-11 cursor-pointer items-start gap-2 rounded-lg border p-3 text-sm font-medium',
                           'has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/5'
                         )}
                       >
                         <RadioGroupItem
                           value={String(dock.id)}
-                          aria-label={dock.dockCode}
+                          aria-label={dockOptionLabel(dock)}
+                          className='mt-0.5'
                         />
-                        {dock.dockCode}
+                        <span className='flex min-w-0 flex-col'>
+                          <span className='truncate'>{dock.dockCode}</span>
+                          {dockOptionPlace(dock) && (
+                            <span className='truncate text-xs font-normal text-muted-foreground'>
+                              {dockOptionPlace(dock)}
+                            </span>
+                          )}
+                        </span>
                       </Label>
                     ))}
                   </RadioGroup>

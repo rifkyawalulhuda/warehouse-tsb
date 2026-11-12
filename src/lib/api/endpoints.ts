@@ -239,6 +239,10 @@ export function assignDock(bookingId: string, dockId: number) {
   return postData<Booking>('/ops/assign-dock', { bookingId, dockId })
 }
 
+export function unassignDock(bookingId: string) {
+  return postData<Booking>('/ops/unassign-dock', { bookingId })
+}
+
 export function startProcess(bookingId: string) {
   return postData<Booking>('/ops/start-process', { bookingId })
 }

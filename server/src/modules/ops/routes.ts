@@ -547,6 +547,103 @@ opsRouter.post(
   }
 )
 
+/**
+ * Lepas penugasan dock.
+ *
+ * Papan Antrean menugaskan truk dengan satu klik ke dock bebas pertama, jadi
+ * salah klik harus bisa dibatalkan. Hanya DOCK_ASSIGNED yang boleh dilepas:
+ * begitu proses dimulai, bongkar/muat sudah berjalan dan membebaskan dock akan
+ * membuat durasi proses di laporan menyesatkan.
+ *
+ * Status dikembalikan ke bentuk hasil gate-in, bukan ditebak: gate-in menyimpan
+ * `lateMinutes`, dan status tunggu diturunkan dari angka itu terhadap tenggang
+ * waktu yang berlaku sekarang.
+ */
+opsRouter.post(
+  '/unassign-dock',
+  requireRole('CHECKER'),
+  async (req, res, next) => {
+    try {
+      const body = parse(
+        z.object({ bookingId: z.uuid() }),
+        req.body,
+        'Pelepasan dock'
+      )
+      const user = req.user!
+
+      const booking = await prisma.booking.findUnique({
+        where: { id: body.bookingId },
+        select: {
+          id: true,
+          status: true,
+          lateMinutes: true,
+          assignedDockId: true,
+          assignedDock: { select: { dockCode: true } },
+        },
+      })
+      if (!booking) throw notFound('Booking tidak ditemukan')
+      assertStatus(booking, ['DOCK_ASSIGNED'], 'melepas dock')
+
+      const dockId = booking.assignedDockId
+      if (!dockId) throw conflict('NO_DOCK', 'Booking ini tidak menempati dock')
+
+      const settings = await getSettings()
+      const waitingStatus: BookingStatus =
+        booking.lateMinutes <= settings.gracePeriodMinutes
+          ? 'CHECKED_IN_ON_TIME'
+          : 'LATE_WAITING_LIST'
+
+      const updated = await prisma.$transaction(async (tx) => {
+        await tx.dock.update({
+          where: { id: dockId },
+          data: { currentStatus: 'AVAILABLE' },
+        })
+
+        const result = await tx.booking.update({
+          where: { id: booking.id },
+          data: { assignedDockId: null, status: waitingStatus },
+          select: bookingSelect,
+        })
+
+        await tx.bookingTimeLog.updateMany({
+          where: { bookingId: booking.id },
+          data: { dockAssignedAt: null, dockAssignedBy: null },
+        })
+
+        await writeAudit(
+          {
+            userId: user.id,
+            userRole: user.role,
+            actingAsRole: req.actingAsRole,
+            action: 'DOCK_UNASSIGNED',
+            bookingId: booking.id,
+            meta: {
+              dockId,
+              dockCode: booking.assignedDock?.dockCode,
+              status: waitingStatus,
+            },
+          },
+          tx as Tx
+        )
+
+        return result
+      })
+
+      emitBookingUpdated({
+        bookingId: updated.id,
+        qrToken: updated.qrToken,
+        status: updated.status,
+        customerId: updated.customer.id,
+      })
+      emitDockUpdated(dockId)
+
+      res.json({ data: updated })
+    } catch (error) {
+      next(error)
+    }
+  }
+)
+
 /* ------------------------------------------------------------------ */
 /* Mulai & selesai proses di dock                                      */
 /* ------------------------------------------------------------------ */
@@ -857,6 +954,7 @@ opsRouter.get('/docks', requireRole('CHECKER'), async (_req, res, next) => {
     const docks = await prisma.dock.findMany({
       orderBy: { id: 'asc' },
       include: {
+        warehouse: { select: { id: true, name: true } },
         bookings: {
           where: { status: { in: ['DOCK_ASSIGNED', 'IN_PROGRESS'] } },
           select: bookingSelect,
@@ -871,6 +969,8 @@ opsRouter.get('/docks', requireRole('CHECKER'), async (_req, res, next) => {
         dockCode: dock.dockCode,
         allowedActivity: dock.allowedActivity,
         currentStatus: dock.currentStatus,
+        areaName: dock.areaName,
+        warehouse: { id: dock.warehouse.id, name: dock.warehouse.name },
         currentBooking: dock.bookings[0] ?? null,
       })),
     })

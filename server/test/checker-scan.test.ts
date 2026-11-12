@@ -66,6 +66,32 @@ async function seedBooking(options: {
 }
 
 describe('pindai checker', () => {
+  it('mengirim area dan gudang tiap dock untuk pemilih dock', async () => {
+    await resetDatabase(prisma)
+    await seedBase(prisma, {
+      docks: [
+        { dockCode: 'L1', allowedActivity: 'BOTH', areaName: 'Area Tengah' },
+        { dockCode: 'L2', allowedActivity: 'BOTH' },
+      ],
+    })
+    const cookie = await loginCookie(app, 'checker@test.local')
+
+    const response = await request(app).get('/api/ops/docks').set('Cookie', cookie)
+
+    expect(response.status).toBe(200)
+    const docks = response.body.data
+    expect(docks).toHaveLength(2)
+    const l1 = docks.find((dock: { dockCode: string }) => dock.dockCode === 'L1')
+    const l2 = docks.find((dock: { dockCode: string }) => dock.dockCode === 'L2')
+    expect(l1).toMatchObject({
+      areaName: 'Area Tengah',
+      warehouse: { name: 'Gudang Tes' },
+    })
+    // Area boleh kosong: dock lama belum diisi, pemilih tetap menampilkan kodenya.
+    expect(l2.areaName).toBeNull()
+    expect(l2.warehouse.name).toBe('Gudang Tes')
+  })
+
   it('menawarkan penugasan dock hanya untuk dock kosong yang cocok', async () => {
     await resetDatabase(prisma)
     const { docks, customer, truckTypes } = await seedBase(prisma, {

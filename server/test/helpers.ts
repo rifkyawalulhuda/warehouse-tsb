@@ -35,7 +35,11 @@ export async function resetDatabase(prisma: PrismaClient) {
 }
 
 export type SeedOptions = {
-  docks?: { dockCode: string; allowedActivity: 'LOADING' | 'UNLOADING' | 'BOTH' }[]
+  docks?: {
+    dockCode: string
+    allowedActivity: 'LOADING' | 'UNLOADING' | 'BOTH'
+    areaName?: string | null
+  }[]
   truckTypes?: { truckName: string; durationMinutes: number; blocksRequired: number }[]
   operatingStartMinute?: number
   operatingEndMinute?: number

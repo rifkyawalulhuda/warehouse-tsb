@@ -10,13 +10,16 @@ import {
   CommandItem,
   CommandList,
 } from '@/components/ui/command'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-
-export type DockOption = {
-  id: number
-  dockCode: string
-  areaName?: string | null
-}
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import {
+  dockOptionLabel,
+  dockOptionPlace,
+  type DockOption,
+} from '@/lib/dock-label'
 
 type DockPickerProps<T extends DockOption> = {
   docks: T[]
@@ -26,6 +29,9 @@ type DockPickerProps<T extends DockOption> = {
   /** Nama aksesibel tombol, mis. "Pilih dock untuk TSB-20261111-001". */
   label?: string
   className?: string
+  /** Tampilan tombol pemicu; `ghost` untuk aksi sekunder di bawah aksi utama. */
+  variant?: 'outline' | 'ghost'
+  size?: 'sm' | 'default'
 }
 
 /**
@@ -39,6 +45,8 @@ export function DockPicker<T extends DockOption>({
   placeholder = 'Pilih dock',
   label,
   className,
+  variant = 'outline',
+  size = 'sm',
 }: DockPickerProps<T>) {
   const [open, setOpen] = useState(false)
   const [selected, setSelected] = useState<T | null>(null)
@@ -47,52 +55,65 @@ export function DockPicker<T extends DockOption>({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button
-          variant='outline'
-          size='sm'
+          variant={variant}
+          size={size}
           role='combobox'
           aria-expanded={open}
-          aria-label={label ?? placeholder}
+          aria-label={
+            selected
+              ? `${label ?? 'Pilih dock'}: ${dockOptionLabel(selected)}`
+              : (label ?? placeholder)
+          }
+          title={selected ? dockOptionLabel(selected) : undefined}
           disabled={disabled}
           className={cn(
-            'h-8 w-36 justify-between gap-1 font-normal',
+            'h-8 w-40 justify-between gap-1 font-normal',
+            size === 'default' && 'h-11',
             !selected && 'text-muted-foreground',
             className
           )}
         >
-          <span className='truncate'>{selected?.dockCode ?? placeholder}</span>
+          <span className='truncate'>
+            {selected ? dockOptionLabel(selected) : placeholder}
+          </span>
           <ChevronsUpDownIcon data-icon='inline-end' className='opacity-60' />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className='w-60 p-0' align='start'>
+      <PopoverContent className='w-72 p-0' align='start'>
         <Command>
-          <CommandInput placeholder='Cari kode dock…' />
+          <CommandInput placeholder='Cari dock, area, atau gudang…' />
           <CommandList>
             <CommandEmpty>Tidak ada dock yang cocok.</CommandEmpty>
             <CommandGroup>
-              {docks.map((dock) => (
-                <CommandItem
-                  key={dock.id}
-                  value={`${dock.dockCode} ${dock.areaName ?? ''}`}
-                  onSelect={() => {
-                    setSelected(dock)
-                    setOpen(false)
-                    onSelect(dock)
-                  }}
-                >
-                  <CheckIcon
-                    className={cn(
-                      'size-4',
-                      selected?.id === dock.id ? 'opacity-100' : 'opacity-0'
-                    )}
-                  />
-                  <span className='truncate'>{dock.dockCode}</span>
-                  {dock.areaName && (
-                    <span className='ms-auto truncate text-xs text-muted-foreground'>
-                      {dock.areaName}
+              {docks.map((dock) => {
+                const place = dockOptionPlace(dock)
+                return (
+                  <CommandItem
+                    key={dock.id}
+                    value={dockOptionLabel(dock)}
+                    onSelect={() => {
+                      setSelected(dock)
+                      setOpen(false)
+                      onSelect(dock)
+                    }}
+                  >
+                    <CheckIcon
+                      className={cn(
+                        'size-4',
+                        selected?.id === dock.id ? 'opacity-100' : 'opacity-0'
+                      )}
+                    />
+                    <span className='flex min-w-0 flex-col'>
+                      <span className='truncate font-medium'>{dock.dockCode}</span>
+                      {place && (
+                        <span className='truncate text-xs text-muted-foreground'>
+                          {place}
+                        </span>
+                      )}
                     </span>
-                  )}
-                </CommandItem>
-              ))}
+                  </CommandItem>
+                )
+              })}
             </CommandGroup>
           </CommandList>
         </Command>
@@ -100,4 +121,3 @@ export function DockPicker<T extends DockOption>({
     </Popover>
   )
 }
-
