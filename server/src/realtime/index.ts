@@ -24,6 +24,20 @@ export const rooms = {
 
 const STAFF_ROLES: Role[] = ['ADMIN', 'CHECKER', 'GATE_OFFICER']
 
+type Identity = { userId: string; role: Role; customerId: string | null }
+
+/**
+ * Interval pemeriksaan ulang. Handshake hanya terjadi sekali per koneksi,
+ * sedangkan peran dan status akun bisa berubah kapan saja; lima menit cukup
+ * cepat untuk mencabut akses, cukup jarang untuk tidak membebani database.
+ */
+const REVALIDATE_MS = 5 * 60_000
+
+/** Socket yang sudah terhubung beserta identitas saat terakhir diperiksa. */
+const connections = new Map<string, Identity>()
+
+let revalidateTimer: NodeJS.Timeout | null = null
+
 export type RealtimeEvent =
   | {
       type: 'booking.updated'
@@ -59,7 +73,7 @@ function readCookie(header: string | undefined, name: string): string | undefine
  */
 async function resolveIdentity(
   cookies: string | undefined
-): Promise<{ userId: string; role: Role; customerId: string | null } | null> {
+): Promise<Identity | null> {
   const access = readCookie(cookies, cookieNames.access)
   if (access) {
     try {
@@ -93,6 +107,41 @@ async function resolveIdentity(
   }
 }
 
+/**
+ * Memeriksa ulang identitas semua socket yang sedang terhubung.
+ *
+ * Socket hanya melewati otorisasi sekali, saat handshake. Tanpa pemeriksaan
+ * ulang, petugas yang dinonaktifkan atau customer yang dipindah perusahaan
+ * tetap berada di room lamanya selama koneksinya hidup. Socket yang identitasnya
+ * berubah diputus; klien menyambung lagi dan masuk ke room yang benar.
+ */
+export async function revalidateConnections(): Promise<void> {
+  const entries = [...connections.entries()]
+  await Promise.all(
+    entries.map(async ([socketId, previous]) => {
+      const socket = io?.sockets.sockets.get(socketId)
+      if (!socket) {
+        connections.delete(socketId)
+        return
+      }
+
+      try {
+        const current = await resolveIdentity(socket.handshake.headers.cookie)
+        const changed =
+          !current || current.role !== previous.role || current.customerId !== previous.customerId
+        if (!changed) return
+
+        connections.delete(socketId)
+        socket.disconnect(true)
+      } catch {
+        // Database sesaat tidak terjangkau: jangan putuskan siapa pun karena
+        // kesalahan yang bukan tentang identitasnya. Percobaan berikutnya
+        // mengulang pemeriksaan.
+      }
+    })
+  )
+}
+
 export function initRealtime(httpServer: HttpServer): Server {
   io = new Server(httpServer, {
     cors: { origin: env.appOrigin, credentials: true },
@@ -106,11 +155,20 @@ export function initRealtime(httpServer: HttpServer): Server {
     const identity = await resolveIdentity(socket.handshake.headers.cookie)
     if (!identity) return
 
+    connections.set(socket.id, identity)
+    socket.once('disconnect', () => connections.delete(socket.id))
+
     if (STAFF_ROLES.includes(identity.role)) socket.join(rooms.staff)
     if (identity.role === 'ADMIN') socket.join(rooms.admin)
     socket.join(rooms.user(identity.userId))
     if (identity.customerId) socket.join(rooms.customer(identity.customerId))
   })
+
+  revalidateTimer ??= setInterval(() => {
+    void revalidateConnections()
+  }, REVALIDATE_MS)
+  // Timer tidak boleh menahan proses tetap hidup saat server ditutup.
+  revalidateTimer.unref()
 
   return io
 }
@@ -153,6 +211,11 @@ export function emitDockUpdated(dockId: number) {
 }
 
 export function closeRealtime() {
+  if (revalidateTimer) {
+    clearInterval(revalidateTimer)
+    revalidateTimer = null
+  }
+  connections.clear()
   io?.close()
   io = null
 }

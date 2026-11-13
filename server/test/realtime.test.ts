@@ -5,7 +5,7 @@ import { io as ioClient, type Socket } from 'socket.io-client'
 import request from 'supertest'
 import { createApp } from '../src/app'
 import { prisma } from '../src/lib/prisma'
-import { closeRealtime, emitBookingUpdated, initRealtime, rooms } from '../src/realtime'
+import { closeRealtime, emitBookingUpdated, initRealtime, revalidateConnections, rooms } from '../src/realtime'
 import { cookieNames } from '../src/lib/auth'
 import { loginCookie, resetDatabase, seedBase } from './helpers'
 
@@ -266,6 +266,24 @@ describe('realtime', () => {
     emitBookingUpdated({ bookingId: booking.id, qrToken: booking.qrToken, status: 'X' })
     await expect(event).resolves.toMatchObject({ bookingId: booking.id })
 
+    socket.close()
+  })
+
+  it('memutus socket yang akunnya dinonaktifkan', async () => {
+    await resetDatabase(prisma)
+    const seeded = await seedBase(prisma)
+    const cookie = await loginCookie(app, seeded.gate.email)
+
+    const socket = connect(cookie)
+    await waitFor(socket, 'connect')
+
+    // Socket tidak melewati Express lagi setelah handshake, jadi status akun
+    // harus diperiksa ulang; tanpa itu petugas yang dinonaktifkan tetap
+    // menerima papan antrean sampai ia menutup peramban.
+    await prisma.user.update({ where: { id: seeded.gate.id }, data: { isActive: false } })
+    await revalidateConnections()
+
+    await waitFor(socket, 'disconnect')
     socket.close()
   })
 
