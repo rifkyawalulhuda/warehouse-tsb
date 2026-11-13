@@ -110,16 +110,23 @@ async function recordRejectedScan(input: {
   })
   if (duplicate) return
 
-  await prisma.scanAttempt.create({
-    data: {
-      qrToken: input.qrToken.slice(0, 128),
-      reason: input.reason.slice(0, 40),
-      message: input.message.slice(0, 240),
-      userId: req.user.id,
-      userRole: req.user.role,
-      bookingId: input.bookingId ?? null,
-    },
-  })
+  try {
+    await prisma.scanAttempt.create({
+      data: {
+        qrToken: input.qrToken.slice(0, 128),
+        reason: input.reason.slice(0, 40),
+        message: input.message.slice(0, 240),
+        userId: req.user.id,
+        userRole: req.user.role,
+        bookingId: input.bookingId ?? null,
+      },
+    })
+  } catch (error) {
+    // Jejak adalah catatan tambahan. Kalau tabelnya bermasalah, petugas tetap
+    // harus menerima alasan penolakan yang sebenarnya, bukan galat 500.
+    // eslint-disable-next-line no-console
+    console.error('[ops] gagal mencatat jejak pemindaian', error)
+  }
 }
 
 /**

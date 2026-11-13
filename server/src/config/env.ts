@@ -33,6 +33,8 @@ export const env = {
   appOrigin: process.env.APP_ORIGIN ?? 'http://localhost:5173',
   publicAppUrl: process.env.PUBLIC_APP_URL ?? 'http://localhost:5173',
   databaseUrl: required('DATABASE_URL'),
+  /** Umur jejak pemindaian gate sebelum dihapus job pembersih. */
+  scanHistoryDays: optionalNumber('SCAN_HISTORY_DAYS', 90),
   jwt: {
     accessSecret: required('JWT_ACCESS_SECRET'),
     refreshSecret: required('JWT_REFRESH_SECRET'),
