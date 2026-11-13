@@ -1,7 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { existsSync } from 'node:fs'
-import { mkdir, writeFile } from 'node:fs/promises'
-import { utimes } from 'node:fs/promises'
+import { mkdir, utimes, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import request from 'supertest'
 import { createApp } from '../src/app'
@@ -12,11 +11,9 @@ import { loginCookie, resetDatabase, seedBase } from './helpers'
 
 const app = createApp()
 
-let seed: Awaited<ReturnType<typeof seedBase>>
-
 beforeEach(async () => {
   await resetDatabase(prisma)
-  seed = await seedBase(prisma)
+  await seedBase(prisma)
   await mkdir(uploadsDir(), { recursive: true })
 })
 
