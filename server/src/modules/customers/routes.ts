@@ -5,6 +5,7 @@ import { prisma, type Tx } from '../../lib/prisma'
 import { parse } from '../../lib/validate'
 import { requireAuth, requireExactRole } from '../../middleware/auth'
 import { hashPassword } from '../../lib/auth'
+import { revokeUserSessions } from '../auth/sessions'
 import { badRequest, conflict, notFound } from '../../lib/http-error'
 import { pathParam } from '../../lib/params'
 import { writeAudit } from '../../lib/audit'
@@ -404,7 +405,8 @@ customersRouter.patch(
         body.canApproveBooking !== undefined &&
         body.canApproveBooking !== user.canApproveBooking
 
-      const updated = await prisma.$transaction(async (tx) => {        const result = await tx.user.update({
+      const updated = await prisma.$transaction(async (tx) => {
+        const result = await tx.user.update({
           where: { id: userId },
           data: {
             ...(body.name !== undefined ? { name: body.name } : {}),
@@ -426,6 +428,11 @@ customersRouter.patch(
             createdAt: true,
           },
         })
+
+        // Kata sandi baru atau akun yang dimatikan memutus sesi lama akun ini.
+        if (body.password || body.isActive === false) {
+          await revokeUserSessions(tx, userId)
+        }
 
         if (flagsChanged) {
           await writeAudit(
