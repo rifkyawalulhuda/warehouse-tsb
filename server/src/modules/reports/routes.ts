@@ -10,10 +10,18 @@ import {
   TZ,
   diffMinutes,
   isDateISO,
-  minuteOfDayJakarta,
   utcToDateOnly,
 } from '../../lib/time'
 import { getSettings } from '../../lib/settings'
+import {
+  average,
+  buildArrivalsByHour,
+  buildByActivity,
+  buildByDay,
+  buildDockSummary,
+  buildKpi,
+  notNull,
+} from './aggregate'
 
 export const reportsRouter = Router()
 
@@ -152,81 +160,18 @@ async function buildReport(from: string, to: string, customerId?: string) {
     }
   })
 
-  const finished = rows.filter((row) => row.turnaroundMinutes !== null)
-  const average = (values: number[]) =>
-    values.length === 0
-      ? 0
-      : Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
-
-  const kpi = {
-    totalBookings: rows.length,
-    completed: rows.filter((row) => row.status === 'CHECKED_OUT').length,
-    cancelled: rows.filter((row) => row.status === 'CANCELLED').length,
-    noShow: rows.filter((row) => row.status === 'NO_SHOW').length,
-    // Booking ini berakhir CANCELLED, tetapi penyebabnya bukan customer:
-    // Admin tidak memutuskan sampai tenggat. Dihitung dari sumbu approval
-    // supaya tidak tercampur dengan pembatalan biasa.
-    expiredPending: rows.filter((row) => row.approvalStatus === 'EXPIRED').length,
-    onTimeRate:
-      rows.length === 0
-        ? 0
-        : Math.round(
-            (rows.filter((row) => row.lateMinutes === 0 && row.gateInAt).length /
-              Math.max(1, rows.filter((row) => row.gateInAt).length)) *
-              100
-          ),
-    averageWaitingMinutes: average(
-      rows.map((row) => row.waitingMinutes).filter((v): v is number => v !== null)
-    ),
-    averageProcessingMinutes: average(
-      rows.map((row) => row.processingMinutes).filter((v): v is number => v !== null)
-    ),
-    averageTurnaroundMinutes: average(
-      finished.map((row) => row.turnaroundMinutes as number)
-    ),
-    averageLateMinutes: average(
-      rows.filter((row) => row.lateMinutes > 0).map((row) => row.lateMinutes)
-    ),
-  }
+  const kpi = buildKpi(rows)
 
   // Rekap per hari. Rata-rata dihitung dari baris yang memang punya durasi,
   // supaya hari yang belum selesai tidak menyeret angka ke nol.
-  type DayEntry = {
-    date: string
-    total: number
-    completed: number
-    late: number
-    turnaroundSum: number
-    turnaroundCount: number
-    waitingSum: number
-    waitingCount: number
-  }
-
-  const byDayMap = new Map<string, DayEntry>()
-  for (const row of rows) {
-    const entry = byDayMap.get(row.bookingDate) ?? {
-      date: row.bookingDate,
-      total: 0,
-      completed: 0,
-      late: 0,
-      turnaroundSum: 0,
-      turnaroundCount: 0,
-      waitingSum: 0,
-      waitingCount: 0,
-    }
-    entry.total += 1
-    if (row.status === 'CHECKED_OUT') entry.completed += 1
-    if (row.lateMinutes > 0) entry.late += 1
-    if (row.turnaroundMinutes !== null) {
-      entry.turnaroundSum += row.turnaroundMinutes
-      entry.turnaroundCount += 1
-    }
-    if (row.waitingMinutes !== null) {
-      entry.waitingSum += row.waitingMinutes
-      entry.waitingCount += 1
-    }
-    byDayMap.set(row.bookingDate, entry)
-  }
+  const byDay = buildByDay(rows).map((day) => ({
+    date: day.date,
+    total: day.total,
+    completed: day.completed,
+    late: day.late,
+    averageTurnaroundMinutes: day.averageTurnaroundMinutes,
+    averageWaitingMinutes: day.averageWaitingMinutes,
+  }))
 
   // Kedatangan per jam: jumlah gate-in yang jatuh pada tiap jam operasional,
   // dibandingkan kapasitas slot per jam (jumlah dock aktif x blok per jam).
@@ -237,99 +182,20 @@ async function buildReport(from: string, to: string, customerId?: string) {
   const blocksPerHour = Math.max(1, Math.floor(60 / settings.slotUnitMinutes))
   const hourlyCapacity = activeDockCount * blocksPerHour
 
-  const arrivalsByHourMap = new Map<number, number>()
-  for (const booking of bookings) {
-    const gateInAt = booking.timeLog?.gateInAt
-    if (!gateInAt) continue
-    const hour = Math.floor(minuteOfDayJakarta(gateInAt) / 60)
-    arrivalsByHourMap.set(hour, (arrivalsByHourMap.get(hour) ?? 0) + 1)
-  }
+  const arrivalsByHour = buildArrivalsByHour(
+    bookings
+      .map((booking) => booking.timeLog?.gateInAt ?? null)
+      .filter((instant): instant is Date => instant !== null),
+    settings
+  ).map((hour) => ({ ...hour, capacity: hourlyCapacity }))
 
-  const firstHour = Math.floor(settings.operatingStartMinute / 60)
-  const lastHour = Math.ceil(settings.operatingEndMinute / 60)
-  const arrivalsByHour = Array.from({ length: Math.max(0, lastHour - firstHour) }, (_, index) => {
-    const hour = firstHour + index
-    return {
-      hour,
-      label: `${String(hour).padStart(2, '0')}.00`,
-      arrivals: arrivalsByHourMap.get(hour) ?? 0,
-      capacity: hourlyCapacity,
-    }
-  })
-
-  const byDay = [...byDayMap.values()]
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .map((entry) => ({
-      date: entry.date,
-      total: entry.total,
-      completed: entry.completed,
-      late: entry.late,
-      averageTurnaroundMinutes:
-        entry.turnaroundCount === 0
-          ? 0
-          : Math.round(entry.turnaroundSum / entry.turnaroundCount),
-      averageWaitingMinutes:
-        entry.waitingCount === 0 ? 0 : Math.round(entry.waitingSum / entry.waitingCount),
-    }))
-
-  const byActivity = [
-    { activity: 'LOADING' as const, total: rows.filter((r) => r.activityType === 'LOADING').length },
-    { activity: 'UNLOADING' as const, total: rows.filter((r) => r.activityType === 'UNLOADING').length },
-  ]
+  const byActivity = buildByActivity(rows)
 
   // Rekap per dock. Jam pakai dihitung dari waktu proses yang benar-benar
   // tercatat, lalu dibagi jam operasional x jumlah hari dalam rentang.
   const operatingHours = (settings.operatingEndMinute - settings.operatingStartMinute) / 60
   const dayCount = new Set(rows.map((row) => row.bookingDate)).size || 1
-
-  type DockEntry = {
-    dockCode: string
-    activity: string
-    trucks: number
-    usedMinutes: number
-    processingSum: number
-    processingCount: number
-  }
-
-  const byDockMap = new Map<string, DockEntry>()
-  for (const row of rows) {
-    if (!row.dockCode) continue
-    const entry = byDockMap.get(row.dockCode) ?? {
-      dockCode: row.dockCode,
-      activity: row.activityType,
-      trucks: 0,
-      usedMinutes: 0,
-      processingSum: 0,
-      processingCount: 0,
-    }
-    entry.trucks += 1
-    if (row.processingMinutes !== null) {
-      entry.processingSum += row.processingMinutes
-      entry.processingCount += 1
-      entry.usedMinutes += row.processingMinutes
-    }
-    byDockMap.set(row.dockCode, entry)
-  }
-
-  const byDock = [...byDockMap.values()]
-    .sort((a, b) => a.dockCode.localeCompare(b.dockCode))
-    .map((entry) => {
-      const availableMinutes = operatingHours * 60 * dayCount
-      return {
-        dockCode: entry.dockCode,
-        activity: entry.activity,
-        trucks: entry.trucks,
-        usedHours: Math.round((entry.usedMinutes / 60) * 10) / 10,
-        averageProcessingMinutes:
-          entry.processingCount === 0
-            ? 0
-            : Math.round(entry.processingSum / entry.processingCount),
-        utilization:
-          availableMinutes === 0
-            ? 0
-            : Math.min(100, Math.round((entry.usedMinutes / availableMinutes) * 100)),
-      }
-    })
+  const byDock = buildDockSummary(rows, { operatingHours, dayCount })
 
   return {
     from,
@@ -569,149 +435,32 @@ async function buildCustomerReport(from: string, to: string, customerId: string)
     }
   })
 
-  const average = (values: number[]) =>
-    values.length === 0
-      ? 0
-      : Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
-
-  const gatedIn = rows.filter((row) => row.gateInAt !== null)
-
   const kpi = {
-    totalBookings: rows.length,
-    completed: rows.filter((row) => row.status === 'CHECKED_OUT').length,
-    cancelled: rows.filter((row) => row.status === 'CANCELLED').length,
-    noShow: rows.filter((row) => row.status === 'NO_SHOW').length,
-    expiredPending: rows.filter((row) => row.approvalStatus === 'EXPIRED').length,
-    onTimeRate:
-      gatedIn.length === 0
-        ? 0
-        : Math.round(
-            (gatedIn.filter((row) => row.lateMinutes === 0).length /
-              gatedIn.length) *
-              100
-          ),
-    averageWaitingMinutes: average(
-      rows.map((row) => row.waitingMinutes).filter((v): v is number => v !== null)
-    ),
-    averageProcessingMinutes: average(
-      rows
-        .map((row) => row.processingMinutes)
-        .filter((v): v is number => v !== null)
-    ),
-    averageTurnaroundMinutes: average(
-      rows
-        .map((row) => row.turnaroundMinutes)
-        .filter((v): v is number => v !== null)
-    ),
-    averageLateMinutes: average(
-      rows.filter((row) => row.lateMinutes > 0).map((row) => row.lateMinutes)
-    ),
-    averageSlotUsedPercent: average(
-      rows
-        .map((row) => row.slotUsedPercent)
-        .filter((v): v is number => v !== null)
-    ),
+    ...buildKpi(rows),
+    // Penyebut pemakaian slot adalah blok yang customer kunci sendiri
+    // (`blocksLocked`), bukan kapasitas gudang.
+    averageSlotUsedPercent: average(notNull(rows.map((row) => row.slotUsedPercent))),
     overrunCount: rows.filter((row) => (row.slotOverrunMinutes ?? 0) > 0).length,
   }
 
-  type DayEntry = {
-    date: string
-    total: number
-    completed: number
-    late: number
-    waitingSum: number
-    waitingCount: number
-    processingSum: number
-    processingCount: number
-    turnaroundSum: number
-    turnaroundCount: number
-    slotSum: number
-    slotCount: number
-  }
-
-  const byDayMap = new Map<string, DayEntry>()
-  for (const row of rows) {
-    const entry = byDayMap.get(row.bookingDate) ?? {
-      date: row.bookingDate,
-      total: 0,
-      completed: 0,
-      late: 0,
-      waitingSum: 0,
-      waitingCount: 0,
-      processingSum: 0,
-      processingCount: 0,
-      turnaroundSum: 0,
-      turnaroundCount: 0,
-      slotSum: 0,
-      slotCount: 0,
-    }
-    entry.total += 1
-    if (row.status === 'CHECKED_OUT') entry.completed += 1
-    if (row.lateMinutes > 0) entry.late += 1
-    if (row.waitingMinutes !== null) {
-      entry.waitingSum += row.waitingMinutes
-      entry.waitingCount += 1
-    }
-    if (row.processingMinutes !== null) {
-      entry.processingSum += row.processingMinutes
-      entry.processingCount += 1
-    }
-    if (row.turnaroundMinutes !== null) {
-      entry.turnaroundSum += row.turnaroundMinutes
-      entry.turnaroundCount += 1
-    }
-    if (row.slotUsedPercent !== null) {
-      entry.slotSum += row.slotUsedPercent
-      entry.slotCount += 1
-    }
-    byDayMap.set(row.bookingDate, entry)
-  }
-
-  const byDay = [...byDayMap.values()]
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .map((entry) => ({
-      date: entry.date,
-      total: entry.total,
-      completed: entry.completed,
-      late: entry.late,
-      averageWaitingMinutes:
-        entry.waitingCount === 0
-          ? 0
-          : Math.round(entry.waitingSum / entry.waitingCount),
-      averageProcessingMinutes:
-        entry.processingCount === 0
-          ? 0
-          : Math.round(entry.processingSum / entry.processingCount),
-      averageTurnaroundMinutes:
-        entry.turnaroundCount === 0
-          ? 0
-          : Math.round(entry.turnaroundSum / entry.turnaroundCount),
-      averageSlotUsedPercent:
-        entry.slotCount === 0 ? 0 : Math.round(entry.slotSum / entry.slotCount),
-    }))
+  const byDay = buildByDay(rows).map((day) => ({
+    date: day.date,
+    total: day.total,
+    completed: day.completed,
+    late: day.late,
+    averageWaitingMinutes: day.averageWaitingMinutes,
+    averageProcessingMinutes: day.averageProcessingMinutes,
+    averageTurnaroundMinutes: day.averageTurnaroundMinutes,
+    averageSlotUsedPercent: day.averageSlotUsedPercent,
+  }))
 
   // Kedatangan per jam, tanpa pembanding kapasitas: garis kapasitas adalah
   // angka internal gudang dan sengaja tidak ikut ke laporan customer.
-  const arrivalsByHourMap = new Map<number, number>()
-  for (const booking of bookings) {
-    const gateInAt = booking.timeLog?.gateInAt
-    if (!gateInAt) continue
-    const hour = Math.floor(minuteOfDayJakarta(gateInAt) / 60)
-    arrivalsByHourMap.set(hour, (arrivalsByHourMap.get(hour) ?? 0) + 1)
-  }
-
-  const firstHour = Math.floor(settings.operatingStartMinute / 60)
-  const lastHour = Math.ceil(settings.operatingEndMinute / 60)
-  const byHour = Array.from(
-    { length: Math.max(0, lastHour - firstHour) },
-    (_, index) => {
-      const hour = firstHour + index
-      return {
-        hour,
-        label: `${String(hour).padStart(2, '0')}.00`,
-        arrivals: arrivalsByHourMap.get(hour) ?? 0,
-      }
-    }
+  const byHour = buildArrivalsByHour(
+    bookings
+      .map((booking) => booking.timeLog?.gateInAt ?? null)
+      .filter((instant): instant is Date => instant !== null),
+    settings
   )
 
   return {
@@ -722,16 +471,7 @@ async function buildCustomerReport(from: string, to: string, customerId: string)
     rows,
     byDay,
     byHour,
-    byActivity: [
-      {
-        activity: 'LOADING' as const,
-        total: rows.filter((row) => row.activityType === 'LOADING').length,
-      },
-      {
-        activity: 'UNLOADING' as const,
-        total: rows.filter((row) => row.activityType === 'UNLOADING').length,
-      },
-    ],
+    byActivity: buildByActivity(rows),
   }
 }
 
