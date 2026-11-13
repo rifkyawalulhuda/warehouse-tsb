@@ -18,6 +18,7 @@ export async function passwordHash(): Promise<string> {
 export async function resetDatabase(prisma: PrismaClient) {
   await prisma.$executeRawUnsafe(`
     TRUNCATE TABLE
+      refresh_sessions,
       audit_logs,
       scan_attempts,
       booking_time_logs,

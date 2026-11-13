@@ -131,9 +131,29 @@ model User {
   gateOutLogs       BookingTimeLog[] @relation("GateOutBy")
   auditLogs         AuditLog[]
   scanAttempts      ScanAttempt[]
+  refreshSessions   RefreshSession[]
 
   @@index([customerId])
   @@map("users")
+}
+
+/// Sesi refresh yang bisa dicabut. Token aslinya tidak pernah disimpan — hanya
+/// hash SHA-256-nya — sehingga isi tabel ini tidak bisa dipakai untuk masuk.
+///
+/// Satu baris bertahan selama sesi hidup; rotasi token memperbarui hash dan
+/// masa berlakunya, bukan membuat baris baru. Dengan begitu dua tab yang
+/// menyegarkan sesi bersamaan tidak saling mematikan.
+model RefreshSession {
+  id        String    @id @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique @map("token_hash") @db.VarChar(64)
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(3)
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([userId])
+  @@map("refresh_sessions")
 }
 
 /// Satu baris saja (id = 1). Jam disimpan sebagai menit dari tengah malam waktu Jakarta

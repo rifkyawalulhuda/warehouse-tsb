@@ -12,6 +12,7 @@ import { emitBookingUpdated, emitDockUpdated } from '../../realtime'
 import { writeAudit } from '../../lib/audit'
 import { bookingSelect, ACTIVE_STATUSES, getBookingByScanInput, isBookingCode, scanInputWhere } from '../bookings/repository'
 import { finalizeRelease } from '../bookings/quota-service'
+import { transitionBooking } from '../bookings/transitions'
 
 export const opsRouter = Router()
 
@@ -109,16 +110,23 @@ async function recordRejectedScan(input: {
   })
   if (duplicate) return
 
-  await prisma.scanAttempt.create({
-    data: {
-      qrToken: input.qrToken.slice(0, 128),
-      reason: input.reason.slice(0, 40),
-      message: input.message.slice(0, 240),
-      userId: req.user.id,
-      userRole: req.user.role,
-      bookingId: input.bookingId ?? null,
-    },
-  })
+  try {
+    await prisma.scanAttempt.create({
+      data: {
+        qrToken: input.qrToken.slice(0, 128),
+        reason: input.reason.slice(0, 40),
+        message: input.message.slice(0, 240),
+        userId: req.user.id,
+        userRole: req.user.role,
+        bookingId: input.bookingId ?? null,
+      },
+    })
+  } catch (error) {
+    // Jejak adalah catatan tambahan. Kalau tabelnya bermasalah, petugas tetap
+    // harus menerima alasan penolakan yang sebenarnya, bukan galat 500.
+    // eslint-disable-next-line no-console
+    console.error('[ops] gagal mencatat jejak pemindaian', error)
+  }
 }
 
 /**
@@ -381,9 +389,15 @@ opsRouter.post(
           : 'LATE_WAITING_LIST'
 
       const updated = await prisma.$transaction(async (tx) => {
-        const result = await tx.booking.update({
+        // Penjaga sebenarnya: bila petugas lain sudah mencatat kedatangan yang
+        // sama, transaksi ini batal dan tidak ada time log kedua.
+        await transitionBooking(tx, booking.id, ['BOOKED_INCOMPLETE', 'BOOKED_READY'], {
+          status: nextStatus,
+          lateMinutes,
+        })
+
+        const result = await tx.booking.findUniqueOrThrow({
           where: { id: booking.id },
-          data: { status: nextStatus, lateMinutes },
           select: bookingSelect,
         })
 
@@ -501,9 +515,15 @@ opsRouter.post(
           data: { currentStatus: 'OCCUPIED' },
         })
 
-        const result = await tx.booking.update({
+        await transitionBooking(
+          tx,
+          booking.id,
+          ['CHECKED_IN_ON_TIME', 'LATE_WAITING_LIST'],
+          { assignedDockId: dock.id, status: 'DOCK_ASSIGNED' }
+        )
+
+        const result = await tx.booking.findUniqueOrThrow({
           where: { id: booking.id },
-          data: { assignedDockId: dock.id, status: 'DOCK_ASSIGNED' },
           select: bookingSelect,
         })
 
@@ -594,14 +614,21 @@ opsRouter.post(
           : 'LATE_WAITING_LIST'
 
       const updated = await prisma.$transaction(async (tx) => {
-        await tx.dock.update({
-          where: { id: dockId },
+        // Lepas status dulu, baru bebaskan dock. Urutan ini membuat pihak yang
+        // kalah (mis. proses sudah selesai lebih dulu) berhenti sebelum sempat
+        // membebaskan dock yang mungkin sudah dipakai truk lain.
+        await transitionBooking(tx, booking.id, ['DOCK_ASSIGNED'], {
+          assignedDockId: null,
+          status: waitingStatus,
+        })
+
+        await tx.dock.updateMany({
+          where: { id: dockId, currentStatus: 'OCCUPIED' },
           data: { currentStatus: 'AVAILABLE' },
         })
 
-        const result = await tx.booking.update({
+        const result = await tx.booking.findUniqueOrThrow({
           where: { id: booking.id },
-          data: { assignedDockId: null, status: waitingStatus },
           select: bookingSelect,
         })
 
@@ -666,9 +693,12 @@ opsRouter.post(
 
       const now = new Date()
       const updated = await prisma.$transaction(async (tx) => {
-        const result = await tx.booking.update({
+        await transitionBooking(tx, booking.id, ['DOCK_ASSIGNED'], {
+          status: 'IN_PROGRESS',
+        })
+
+        const result = await tx.booking.findUniqueOrThrow({
           where: { id: booking.id },
-          data: { status: 'IN_PROGRESS' },
           select: bookingSelect,
         })
 
@@ -724,9 +754,12 @@ opsRouter.post(
 
       const now = new Date()
       const updated = await prisma.$transaction(async (tx) => {
-        const result = await tx.booking.update({
+        await transitionBooking(tx, booking.id, ['IN_PROGRESS'], {
+          status: 'COMPLETED',
+        })
+
+        const result = await tx.booking.findUniqueOrThrow({
           where: { id: booking.id },
-          data: { status: 'COMPLETED' },
           select: bookingSelect,
         })
 
@@ -742,8 +775,8 @@ opsRouter.post(
 
         // Dock bebas begitu bongkar/muat selesai; truk masih di area menuju gerbang keluar.
         if (booking.assignedDockId) {
-          await tx.dock.update({
-            where: { id: booking.assignedDockId },
+          await tx.dock.updateMany({
+            where: { id: booking.assignedDockId, currentStatus: 'OCCUPIED' },
             data: { currentStatus: 'AVAILABLE' },
           })
         }
@@ -792,9 +825,12 @@ opsRouter.post('/gate-out', requireRole('GATE_OFFICER'), async (req, res, next) 
 
     const now = new Date()
     const updated = await prisma.$transaction(async (tx) => {
-      const result = await tx.booking.update({
+      await transitionBooking(tx, booking.id, ['COMPLETED'], {
+        status: 'CHECKED_OUT',
+      })
+
+      const result = await tx.booking.findUniqueOrThrow({
         where: { id: booking.id },
-        data: { status: 'CHECKED_OUT' },
         select: bookingSelect,
       })
 
@@ -859,6 +895,15 @@ opsRouter.post('/no-show', requireRole('ADMIN'), async (req, res, next) => {
     const window = toWindow(settings)
 
     const updated = await prisma.$transaction(async (tx) => {
+      // Status dikunci lebih dulu: pelepasan kuota di bawah tidak boleh
+      // berjalan dua kali untuk booking yang sama.
+      await transitionBooking(
+        tx,
+        booking.id,
+        ['BOOKED_INCOMPLETE', 'BOOKED_READY', 'CHECKED_IN_ON_TIME', 'LATE_WAITING_LIST'],
+        { status: 'NO_SHOW' }
+      )
+
       await finalizeRelease(tx, {
         bookingId: booking.id,
         date: utcToDateOnly(booking.bookingDate),
@@ -869,15 +914,14 @@ opsRouter.post('/no-show', requireRole('ADMIN'), async (req, res, next) => {
         window,
       })
 
-      const result = await tx.booking.update({
+      const result = await tx.booking.findUniqueOrThrow({
         where: { id: booking.id },
-        data: { status: 'NO_SHOW' },
         select: bookingSelect,
       })
 
       if (booking.assignedDockId) {
-        await tx.dock.update({
-          where: { id: booking.assignedDockId },
+        await tx.dock.updateMany({
+          where: { id: booking.assignedDockId, currentStatus: 'OCCUPIED' },
           data: { currentStatus: 'AVAILABLE' },
         })
       }

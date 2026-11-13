@@ -16,6 +16,7 @@ import { publicTicketRouter } from './modules/public-ticket/routes'
 import { opsRouter } from './modules/ops/routes'
 import { reportsRouter } from './modules/reports/routes'
 import { errorHandler, notFoundHandler } from './middleware/error'
+import { apiLimiter } from './middleware/rate-limit'
 
 export function createApp() {
   const app = express()
@@ -33,11 +34,11 @@ export function createApp() {
   // permintaan yang sudah punya badan terbaca.
   app.use(
     `${UPLOAD_PATH}/login-cover`,
-    express.raw({ type: () => true, limit: '2mb' })
+    express.raw({ type: () => true, limit: '3mb' })
   )
   app.use(
     `${UPLOAD_PATH}/logo`,
-    express.raw({ type: () => true, limit: '2mb' })
+    express.raw({ type: () => true, limit: '3mb' })
   )
   app.use(express.json({ limit: '1mb' }))
   app.use(cookieParser())
@@ -48,6 +49,7 @@ export function createApp() {
     })
   })
 
+  app.use('/api', apiLimiter)
   app.use('/api/auth', authRouter)
   app.use('/api/users', usersRouter)
   app.use('/api/settings', settingsRouter)

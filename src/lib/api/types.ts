@@ -151,7 +151,6 @@ export type AvailabilitySlot = {
   endMinute: number
   endLabel: string
   remaining: number
-  capacity: number
   status: SlotStatus
   limitReason: string | null
 }
@@ -181,8 +180,13 @@ export type Settings = {
   approvalLeadMinutes: number
   approvalMinDecisionMinutes: number
   approvalUrgentBufferMinutes: number
-  capacity: Record<ActivityType, number>
-  blocksPerDay: number
+  /**
+   * Kapasitas per aktivitas dan jumlah blok per hari hanya dikirim ke staf.
+   * Customer tidak menerimanya — angka perencanaan gudang, bukan angka yang
+   * ia butuhkan untuk memesan.
+   */
+  capacity?: Record<ActivityType, number>
+  blocksPerDay?: number
   truckTypes: TruckType[]
 }
 

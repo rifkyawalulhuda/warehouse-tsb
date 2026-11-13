@@ -1,9 +1,10 @@
 import { randomBytes } from 'node:crypto'
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { mkdir, unlink, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { Router, type NextFunction, type Request, type Response } from 'express'
 import { requireAuth, requireExactRole } from '../../middleware/auth'
 import { badRequest } from '../../lib/http-error'
+import { env } from '../../config/env'
 
 export const UPLOAD_PATH = '/api/uploads'
 
@@ -41,9 +42,65 @@ function sniff(buffer: Buffer) {
 }
 
 export function uploadsDir() {
-  const dir = join(process.cwd(), 'uploads')
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
-  return dir
+  return env.uploadsDir
+}
+
+/**
+ * Nama berkas dari URL unggahan kita, atau null bila URL bukan milik kita.
+ *
+ * Nama dibuat server (`prefix-timestamp-hex.ext`), jadi satu-satunya bentuk
+ * yang sah tidak memuat pemisah jalur. Pemeriksaan ini yang mencegah URL
+ * seperti `/api/uploads/../../etc/passwd` berubah menjadi penghapusan berkas
+ * di luar folder unggahan.
+ */
+export function uploadedFileName(url: string | null | undefined): string | null {
+  if (!url) return null
+  const prefix = `${UPLOAD_PATH}/`
+  if (!url.startsWith(prefix)) return null
+
+  const name = url.slice(prefix.length)
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(name)) return null
+  if (name.includes('..')) return null
+  return name
+}
+
+/**
+ * Menghapus satu berkas unggahan berdasarkan URL-nya.
+ *
+ * Mengembalikan `false` bila URL bukan milik kita atau berkasnya sudah tidak
+ * ada. Galat lain (mis. izin folder) dilempar ke pemanggil: pembersihan yang
+ * gagal diam-diam akan menumpuk berkas selamanya.
+ */
+export async function removeUploadedFile(url: string | null | undefined): Promise<boolean> {
+  const name = uploadedFileName(url)
+  if (!name) return false
+
+  try {
+    await unlink(join(uploadsDir(), name))
+    return true
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false
+    throw error
+  }
+}
+
+/**
+ * Folder dibuat sekali, bukan diperiksa di setiap unggahan: `existsSync` +
+ * `mkdirSync` menahan seluruh event loop hanya untuk memastikan folder yang
+ * sama ada. Bila pembuatan gagal, hasilnya dibuang agar percobaan berikutnya
+ * mencoba lagi.
+ */
+let directoryReady: Promise<void> | null = null
+
+function ensureUploadsDir(): Promise<void> {
+  directoryReady ??= mkdir(uploadsDir(), { recursive: true }).then(
+    () => undefined,
+    (error: unknown) => {
+      directoryReady = null
+      throw error
+    }
+  )
+  return directoryReady
 }
 
 export const uploadsRouter = Router()
@@ -53,7 +110,7 @@ export const uploadsRouter = Router()
  * berkas, supaya gambar panel dan logo tidak pernah tertukar di folder disk.
  */
 function handleUpload(prefix: string) {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
     try {
       const body = req.body
       if (!Buffer.isBuffer(body) || body.length === 0) {
@@ -69,7 +126,8 @@ function handleUpload(prefix: string) {
       }
 
       const name = `${prefix}-${Date.now()}-${randomBytes(4).toString('hex')}.${kind.ext}`
-      writeFileSync(join(uploadsDir(), name), body)
+      await ensureUploadsDir()
+      await writeFile(join(uploadsDir(), name), body)
 
       res.json({ data: { url: `${UPLOAD_PATH}/${name}` } })
     } catch (error) {

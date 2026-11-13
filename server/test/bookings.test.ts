@@ -194,6 +194,94 @@ describe('kuota per blok', () => {
   })
 })
 
+/**
+ * Pembatalan hanya milik customer pemilik dan Admin.
+ *
+ * Petugas gate dan checker tidak membatalkan booking: tiket yang truknya tidak
+ * datang diselesaikan lewat NO_SHOW (otomatis atau penandaan manual), yang
+ * juga mengembalikan kuota. Tanpa batas ini, satu orang di pos gate bisa
+ * menghapus jadwal perusahaan mana pun tanpa jejak alasan.
+ */
+describe('POST /api/bookings/:id/cancel - kebijakan peran', () => {
+  it('menolak pembatalan oleh petugas gate dan tidak melepas kuota', async () => {
+    const created = await request(app)
+      .post('/api/bookings')
+      .set('Cookie', cookie)
+      .send(createPayload())
+    expect(created.status).toBe(201)
+
+    const gateCookie = await loginCookie(app, 'gate@test.local')
+    const response = await request(app)
+      .post(`/api/bookings/${created.body.data.id}/cancel`)
+      .set('Cookie', gateCookie)
+
+    expect(response.status).toBe(403)
+
+    const booking = await prisma.booking.findUniqueOrThrow({
+      where: { id: created.body.data.id },
+      select: { status: true },
+    })
+    expect(booking.status).toBe('BOOKED_READY')
+
+    const slots = await prisma.slotAllocation.findMany({
+      where: { slotDate: new Date(`${TOMORROW()}T00:00:00.000Z`), activity: 'UNLOADING' },
+    })
+    expect(slots.some((slot) => slot.used > 0)).toBe(true)
+  })
+
+  it('menolak pembatalan oleh checker', async () => {
+    const created = await request(app)
+      .post('/api/bookings')
+      .set('Cookie', cookie)
+      .send(createPayload())
+
+    const checkerCookie = await loginCookie(app, 'checker@test.local')
+    const response = await request(app)
+      .post(`/api/bookings/${created.body.data.id}/cancel`)
+      .set('Cookie', checkerCookie)
+
+    expect(response.status).toBe(403)
+  })
+
+  it('mengizinkan Admin membatalkan booking milik perusahaan mana pun', async () => {
+    const created = await request(app)
+      .post('/api/bookings')
+      .set('Cookie', cookie2)
+      .send(createPayload())
+    expect(created.status).toBe(201)
+
+    const adminCookie = await loginCookie(app, 'admin@test.local')
+    const response = await request(app)
+      .post(`/api/bookings/${created.body.data.id}/cancel`)
+      .set('Cookie', adminCookie)
+
+    expect(response.status).toBe(200)
+    expect(response.body.data.status).toBe('CANCELLED')
+  })
+
+  it('pembatalan ganda yang bersamaan hanya berhasil sekali', async () => {
+    const created = await request(app)
+      .post('/api/bookings')
+      .set('Cookie', cookie)
+      .send(createPayload())
+    expect(created.status).toBe(201)
+
+    const cancel = () =>
+      request(app).post(`/api/bookings/${created.body.data.id}/cancel`).set('Cookie', cookie)
+
+    const responses = await Promise.all([cancel(), cancel()])
+    const statuses = responses.map((response) => response.status).sort()
+
+    expect(statuses).toEqual([200, 409])
+
+    // Kuota kembali persis sekali, tidak dua kali.
+    const slots = await prisma.slotAllocation.findMany({
+      where: { slotDate: new Date(`${TOMORROW()}T00:00:00.000Z`), activity: 'UNLOADING' },
+    })
+    expect(slots.every((slot) => slot.used === 0)).toBe(true)
+  })
+})
+
 describe('GET /api/bookings/my-list', () => {
   it('hanya menampilkan booking milik perusahaan customer yang login', async () => {
     await request(app).post('/api/bookings').set('Cookie', cookie).send(createPayload())

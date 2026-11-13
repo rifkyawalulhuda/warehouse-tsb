@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from 'node:crypto'
+import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { env } from '../config/env'
@@ -13,7 +13,8 @@ export type AccessClaims = {
 
 export type RefreshClaims = {
   sub: string
-  tokenId: string
+  /** Id baris `refresh_sessions`; inilah yang membuat sesi bisa dicabut. */
+  sid: string
 }
 
 const ACCESS_COOKIE = 'tsb_at'
@@ -54,9 +55,9 @@ export function generateQrToken(): string {
   return randomBytes(24).toString('base64url')
 }
 
-/** Token acak untuk refresh yang disimpan sebagai hash, bukan plaintext. */
-export function generateRefreshId(): string {
-  return randomBytes(24).toString('base64url')
+/** Id sesi refresh. Acak, bukan berurutan, karena ikut ditulis ke token. */
+export function generateSessionId(): string {
+  return randomUUID()
 }
 
 export function hashToken(token: string): string {

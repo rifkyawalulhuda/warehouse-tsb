@@ -4,6 +4,7 @@ import { prisma, type Tx } from '../../lib/prisma'
 import { parse } from '../../lib/validate'
 import { requireAuth, requireExactRole } from '../../middleware/auth'
 import { hashPassword } from '../../lib/auth'
+import { revokeUserSessions } from '../auth/sessions'
 import { badRequest, conflict, notFound } from '../../lib/http-error'
 import { pathParam } from '../../lib/params'
 import { writeAudit } from '../../lib/audit'
@@ -233,6 +234,12 @@ usersRouter.patch('/:id', async (req, res, next) => {
         },
         select: userSelect,
       })
+
+      // Kata sandi baru, akun yang dimatikan, dan peran yang turun semuanya
+      // membuat sesi lama tidak lagi mewakili orang yang sama.
+      if (body.password || body.isActive === false || roleChanged) {
+        await revokeUserSessions(tx as Tx, id)
+      }
 
       // Memberi/mencabut hak approve mengubah siapa yang boleh melewati
       // antrean. Itu perubahan wewenang, bukan sekadar data profil.

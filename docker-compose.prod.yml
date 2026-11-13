@@ -45,6 +45,11 @@ services:
       REFRESH_TOKEN_TTL_DAYS: ${REFRESH_TOKEN_TTL_DAYS:-7}
     expose:
       - '4000'
+    volumes:
+      # Gambar unggahan (logo, panel masuk) hidup di disk, bukan database.
+      # Tanpa volume ini setiap `--build` menghapusnya dan URL di pengaturan
+      # berubah menjadi 404.
+      - tsb-uploads:/app/uploads
 
   web:
     image: nginx:1.27-alpine
@@ -59,3 +64,4 @@ services:
 
 volumes:
   tsb-db-data:
+  tsb-uploads:

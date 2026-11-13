@@ -468,10 +468,12 @@ export function ReportsPage() {
             <Card>
               <CardHeader>
                 <CardTitle className='text-base'>
-                  Kedatangan vs kapasitas slot
+                  {customerParam ? 'Kedatangan per jam' : 'Kedatangan vs kapasitas slot'}
                 </CardTitle>
                 <CardDescription>
-                  Jumlah gate-in per jam dibanding kapasitas jam tersebut.
+                  {customerParam
+                    ? 'Jumlah gate-in per jam untuk customer terpilih. Kapasitas gudang tidak dibandingkan karena grafiknya hanya memuat satu perusahaan.'
+                    : 'Jumlah gate-in per jam dibanding kapasitas jam tersebut.'}
                 </CardDescription>
               </CardHeader>
               <CardContent className='h-72'>
@@ -492,13 +494,15 @@ export function ReportsPage() {
                     />
                     <Tooltip />
                     <Legend />
-                    <Bar
-                      dataKey='capacity'
-                      name='Kapasitas slot'
-                      fill='var(--chart-3)'
-                      radius={[4, 4, 0, 0]}
-                      maxBarSize={22}
-                    />
+                    {!customerParam && (
+                      <Bar
+                        dataKey='capacity'
+                        name='Kapasitas slot'
+                        fill='var(--chart-3)'
+                        radius={[4, 4, 0, 0]}
+                        maxBarSize={22}
+                      />
+                    )}
                     <Bar
                       dataKey='arrivals'
                       name='Kedatangan aktual'

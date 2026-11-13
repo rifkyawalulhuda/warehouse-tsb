@@ -386,7 +386,7 @@ function SettingsForm({ settings }: { settings: Settings }) {
                 pending={save.isPending && save.variables === 'hours'}
                 onSave={() => save.mutate('hours')}
                 onReset={() => resetSection('hours')}
-                footerNote={`Kapasitas per blok saat ini ${settings.capacity.LOADING} loading dan ${settings.capacity.UNLOADING} unloading — mengikuti jumlah dock aktif di Master Data, bukan diatur di sini.`}
+                footerNote={`Kapasitas per blok saat ini ${settings.capacity?.LOADING ?? 0} loading dan ${settings.capacity?.UNLOADING ?? 0} unloading — mengikuti jumlah dock aktif di Master Data, bukan diatur di sini.`}
               >
                 <FieldRow
                   label='Jam buka'

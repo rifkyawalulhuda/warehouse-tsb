@@ -31,6 +31,7 @@ import {
   statusForVehicleData,
 } from './repository'
 import { getAvailability, finalizeRelease, reserveBlocks } from './quota-service'
+import { transitionBooking } from './transitions'
 import { assertActiveCustomer } from '../customers/routes'
 import { generateQrToken } from '../../lib/auth'
 
@@ -90,9 +91,10 @@ bookingsRouter.get('/slots/availability', async (req, res, next) => {
       data: {
         date: query.date,
         activity: query.activity,
-        capacity,
         truckType,
-        slots: slots.map((slot) =>
+        // Tanpa `capacity`: angka itu kapasitas gudang per blok, milik staf.
+        // Customer cukup tahu berapa slot yang masih bisa ia ambil.
+        slots: slots.map(({ capacity: _capacity, ...slot }) =>
           isToday && slot.startMinute <= nowMinute
             ? { ...slot, status: 'FULL' as const, remaining: 0, limitReason: 'Jam sudah lewat' }
             : slot
@@ -448,68 +450,83 @@ bookingsRouter.patch('/:id/vehicle-info', async (req, res, next) => {
 /* Pembatalan                                                          */
 /* ------------------------------------------------------------------ */
 
-bookingsRouter.post('/:id/cancel', async (req, res, next) => {
-  try {
-    const id = pathParam(req, 'id')
-    if (!id) throw badRequest('INVALID_ID', 'ID booking tidak valid')
+/**
+ * Pembatalan: hanya customer pemilik booking dan Admin.
+ *
+ * Petugas gate/checker tidak termasuk — tiket yang truknya tidak datang
+ * diselesaikan lewat NO_SHOW, yang mengembalikan kuota dengan jejak audit yang
+ * jelas. Tanpa batas ini satu orang di pos gate bisa menghapus jadwal
+ * perusahaan mana pun lewat panggilan API langsung.
+ */
+bookingsRouter.post(
+  '/:id/cancel',
+  requireExactRole('ADMIN', 'CUSTOMER'),
+  async (req, res, next) => {
+    try {
+      const id = pathParam(req, 'id')
+      if (!id) throw badRequest('INVALID_ID', 'ID booking tidak valid')
 
-    const booking = await prisma.booking.findUnique({
-      where: { id },
-      include: { truckType: true },
-    })
-    if (!booking) throw notFound('Booking tidak ditemukan')
-
-    const user = req.user!
-    if (user.role === 'CUSTOMER' && booking.customerId !== user.customerId) throw forbidden()
-
-    // Setelah gate-in, satu-satunya jalan keluar adalah NO_SHOW.
-    if (!['BOOKED_INCOMPLETE', 'BOOKED_READY'].includes(booking.status)) {
-      throw conflict(
-        'CANCEL_NOT_ALLOWED',
-        'Booking tidak bisa dibatalkan karena truk sudah masuk gerbang'
-      )
-    }
-
-    const settings = await getSettings()
-    const window = toWindow(settings)
-
-    await prisma.$transaction(async (tx) => {
-      await finalizeRelease(tx, {
-        bookingId: id,
-        date: utcToDateOnly(booking.bookingDate),
-        activity: booking.activityType,
-        startMinute: minuteOfDayJakarta(booking.startTime),
-        // Pakai snapshot, bukan truckType.blocksRequired: jenis truk bisa saja
-        // sudah diedit sejak booking ini dibuat.
-        blocksRequired: booking.blocksLocked,
-        window,
-      })
-
-      await tx.booking.update({
+      const booking = await prisma.booking.findUnique({
         where: { id },
-        data: { status: 'CANCELLED' },
+        include: { truckType: true },
+      })
+      if (!booking) throw notFound('Booking tidak ditemukan')
+
+      const user = req.user!
+      // Admin boleh membatalkan booking perusahaan mana pun; customer hanya
+      // milik perusahaannya sendiri.
+      if (user.role === 'CUSTOMER' && booking.customerId !== user.customerId) throw forbidden()
+
+      // Setelah gate-in, satu-satunya jalan keluar adalah NO_SHOW.
+      if (!['BOOKED_INCOMPLETE', 'BOOKED_READY'].includes(booking.status)) {
+        throw conflict(
+          'CANCEL_NOT_ALLOWED',
+          'Booking tidak bisa dibatalkan karena truk sudah masuk gerbang'
+        )
+      }
+
+      const settings = await getSettings()
+      const window = toWindow(settings)
+
+      await prisma.$transaction(async (tx) => {
+        // Penjaga status ditulis sebagai syarat update: dua permintaan batal
+        // bersamaan tidak boleh sama-sama melepas kuota.
+        await transitionBooking(tx, id, ['BOOKED_INCOMPLETE', 'BOOKED_READY'], {
+          status: 'CANCELLED',
+        })
+
+        await finalizeRelease(tx, {
+          bookingId: id,
+          date: utcToDateOnly(booking.bookingDate),
+          activity: booking.activityType,
+          startMinute: minuteOfDayJakarta(booking.startTime),
+          // Pakai snapshot, bukan truckType.blocksRequired: jenis truk bisa saja
+          // sudah diedit sejak booking ini dibuat.
+          blocksRequired: booking.blocksLocked,
+          window,
+        })
+
+        await writeAudit(
+          {
+            userId: user.id,
+            userRole: user.role,
+            action: 'BOOKING_CANCELLED',
+            bookingId: id,
+          },
+          tx as Tx
+        )
       })
 
-      await writeAudit(
-        {
-          userId: user.id,
-          userRole: user.role,
-          action: 'BOOKING_CANCELLED',
-          bookingId: id,
-        },
-        tx as Tx
-      )
-    })
+      emitBookingUpdated({
+        bookingId: booking.id,
+        qrToken: booking.qrToken,
+        status: 'CANCELLED',
+        customerId: booking.customerId,
+      })
 
-    emitBookingUpdated({
-      bookingId: booking.id,
-      qrToken: booking.qrToken,
-      status: 'CANCELLED',
-      customerId: booking.customerId,
-    })
-
-    res.json({ data: { id, status: 'CANCELLED' as BookingStatus } })
-  } catch (error) {
-    next(error)
+      res.json({ data: { id, status: 'CANCELLED' as BookingStatus } })
+    } catch (error) {
+      next(error)
+    }
   }
-})
+)

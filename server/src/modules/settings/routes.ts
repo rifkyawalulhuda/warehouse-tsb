@@ -1,12 +1,13 @@
 import { Router } from 'express'
-import { z } from 'zod'
 import { prisma, type Tx } from '../../lib/prisma'
 import { parse } from '../../lib/validate'
 import { requireAuth, requireExactRole } from '../../middleware/auth'
-import { getSettings, capacityMap, toWindow } from '../../lib/settings'
-import { listBlockStarts, minuteToLabel } from '../../lib/quota'
+import { getSettings } from '../../lib/settings'
 import { badRequest, conflict } from '../../lib/http-error'
 import { writeAudit } from '../../lib/audit'
+import { settingsPayload } from './payload'
+import { updateSchema } from './schema'
+import { removeUploadedFile } from './uploads'
 
 export const settingsRouter = Router()
 
@@ -18,116 +19,29 @@ export const settingsRouter = Router()
  */
 const DEFAULT_WAREHOUSE_ID = 1
 
-/** Gambar halaman masuk hanya dari unggahan kita sendiri atau http(s). */
-function isSafeImageUrl(value: string): boolean {
-  if (value.startsWith('/api/uploads/')) return true
-  try {
-    const url = new URL(value)
-    return url.protocol === 'https:' || url.protocol === 'http:'
-  } catch {
-    return false
-  }
+/**
+ * String kosong dari formulir berarti "tidak ada", bukan nilai kosong.
+ *
+ * `undefined` tetap `undefined` supaya Prisma tidak menimpa kolom yang tidak
+ * dikirim klien.
+ */
+function emptyToNull(value: string | null | undefined): string | null | undefined {
+  if (value === undefined) return undefined
+  const trimmed = value?.trim() ?? ''
+  return trimmed === '' ? null : trimmed
 }
 
-/** Satu bentuk respons untuk GET dan PUT supaya UI tidak perlu dua tipe. */
-async function settingsPayload() {
-  const settings = await getSettings()
-  const [truckTypes, capacities] = await Promise.all([
-    prisma.truckType.findMany({
-      where: { isActive: true },
-      orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
-    }),
-    capacityMap(),
-  ])
-
-  const window = toWindow(settings)
-
-  return {
-    warehouseName: settings.warehouseName,
-    appName: settings.appName,
-    appTagline: settings.appTagline,
-    appShortName: settings.appShortName,
-    appLogoUrl: settings.appLogoUrl,
-    loginDescription: settings.loginDescription,
-    loginCoverUrl: settings.loginCoverUrl,
-    loginBrandColor: settings.loginBrandColor,
-    operatingStartMinute: settings.operatingStartMinute,
-    operatingEndMinute: settings.operatingEndMinute,
-    operatingStartLabel: minuteToLabel(settings.operatingStartMinute),
-    operatingEndLabel: minuteToLabel(settings.operatingEndMinute),
-    slotUnitMinutes: settings.slotUnitMinutes,
-    gracePeriodMinutes: settings.gracePeriodMinutes,
-    earlyArrivalLimitMinutes: settings.earlyArrivalLimitMinutes,
-    bookingWindowDays: settings.bookingWindowDays,
-    approvalMode: settings.approvalMode,
-    approvalLeadMinutes: settings.approvalLeadMinutes,
-    approvalMinDecisionMinutes: settings.approvalMinDecisionMinutes,
-    approvalUrgentBufferMinutes: settings.approvalUrgentBufferMinutes,
-    capacity: capacities,
-    blocksPerDay: listBlockStarts(window).length,
-    truckTypes,
-  }
-}
-
-settingsRouter.get('/', requireAuth, async (_req, res, next) => {
+settingsRouter.get('/', requireAuth, async (req, res, next) => {
   try {
-    res.json({ data: await settingsPayload() })
+    // Customer hanya menerima bagian yang dipakai layarnya untuk memesan.
+    // Angka kapasitas gudang tetap milik staf, sesuai aturan yang juga
+    // diterapkan pada laporan customer.
+    res.json({
+      data: await settingsPayload({ includeInternal: req.user!.role !== 'CUSTOMER' }),
+    })
   } catch (error) {
     next(error)
   }
-})
-
-const updateSchema = z.object({
-  warehouseName: z.string().trim().min(2).max(120).optional(),
-  // Batas panjang mengikuti kolom database: lebih baik ditolak di sini dengan
-  // pesan jelas daripada gagal saat menyimpan.
-  appName: z.string().trim().min(1).max(60).optional(),
-  appTagline: z.string().trim().max(80).optional(),
-  // Null/"" melepas nama pendek, sehingga judul tab kembali memakai appName.
-  appShortName: z.string().trim().max(20).nullable().optional(),
-  // Logo aplikasi. Aturan URL-nya sama dengan gambar panel: nilai ini dirender
-  // di halaman tanpa sesi, jadi hanya unggahan kita sendiri atau http(s).
-  appLogoUrl: z
-    .string()
-    .trim()
-    .max(2048)
-    .refine((value) => value === '' || isSafeImageUrl(value), {
-      message: 'URL logo harus diawali /api/uploads/ atau http(s)://',
-    })
-    .nullable()
-    .optional(),
-  // Paragraf sambutan halaman masuk. Null/"" berarti memakai teks bawaan.
-  loginDescription: z.string().trim().max(240).nullable().optional(),
-  // Gambar sisi kanan halaman masuk. Hanya URL yang berasal dari unggahan kita
-  // sendiri (atau http/https biasa) yang diterima: nilai ini dirender sebagai
-  // CSS `url()` di halaman tanpa sesi, jadi skema seperti `javascript:` tidak
-  // boleh lolos.
-  loginCoverUrl: z
-    .string()
-    .trim()
-    .max(2048)
-    .refine((value) => value === '' || isSafeImageUrl(value), {
-      message: 'URL gambar harus diawali /api/uploads/ atau http(s)://',
-    })
-    .nullable()
-    .optional(),
-  // Hex 6 digit; null/"" berarti kembali ke gradien bawaan.
-  loginBrandColor: z
-    .string()
-    .trim()
-    .regex(/^#(?:[0-9a-fA-F]{6})$/, 'Warna harus berupa hex, misalnya #1D4ED8')
-    .nullable()
-    .optional(),
-  operatingStartMinute: z.number().int().min(0).max(1439).optional(),
-  operatingEndMinute: z.number().int().min(1).max(1440).optional(),
-  slotUnitMinutes: z.number().int().min(15).max(120).optional(),
-  gracePeriodMinutes: z.number().int().min(0).max(240).optional(),
-  earlyArrivalLimitMinutes: z.number().int().min(0).max(480).optional(),
-  bookingWindowDays: z.number().int().min(1).max(90).optional(),
-  approvalMode: z.enum(['AUTO', 'MANUAL']).optional(),
-  approvalLeadMinutes: z.number().int().min(5).max(2880).optional(),
-  approvalMinDecisionMinutes: z.number().int().min(5).max(1440).optional(),
-  approvalUrgentBufferMinutes: z.number().int().min(0).max(14400).optional(),
 })
 
 settingsRouter.put('/', requireAuth, requireExactRole('ADMIN'), async (req, res, next) => {
@@ -160,28 +74,14 @@ settingsRouter.put('/', requireAuth, requireExactRole('ADMIN'), async (req, res,
     // boleh ikut berubah supaya kedua tempat tidak berakhir beda nama.
     await prisma.$transaction(async (tx) => {
       const data = { ...body }
-      // String kosong dari formulir berarti "tidak ada", bukan nama pendek
-      // sepanjang satu spasi.
-      if (data.appShortName !== undefined) {
-        data.appShortName = data.appShortName?.trim() ? data.appShortName.trim() : null
-      }
-      // Sama untuk gambar dan warna: isian kosong berarti "pakai bawaan".
-      if (data.loginCoverUrl !== undefined) {
-        data.loginCoverUrl = data.loginCoverUrl?.trim() ? data.loginCoverUrl.trim() : null
-      }
-      if (data.loginBrandColor !== undefined) {
-        data.loginBrandColor = data.loginBrandColor?.trim()
-          ? data.loginBrandColor.trim()
-          : null
-      }
-      if (data.appLogoUrl !== undefined) {
-        data.appLogoUrl = data.appLogoUrl?.trim() ? data.appLogoUrl.trim() : null
-      }
-      if (data.loginDescription !== undefined) {
-        data.loginDescription = data.loginDescription?.trim()
-          ? data.loginDescription.trim()
-          : null
-      }
+      // Isian kosong berarti "pakai bawaan" untuk nama pendek, gambar, dan
+      // warna. Dikerjakan di satu tempat supaya bidang baru tidak lupa ikut.
+      data.appShortName = emptyToNull(data.appShortName)
+      data.loginCoverUrl = emptyToNull(data.loginCoverUrl)
+      data.loginBrandColor = emptyToNull(data.loginBrandColor)
+      data.appLogoUrl = emptyToNull(data.appLogoUrl)
+      data.loginDescription = emptyToNull(data.loginDescription)
+
       await tx.warehouseSetting.update({ where: { id: current.id }, data })
       if (body.warehouseName !== undefined) {
         await tx.warehouse.updateMany({
@@ -205,6 +105,25 @@ settingsRouter.put('/', requireAuth, requireExactRole('ADMIN'), async (req, res,
         )
       }
     })
+
+    // Berkas lama tidak mungkin dirujuk lagi setelah pengaturan menunjuk URL
+    // lain. Dibandingkan dengan nilai yang benar-benar tersimpan, bukan dengan
+    // body: isian kosong berarti "pakai bawaan", dan itu juga melepas berkas.
+    const saved = await getSettings()
+    for (const [before, after] of [
+      [current.loginCoverUrl, saved.loginCoverUrl],
+      [current.appLogoUrl, saved.appLogoUrl],
+    ] as const) {
+      if (before === after) continue
+      try {
+        await removeUploadedFile(before)
+      } catch (error) {
+        // Gagal menghapus berkas lama tidak boleh menggagalkan penyimpanan;
+        // job pembersih harian akan menyapunya.
+        // eslint-disable-next-line no-console
+        console.error('[settings] gagal menghapus berkas unggahan lama', error)
+      }
+    }
 
     res.json({ data: await settingsPayload() })
   } catch (error) {
