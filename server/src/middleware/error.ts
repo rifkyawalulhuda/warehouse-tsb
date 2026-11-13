@@ -58,6 +58,26 @@ export function errorHandler(
     }
   }
 
+  /**
+   * Galat dari middleware badan permintaan (`express.json`, `express.raw`)
+   * sudah membawa status yang benar: JSON rusak = 400, badan terlalu besar =
+   * 413. Tanpa cabang ini keduanya jatuh ke 500, sehingga log penuh "unhandled
+   * error" hanya karena klien mengirim badan yang salah.
+   */
+  const bodyError = error as { status?: unknown; type?: unknown }
+  if (typeof bodyError?.status === 'number' && bodyError.status >= 400 && bodyError.status < 500) {
+    const tooLarge = bodyError.type === 'entity.too.large'
+    res.status(bodyError.status).json({
+      error: {
+        code: tooLarge ? 'PAYLOAD_TOO_LARGE' : 'INVALID_REQUEST',
+        message: tooLarge
+          ? 'Badan permintaan terlalu besar'
+          : 'Badan permintaan tidak bisa dibaca',
+      },
+    })
+    return
+  }
+
   // eslint-disable-next-line no-console
   console.error('[api] unhandled error', error)
   res.status(500).json({

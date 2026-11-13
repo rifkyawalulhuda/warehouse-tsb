@@ -34,11 +34,11 @@ export function createApp() {
   // permintaan yang sudah punya badan terbaca.
   app.use(
     `${UPLOAD_PATH}/login-cover`,
-    express.raw({ type: () => true, limit: '2mb' })
+    express.raw({ type: () => true, limit: '3mb' })
   )
   app.use(
     `${UPLOAD_PATH}/logo`,
-    express.raw({ type: () => true, limit: '2mb' })
+    express.raw({ type: () => true, limit: '3mb' })
   )
   app.use(express.json({ limit: '1mb' }))
   app.use(cookieParser())

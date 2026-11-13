@@ -1,8 +1,9 @@
 import type { NextFunction, Request, Response } from 'express'
 import type { Role, User } from '@prisma/client'
+import jwt from 'jsonwebtoken'
 import { prisma } from '../lib/prisma'
 import { cookieNames, verifyAccessToken } from '../lib/auth'
-import { forbidden, unauthorized } from '../lib/http-error'
+import { forbidden, HttpError, unauthorized } from '../lib/http-error'
 
 /**
  * Profil yang ikut di setiap request. `customerName` bukan kolom `User`: ia
@@ -56,7 +57,12 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
     }
     next()
   } catch (error) {
-    next(error instanceof Error && error.name === 'HttpError' ? error : unauthorized())
+    // Kesalahan token berarti sesi tidak sah. Kesalahan lain — paling sering
+    // database yang sedang tidak terjangkau — bukan 401: menjawab 401 membuat
+    // semua pengguna ter-logout dan menyembunyikan penyebab sebenarnya.
+    if (error instanceof HttpError) return next(error)
+    if (error instanceof jwt.JsonWebTokenError) return next(unauthorized())
+    next(error)
   }
 }
 
