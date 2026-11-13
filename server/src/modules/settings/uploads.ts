@@ -1,9 +1,10 @@
 import { randomBytes } from 'node:crypto'
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, unlink, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { Router, type NextFunction, type Request, type Response } from 'express'
 import { requireAuth, requireExactRole } from '../../middleware/auth'
 import { badRequest } from '../../lib/http-error'
+import { env } from '../../config/env'
 
 export const UPLOAD_PATH = '/api/uploads'
 
@@ -41,7 +42,46 @@ function sniff(buffer: Buffer) {
 }
 
 export function uploadsDir() {
-  return join(process.cwd(), 'uploads')
+  return env.uploadsDir
+}
+
+/**
+ * Nama berkas dari URL unggahan kita, atau null bila URL bukan milik kita.
+ *
+ * Nama dibuat server (`prefix-timestamp-hex.ext`), jadi satu-satunya bentuk
+ * yang sah tidak memuat pemisah jalur. Pemeriksaan ini yang mencegah URL
+ * seperti `/api/uploads/../../etc/passwd` berubah menjadi penghapusan berkas
+ * di luar folder unggahan.
+ */
+export function uploadedFileName(url: string | null | undefined): string | null {
+  if (!url) return null
+  const prefix = `${UPLOAD_PATH}/`
+  if (!url.startsWith(prefix)) return null
+
+  const name = url.slice(prefix.length)
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(name)) return null
+  if (name.includes('..')) return null
+  return name
+}
+
+/**
+ * Menghapus satu berkas unggahan berdasarkan URL-nya.
+ *
+ * Mengembalikan `false` bila URL bukan milik kita atau berkasnya sudah tidak
+ * ada. Galat lain (mis. izin folder) dilempar ke pemanggil: pembersihan yang
+ * gagal diam-diam akan menumpuk berkas selamanya.
+ */
+export async function removeUploadedFile(url: string | null | undefined): Promise<boolean> {
+  const name = uploadedFileName(url)
+  if (!name) return false
+
+  try {
+    await unlink(join(uploadsDir(), name))
+    return true
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false
+    throw error
+  }
 }
 
 /**

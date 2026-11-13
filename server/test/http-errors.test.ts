@@ -4,6 +4,7 @@ import { unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { createApp } from '../src/app'
 import { prisma } from '../src/lib/prisma'
+import { uploadsDir } from '../src/modules/settings/uploads'
 import { loginCookie, resetDatabase, seedBase } from './helpers'
 
 const app = createApp()
@@ -70,7 +71,7 @@ describe('galat permintaan', () => {
     expect(printed.status).toBe(400)
     expect(printed.body.error.code).toBe('UPLOAD_TYPE')
 
-    await unlink(join(process.cwd(), 'uploads', url.split('/').pop()!))
+    await unlink(join(uploadsDir(), url.split('/').pop()!))
   })
 })
 

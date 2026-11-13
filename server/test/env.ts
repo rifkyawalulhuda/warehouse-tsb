@@ -29,3 +29,10 @@ if (!testDbName.endsWith('_test')) {
 }
 
 export const testDatabaseName = testDbName
+
+/**
+ * Unggahan tes tidak boleh masuk folder aplikasi: satu tes pembersihan akan
+ * menghapus berkas yang sedang dipakai proses dev. Semua tes menulis ke cache
+ * repo, satu tempat yang sudah diabaikan Git.
+ */
+process.env.UPLOADS_DIR ??= path.resolve(process.cwd(), 'node_modules/.cache/tsb-uploads-test')

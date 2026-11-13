@@ -35,6 +35,11 @@ export const env = {
   databaseUrl: required('DATABASE_URL'),
   /** Umur jejak pemindaian gate sebelum dihapus job pembersih. */
   scanHistoryDays: optionalNumber('SCAN_HISTORY_DAYS', 90),
+  /**
+   * Folder gambar unggahan. Bisa diarahkan keluar folder aplikasi agar tes
+   * tidak menghapus berkas yang sedang dipakai proses dev.
+   */
+  uploadsDir: process.env.UPLOADS_DIR ?? path.join(process.cwd(), 'uploads'),
   jwt: {
     accessSecret: required('JWT_ACCESS_SECRET'),
     refreshSecret: required('JWT_REFRESH_SECRET'),

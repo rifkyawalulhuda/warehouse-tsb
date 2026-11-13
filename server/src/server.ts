@@ -6,6 +6,7 @@ import { initRealtime } from './realtime'
 import { startNoShowJob } from './jobs/no-show'
 import { startApprovalExpiryJob } from './jobs/approval-expiry'
 import { startScanPruneJob } from './jobs/scan-attempts'
+import { startUploadPruneJob } from './jobs/uploads'
 
 async function main() {
   const app = createApp()
@@ -15,6 +16,7 @@ async function main() {
   startNoShowJob()
   startApprovalExpiryJob()
   startScanPruneJob()
+  startUploadPruneJob()
 
   server.listen(env.port, () => {
     // eslint-disable-next-line no-console
