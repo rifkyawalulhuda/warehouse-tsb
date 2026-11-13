@@ -11,6 +11,10 @@ export type FormState = {
   appName: string
   appTagline: string
   appShortName: string
+  /** Logo aplikasi; kosong = lencana huruf pertama nama aplikasi. */
+  appLogoUrl: string
+  /** Paragraf sambutan halaman masuk; kosong = teks bawaan. */
+  loginDescription: string
   /** URL gambar sisi kanan halaman masuk; kosong = gradien bawaan. */
   loginCoverUrl: string
   /** Warna aksen halaman masuk, hex; kosong = warna bawaan tema. */
@@ -29,17 +33,20 @@ export type FormState = {
 
 /** Seksi yang disimpan lewat `PUT /api/settings`, satu permintaan per seksi. */
 export type SectionKey =
-  'identity' | 'branding' | 'hours' | 'arrival' | 'window' | 'approval'
+  | 'identity'
+  | 'brand'
+  | 'login'
+  | 'hours'
+  | 'arrival'
+  | 'window'
+  | 'approval'
 
 export const FIELD_GROUPS = {
   identity: ['warehouseName'],
-  branding: [
-    'appName',
-    'appTagline',
-    'appShortName',
-    'loginCoverUrl',
-    'loginBrandColor',
-  ],
+  // Merek menjawab "aplikasi ini siapa": logo, judul, subjudul, nama pendek.
+  brand: ['appLogoUrl', 'appName', 'appTagline', 'appShortName'],
+  // Halaman masuk menjawab "apa yang dilihat orang pertama kali".
+  login: ['loginDescription', 'loginCoverUrl', 'loginBrandColor'],
   hours: ['open', 'close', 'slotUnitMinutes'],
   arrival: ['gracePeriodMinutes', 'earlyArrivalLimitMinutes'],
   window: ['bookingWindowDays'],
@@ -62,6 +69,8 @@ export type SettingsPayload = {
   appName?: string
   appTagline?: string
   appShortName?: string | null
+  appLogoUrl?: string | null
+  loginDescription?: string | null
   loginCoverUrl?: string | null
   loginBrandColor?: string | null
   operatingStartMinute?: number
@@ -82,6 +91,8 @@ export function toForm(settings: Settings): FormState {
     appName: settings.appName,
     appTagline: settings.appTagline,
     appShortName: settings.appShortName ?? '',
+    appLogoUrl: settings.appLogoUrl ?? '',
+    loginDescription: settings.loginDescription ?? '',
     loginCoverUrl: settings.loginCoverUrl ?? '',
     loginBrandColor: settings.loginBrandColor ?? '',
     open: settings.operatingStartLabel,
@@ -109,12 +120,18 @@ export function restoreSection(
   switch (section) {
     case 'identity':
       return { ...current, warehouseName: saved.warehouseName }
-    case 'branding':
+    case 'brand':
       return {
         ...current,
+        appLogoUrl: saved.appLogoUrl,
         appName: saved.appName,
         appTagline: saved.appTagline,
         appShortName: saved.appShortName,
+      }
+    case 'login':
+      return {
+        ...current,
+        loginDescription: saved.loginDescription,
         loginCoverUrl: saved.loginCoverUrl,
         loginBrandColor: saved.loginBrandColor,
       }
@@ -160,6 +177,13 @@ export function dirtySections(form: FormState, saved: FormState) {
 
 /* ----------------------------- validasi ----------------------------- */
 
+/**
+ * Batas paragraf sambutan. Angka ini sama dengan lebar kolom
+ * `login_description` di database dan dengan batas di skema Zod server; kalau
+ * salah satunya diubah, yang lain harus ikut.
+ */
+export const LOGIN_DESCRIPTION_MAX = 240
+
 /** Angka bulat dalam rentang; string kosong selalu ditolak, termasuk untuk min 0. */
 function isIntegerIn(value: string, min: number, max: number) {
   const trimmed = value.trim()
@@ -204,7 +228,7 @@ export function sectionError(
       if (name.length > 120) return 'Nama gudang maksimal 120 karakter.'
       return null
     }
-    case 'branding': {
+    case 'brand': {
       const appName = form.appName.trim()
       // Nama kosong akan membuat header dan judul tab tampak rusak, jadi
       // ditolak di sini — bukan diam-diam diganti nilai bawaan.
@@ -215,6 +239,16 @@ export function sectionError(
       }
       if (form.appShortName.trim().length > 20) {
         return 'Nama pendek maksimal 20 karakter.'
+      }
+      const logo = form.appLogoUrl.trim()
+      if (logo !== '' && !isSafeImageUrl(logo)) {
+        return 'Logo harus PNG atau JPG yang diunggah dari sini, atau alamat https.'
+      }
+      return null
+    }
+    case 'login': {
+      if (form.loginDescription.trim().length > LOGIN_DESCRIPTION_MAX) {
+        return `Teks sambutan maksimal ${LOGIN_DESCRIPTION_MAX} karakter.`
       }
       const cover = form.loginCoverUrl.trim()
       if (cover !== '' && !isSafeImageUrl(cover)) {
@@ -281,13 +315,18 @@ export function sectionPayload(
   switch (section) {
     case 'identity':
       return { warehouseName: form.warehouseName.trim() }
-    case 'branding':
+    case 'brand':
       return {
         appName: form.appName.trim(),
         appTagline: form.appTagline.trim(),
         // String kosong dikirim sebagai null: server lalu memakai judul penuh
         // untuk tab, bukan nama pendek sepanjang nol karakter.
         appShortName: form.appShortName.trim() || null,
+        appLogoUrl: form.appLogoUrl.trim() || null,
+      }
+    case 'login':
+      return {
+        loginDescription: form.loginDescription.trim() || null,
         loginCoverUrl: form.loginCoverUrl.trim() || null,
         loginBrandColor: form.loginBrandColor.trim() || null,
       }

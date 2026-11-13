@@ -1,4 +1,5 @@
-import { brandInitial, useBranding } from '@/lib/branding'
+import { BrandLogo } from '@/components/brand-logo'
+import { useBranding } from '@/lib/branding'
 import { cn } from '@/lib/utils'
 
 /**
@@ -67,16 +68,29 @@ export function WhiteLabel({ className }: { className?: string }) {
         )}
       >
         <div className='flex items-center gap-3'>
-          <div
-            className={cn(
-              'flex size-10 items-center justify-center rounded-lg text-lg font-bold',
-              loginCoverUrl || loginBrandColor
-                ? 'bg-white/15 text-white backdrop-blur-sm'
-                : 'bg-primary text-primary-foreground'
-            )}
-          >
-            {brandInitial(brand.appName)}
-          </div>
+          {/* Logo unggahan bisa berwarna gelap; di atas foto atau warna aksen
+              ia diberi alas putih supaya tetap terbaca. Lencana huruf sudah
+              punya alas sendiri. */}
+          {brand.appLogoUrl && (loginCoverUrl || loginBrandColor) ? (
+            <span className='flex items-center justify-center rounded-xl bg-white/95 px-2 py-1.5 shadow-sm'>
+              <BrandLogo
+                name={brand.appName}
+                logoUrl={brand.appLogoUrl}
+                size={26}
+              />
+            </span>
+          ) : (
+            <BrandLogo
+              name={brand.appName}
+              logoUrl={brand.appLogoUrl}
+              size={40}
+              className={cn(
+                !brand.appLogoUrl &&
+                  (loginCoverUrl || loginBrandColor) &&
+                  'bg-white/15 text-white backdrop-blur-sm'
+              )}
+            />
+          )}
           <span className='text-sm font-semibold tracking-tight'>
             {brand.appName}
           </span>
@@ -94,8 +108,7 @@ export function WhiteLabel({ className }: { className?: string }) {
                 : 'text-muted-foreground'
             )}
           >
-            Kelola jadwal bongkar, antrean dock, dan tiket supir dari satu
-            tempat.
+            {brand.loginDescription}
           </p>
         </div>
 

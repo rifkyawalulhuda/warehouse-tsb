@@ -39,12 +39,14 @@ describe('nama aplikasi', () => {
     })
 
     const branding = await request(app).get('/api/branding')
-    // `/api/branding` juga mengirim dua kolom halaman login. Nilainya null di
-    // tes ini karena tidak pernah diisi, tetapi kolomnya wajib ada.
+    // `/api/branding` juga mengirim kolom merek dan halaman login. Nilainya null
+    // di tes ini karena tidak pernah diisi, tetapi kolomnya wajib ada.
     expect(branding.body.data).toEqual({
       appName: 'TSB Dock',
       appTagline: 'Antrean Gudang',
       appShortName: 'TSB',
+      appLogoUrl: null,
+      loginDescription: null,
       loginCoverUrl: null,
       loginBrandColor: null,
     })
@@ -66,6 +68,69 @@ describe('nama aplikasi', () => {
     expect(response.status).toBe(200)
     expect(response.body.data.appShortName).toBeNull()
     expect(response.body.data.appName).toBe('TSB Dock')
+  })
+
+  it('menyimpan logo dan teks sambutan halaman masuk', async () => {
+    const cookie = await loginCookie(app, 'admin@test.local')
+
+    const response = await request(app)
+      .put('/api/settings')
+      .set('Cookie', cookie)
+      .send({
+        appLogoUrl: ' /api/uploads/app-logo-1.png ',
+        loginDescription: '  Bongkar lebih cepat.  ',
+      })
+
+    expect(response.status).toBe(200)
+    expect(response.body.data.appLogoUrl).toBe('/api/uploads/app-logo-1.png')
+    expect(response.body.data.loginDescription).toBe('Bongkar lebih cepat.')
+
+    // Halaman masuk membacanya tanpa sesi; nilainya harus ikut terkirim.
+    const branding = await request(app).get('/api/branding')
+    expect(branding.body.data.appLogoUrl).toBe('/api/uploads/app-logo-1.png')
+    expect(branding.body.data.loginDescription).toBe('Bongkar lebih cepat.')
+  })
+
+  it('mengosongkan logo dan teks sambutan kembali ke null', async () => {
+    const cookie = await loginCookie(app, 'admin@test.local')
+    await request(app)
+      .put('/api/settings')
+      .set('Cookie', cookie)
+      .send({
+        appLogoUrl: '/api/uploads/app-logo-1.png',
+        loginDescription: 'Halo',
+      })
+
+    const response = await request(app)
+      .put('/api/settings')
+      .set('Cookie', cookie)
+      .send({ appLogoUrl: '   ', loginDescription: '   ' })
+
+    expect(response.status).toBe(200)
+    // Null, bukan string kosong: layar masuk memakai null sebagai penanda
+    // "pakai teks dan lencana bawaan".
+    expect(response.body.data.appLogoUrl).toBeNull()
+    expect(response.body.data.loginDescription).toBeNull()
+  })
+
+  it('menolak logo yang bukan unggahan sendiri atau http(s)', async () => {
+    const cookie = await loginCookie(app, 'admin@test.local')
+
+    // Nilai ini dirender di halaman tanpa sesi, jadi skema seperti javascript:
+    // tidak boleh lolos.
+    const unsafe = await request(app)
+      .put('/api/settings')
+      .set('Cookie', cookie)
+      .send({ appLogoUrl: 'javascript:alert(1)' })
+
+    expect(unsafe.status).toBe(400)
+    expect(unsafe.body.error.code).toBe('VALIDATION_ERROR')
+
+    const remote = await request(app)
+      .put('/api/settings')
+      .set('Cookie', cookie)
+      .send({ appLogoUrl: 'https://cdn.contoh.test/logo.png' })
+    expect(remote.status).toBe(200)
   })
 
   it('menolak judul kosong dan teks melebihi kolom database', async () => {

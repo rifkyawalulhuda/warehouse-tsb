@@ -161,6 +161,10 @@ export type Settings = {
   appName: string
   appTagline: string
   appShortName: string | null
+  /** Logo aplikasi; null = lencana huruf pertama dari appName. */
+  appLogoUrl: string | null
+  /** Paragraf sambutan halaman masuk; null = teks bawaan. */
+  loginDescription: string | null
   /** Gambar sisi kanan halaman masuk; null = gradien bawaan. */
   loginCoverUrl: string | null
   /** Warna aksen halaman masuk (hex) pilihan Admin; null = warna bawaan. */

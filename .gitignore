@@ -32,6 +32,9 @@ server/dist
 # Cache plugin TanStack Router (dibuat ulang tiap dev/test)
 /.tanstack/
 
+# Berkas unggahan runtime (logo, gambar panel masuk) — data lokal, bukan bagian repo
+/uploads/
+
 # Test coverage
 /coverage
 

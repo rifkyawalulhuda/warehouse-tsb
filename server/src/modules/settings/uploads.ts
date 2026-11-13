@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { Router } from 'express'
+import { Router, type NextFunction, type Request, type Response } from 'express'
 import { requireAuth, requireExactRole } from '../../middleware/auth'
 import { badRequest } from '../../lib/http-error'
 
@@ -49,18 +49,11 @@ export function uploadsDir() {
 export const uploadsRouter = Router()
 
 /**
- * `PUT /api/uploads/login-cover` dengan badan biner mentah (bukan multipart).
- * Admin mengunggah satu gambar; nama berkas dibuat acak sehingga tidak ada
- * nama dari klien yang pernah menyentuh jalur disk.
- *
- * Rute ini memakai parser binernya sendiri di app.ts, di depan body JSON,
- * karena berkas gambar bukan JSON.
+ * Satu penangan untuk semua unggahan gambar: yang berbeda hanya awalan nama
+ * berkas, supaya gambar panel dan logo tidak pernah tertukar di folder disk.
  */
-uploadsRouter.put(
-  '/login-cover',
-  requireAuth,
-  requireExactRole('ADMIN'),
-  (req, res, next) => {
+function handleUpload(prefix: string) {
+  return (req: Request, res: Response, next: NextFunction) => {
     try {
       const body = req.body
       if (!Buffer.isBuffer(body) || body.length === 0) {
@@ -75,7 +68,7 @@ uploadsRouter.put(
         throw badRequest('UPLOAD_TYPE', 'Gambar harus PNG atau JPG.')
       }
 
-      const name = `login-cover-${Date.now()}-${randomBytes(4).toString('hex')}.${kind.ext}`
+      const name = `${prefix}-${Date.now()}-${randomBytes(4).toString('hex')}.${kind.ext}`
       writeFileSync(join(uploadsDir(), name), body)
 
       res.json({ data: { url: `${UPLOAD_PATH}/${name}` } })
@@ -83,4 +76,31 @@ uploadsRouter.put(
       next(error)
     }
   }
+}
+
+/**
+ * `PUT /api/uploads/login-cover` dengan badan biner mentah (bukan multipart).
+ * Admin mengunggah satu gambar; nama berkas dibuat acak sehingga tidak ada
+ * nama dari klien yang pernah menyentuh jalur disk.
+ *
+ * Rute ini memakai parser binernya sendiri di app.ts, di depan body JSON,
+ * karena berkas gambar bukan JSON.
+ */
+uploadsRouter.put(
+  '/login-cover',
+  requireAuth,
+  requireExactRole('ADMIN'),
+  handleUpload('login-cover')
+)
+
+/**
+ * `PUT /api/uploads/logo` — logo aplikasi. Batas 2 MB yang sama dipakai karena
+ * yang membatasi bukan ukuran berkas, melainkan waktu muat halaman masuk yang
+ * dibuka tanpa sesi di jaringan ponsel.
+ */
+uploadsRouter.put(
+  '/logo',
+  requireAuth,
+  requireExactRole('ADMIN'),
+  handleUpload('app-logo')
 )

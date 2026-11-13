@@ -47,6 +47,8 @@ async function settingsPayload() {
     appName: settings.appName,
     appTagline: settings.appTagline,
     appShortName: settings.appShortName,
+    appLogoUrl: settings.appLogoUrl,
+    loginDescription: settings.loginDescription,
     loginCoverUrl: settings.loginCoverUrl,
     loginBrandColor: settings.loginBrandColor,
     operatingStartMinute: settings.operatingStartMinute,
@@ -83,6 +85,19 @@ const updateSchema = z.object({
   appTagline: z.string().trim().max(80).optional(),
   // Null/"" melepas nama pendek, sehingga judul tab kembali memakai appName.
   appShortName: z.string().trim().max(20).nullable().optional(),
+  // Logo aplikasi. Aturan URL-nya sama dengan gambar panel: nilai ini dirender
+  // di halaman tanpa sesi, jadi hanya unggahan kita sendiri atau http(s).
+  appLogoUrl: z
+    .string()
+    .trim()
+    .max(2048)
+    .refine((value) => value === '' || isSafeImageUrl(value), {
+      message: 'URL logo harus diawali /api/uploads/ atau http(s)://',
+    })
+    .nullable()
+    .optional(),
+  // Paragraf sambutan halaman masuk. Null/"" berarti memakai teks bawaan.
+  loginDescription: z.string().trim().max(240).nullable().optional(),
   // Gambar sisi kanan halaman masuk. Hanya URL yang berasal dari unggahan kita
   // sendiri (atau http/https biasa) yang diterima: nilai ini dirender sebagai
   // CSS `url()` di halaman tanpa sesi, jadi skema seperti `javascript:` tidak
@@ -157,6 +172,14 @@ settingsRouter.put('/', requireAuth, requireExactRole('ADMIN'), async (req, res,
       if (data.loginBrandColor !== undefined) {
         data.loginBrandColor = data.loginBrandColor?.trim()
           ? data.loginBrandColor.trim()
+          : null
+      }
+      if (data.appLogoUrl !== undefined) {
+        data.appLogoUrl = data.appLogoUrl?.trim() ? data.appLogoUrl.trim() : null
+      }
+      if (data.loginDescription !== undefined) {
+        data.loginDescription = data.loginDescription?.trim()
+          ? data.loginDescription.trim()
           : null
       }
       await tx.warehouseSetting.update({ where: { id: current.id }, data })

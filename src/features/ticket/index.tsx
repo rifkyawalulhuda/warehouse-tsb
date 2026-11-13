@@ -5,6 +5,7 @@ import { Loader2, Lock, MessageCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { apiErrorMessage } from '@/lib/api/client'
 import { completeVehicleByTicket, fetchPublicTicket } from '@/lib/api/endpoints'
+import { useBranding } from '@/lib/branding'
 import { formatTime, waNumber } from '@/lib/format'
 import { closeTicketSocket, getTicketSocket } from '@/lib/socket'
 import { Button } from '@/components/ui/button'
@@ -12,6 +13,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ApprovalBadge } from '@/components/approval-badge'
+import { BrandLogo } from '@/components/brand-logo'
 import { ErrorBlock, LoadingBlock } from '@/components/query-state'
 import { StatusBadge } from '@/components/status-badge'
 import { TicketPanel } from './ticket-panel'
@@ -25,6 +27,7 @@ import './ticket-print.css'
 export function TicketPage() {
   const { token } = useParams({ from: '/t/$token' })
   const queryClient = useQueryClient()
+  const brand = useBranding()
 
   const { data, isPending, isError, error, refetch } = useQuery({
     queryKey: ['ticket', token],
@@ -79,6 +82,12 @@ export function TicketPage() {
   return (
     <div className='mx-auto max-w-md space-y-4 p-4 pb-10 sm:p-6'>
       <div className='space-y-1 text-center'>
+        {/* Merek aplikasi di halaman tanpa sesi: supir perlu tahu tiket ini
+            dari sistem mana, dan logonya jauh lebih cepat dikenali daripada
+            nama gudang. */}
+        <div className='mb-2 flex justify-center'>
+          <BrandLogo name={brand.appName} logoUrl={brand.appLogoUrl} size={32} />
+        </div>
         <p className='text-xs tracking-wide text-muted-foreground uppercase'>
           {ticket.warehouseName}
         </p>

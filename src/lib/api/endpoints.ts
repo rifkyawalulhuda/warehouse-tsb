@@ -60,6 +60,8 @@ export type Branding = Pick<
   | 'appName'
   | 'appTagline'
   | 'appShortName'
+  | 'appLogoUrl'
+  | 'loginDescription'
   | 'loginCoverUrl'
   | 'loginBrandColor'
 >
@@ -74,6 +76,8 @@ export function saveSettings(payload: {
   appName?: string
   appTagline?: string
   appShortName?: string | null
+  appLogoUrl?: string | null
+  loginDescription?: string | null
   loginCoverUrl?: string | null
   loginBrandColor?: string | null
   operatingStartMinute?: number
@@ -99,11 +103,18 @@ export function saveSettings(payload: {
  * terbuka untuk Admin yang sedang masuk.
  */
 export async function uploadLoginCover(file: Blob) {
-  const response = await api.put<{ data: { url: string } }>(
-    '/uploads/login-cover',
-    file,
-    { headers: { 'Content-Type': file.type || 'application/octet-stream' } }
-  )
+  return uploadImage('/uploads/login-cover', file)
+}
+
+/** Logo aplikasi. Batas dan aturan tipenya sama dengan gambar panel. */
+export async function uploadAppLogo(file: Blob) {
+  return uploadImage('/uploads/logo', file)
+}
+
+async function uploadImage(path: string, file: Blob) {
+  const response = await api.put<{ data: { url: string } }>(path, file, {
+    headers: { 'Content-Type': file.type || 'application/octet-stream' },
+  })
   return response.data.data.url
 }
 

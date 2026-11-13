@@ -8,6 +8,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 import { Button } from '../ui/button'
+import { BrandLogo } from '@/components/brand-logo'
 import { useBranding } from '@/lib/branding'
 
 export function AppTitle() {
@@ -25,12 +26,19 @@ export function AppTitle() {
             <Link
               to='/'
               onClick={() => setOpenMobile(false)}
-              className='grid flex-1 text-start text-sm leading-tight'
+              className='flex min-w-0 flex-1 items-center gap-2 text-start text-sm leading-tight'
             >
-              <span className='truncate font-bold'>{brand.appName}</span>
-              {brand.appTagline && (
-                <span className='truncate text-xs'>{brand.appTagline}</span>
-              )}
+              <BrandLogo
+                name={brand.appName}
+                logoUrl={brand.appLogoUrl}
+                size={28}
+              />
+              <span className='grid min-w-0 leading-tight'>
+                <span className='truncate font-bold'>{brand.appName}</span>
+                {brand.appTagline && (
+                  <span className='truncate text-xs'>{brand.appTagline}</span>
+                )}
+              </span>
             </Link>
             <ToggleSidebar />
           </div>

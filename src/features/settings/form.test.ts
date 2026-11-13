@@ -5,6 +5,7 @@ import {
   hoursNote,
   impactOf,
   isDirty,
+  LOGIN_DESCRIPTION_MAX,
   restoreSection,
   sectionError,
   sectionPayload,
@@ -16,6 +17,8 @@ const settings: Settings = {
   appName: 'Warehouse TSB',
   appTagline: 'Time Slot Booking',
   appShortName: null,
+  appLogoUrl: null,
+  loginDescription: null,
   loginCoverUrl: null,
   loginBrandColor: null,
   operatingStartMinute: 480,
@@ -70,59 +73,114 @@ describe('status kotor per seksi', () => {
   })
 })
 
-describe('seksi nama aplikasi', () => {
+describe('seksi identitas merek', () => {
   const saved = toForm(settings)
 
   it('memisahkan draf merek dari identitas gudang', () => {
     const form = { ...saved, appName: 'TSB Dock' }
-    expect(dirtySections(form, saved)).toEqual(['branding'])
+    expect(dirtySections(form, saved)).toEqual(['brand'])
 
     const restored = restoreSection(
       { ...form, warehouseName: 'Gudang Lain' },
       saved,
-      'branding'
+      'brand'
     )
     expect(restored.appName).toBe('Warehouse TSB')
     expect(restored.warehouseName).toBe('Gudang Lain')
   })
 
   it('menolak judul kosong — header tidak boleh tanpa nama', () => {
-    expect(sectionError('branding', { ...saved, appName: '   ' })).toBe(
+    expect(sectionError('brand', { ...saved, appName: '   ' })).toBe(
       'Judul aplikasi wajib diisi.'
     )
-    expect(sectionError('branding', saved)).toBeNull()
+    expect(sectionError('brand', saved)).toBeNull()
   })
 
   it('menolak teks yang lebih panjang dari kolom database', () => {
     expect(
-      sectionError('branding', { ...saved, appName: 'a'.repeat(61) })
+      sectionError('brand', { ...saved, appName: 'a'.repeat(61) })
     ).toContain('maksimal 60')
     expect(
-      sectionError('branding', { ...saved, appTagline: 'a'.repeat(81) })
+      sectionError('brand', { ...saved, appTagline: 'a'.repeat(81) })
     ).toContain('Subjudul maksimal 80')
     expect(
-      sectionError('branding', { ...saved, appShortName: 'a'.repeat(21) })
+      sectionError('brand', { ...saved, appShortName: 'a'.repeat(21) })
     ).toContain('Nama pendek maksimal 20')
   })
 
-  it('mengirim nama pendek kosong sebagai null, bukan string kosong', () => {
-    expect(sectionPayload('branding', { ...saved, appShortName: '  ' })).toEqual(
-      {
-        appName: 'Warehouse TSB',
-        appTagline: 'Time Slot Booking',
-        appShortName: null,
-        loginCoverUrl: null,
-        loginBrandColor: null,
-      }
-    )
+  it('menolak logo yang bukan unggahan atau alamat https', () => {
     expect(
-      sectionPayload('branding', { ...saved, appShortName: ' TSB ' })
+      sectionError('brand', { ...saved, appLogoUrl: 'javascript:alert(1)' })
+    ).toContain('Logo harus PNG atau JPG')
+    expect(
+      sectionError('brand', { ...saved, appLogoUrl: '/api/uploads/logo-a.png' })
+    ).toBeNull()
+  })
+
+  it('mengirim nama pendek dan logo kosong sebagai null', () => {
+    expect(
+      sectionPayload('brand', {
+        ...saved,
+        appShortName: '  ',
+        appLogoUrl: '   ',
+      })
+    ).toEqual({
+      appName: 'Warehouse TSB',
+      appTagline: 'Time Slot Booking',
+      appShortName: null,
+      appLogoUrl: null,
+    })
+    expect(
+      sectionPayload('brand', { ...saved, appShortName: ' TSB ' })
     ).toMatchObject({ appShortName: 'TSB' })
   })
 
   it('membaca null dari server sebagai kolom kosong di form', () => {
     expect(toForm(settings).appShortName).toBe('')
+    expect(toForm(settings).appLogoUrl).toBe('')
     expect(toForm({ ...settings, appShortName: 'TSB' }).appShortName).toBe('TSB')
+  })
+})
+
+describe('seksi halaman masuk', () => {
+  const saved = toForm(settings)
+
+  it('menyimpan teks sambutan terpisah dari merek', () => {
+    const form = { ...saved, loginDescription: 'Bongkar lebih cepat.' }
+    expect(dirtySections(form, saved)).toEqual(['login'])
+
+    const restored = restoreSection(form, saved, 'login')
+    expect(restored.loginDescription).toBe('')
+    // Judul merek tidak ikut kembali saat seksi halaman masuk direset.
+    expect(restored.appName).toBe(saved.appName)
+  })
+
+  it('menolak teks sambutan yang melebihi batas kolom', () => {
+    expect(
+      sectionError('login', {
+        ...saved,
+        loginDescription: 'a'.repeat(LOGIN_DESCRIPTION_MAX + 1),
+      })
+    ).toContain('maksimal 240')
+    expect(
+      sectionError('login', {
+        ...saved,
+        loginDescription: 'a'.repeat(LOGIN_DESCRIPTION_MAX),
+      })
+    ).toBeNull()
+  })
+
+  it('mengirim teks sambutan kosong sebagai null agar server memakai bawaan', () => {
+    expect(
+      sectionPayload('login', { ...saved, loginDescription: '   ' })
+    ).toEqual({
+      loginDescription: null,
+      loginCoverUrl: null,
+      loginBrandColor: null,
+    })
+    expect(
+      sectionPayload('login', { ...saved, loginDescription: ' Halo ' })
+    ).toMatchObject({ loginDescription: 'Halo' })
   })
 })
 

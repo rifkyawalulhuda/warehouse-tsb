@@ -35,6 +35,10 @@ export function createApp() {
     `${UPLOAD_PATH}/login-cover`,
     express.raw({ type: () => true, limit: '2mb' })
   )
+  app.use(
+    `${UPLOAD_PATH}/logo`,
+    express.raw({ type: () => true, limit: '2mb' })
+  )
   app.use(express.json({ limit: '1mb' }))
   app.use(cookieParser())
 

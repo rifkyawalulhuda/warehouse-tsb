@@ -20,6 +20,8 @@ brandingRouter.get('/', async (_req, res, next) => {
         appName: true,
         appTagline: true,
         appShortName: true,
+        appLogoUrl: true,
+        loginDescription: true,
         loginCoverUrl: true,
         loginBrandColor: true,
       },

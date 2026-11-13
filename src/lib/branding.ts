@@ -2,6 +2,14 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchBranding, type Branding } from '@/lib/api/endpoints'
 
 /**
+ * Paragraf sambutan bawaan halaman masuk. Dipakai sebagai nilai cadangan dan
+ * sebagai placeholder di Pengaturan, supaya Admin tahu persis teks apa yang
+ * sedang menggantikan isian kosong.
+ */
+export const DEFAULT_LOGIN_DESCRIPTION =
+  'Kelola jadwal bongkar, antrean dock, dan tiket supir dari satu tempat.'
+
+/**
  * Judul aplikasi yang diatur Admin. Muncul di sidebar, halaman masuk, dan judul
  * tab peramban; semuanya memakai satu sumber supaya tidak pernah ada layar yang
  * masih menulis nama lama setelah diganti.
@@ -15,6 +23,8 @@ export const DEFAULT_BRANDING: Branding = {
   appName: 'Warehouse TSB',
   appTagline: 'Time Slot Booking',
   appShortName: null,
+  appLogoUrl: null,
+  loginDescription: null,
   loginCoverUrl: null,
   loginBrandColor: null,
 }
@@ -54,6 +64,11 @@ export function useBranding(): Branding {
     appName: data.appName || DEFAULT_BRANDING.appName,
     appTagline: data.appTagline,
     appShortName: data.appShortName,
+    // Kosong berarti Admin belum mengunggah logo; lencana huruf lalu dipakai.
+    appLogoUrl: data.appLogoUrl?.trim() || null,
+    // Paragraf sambutan selalu punya isi: kosong berarti teks bawaan, dan
+    // layar masuk tidak perlu tahu bedanya.
+    loginDescription: data.loginDescription?.trim() || DEFAULT_LOGIN_DESCRIPTION,
     // Kosong berarti Admin belum mengunggah apa pun; halaman masuk lalu memakai
     // gradien bawaan, bukan gambar kosong yang tampak rusak.
     loginCoverUrl: data.loginCoverUrl?.trim() || null,

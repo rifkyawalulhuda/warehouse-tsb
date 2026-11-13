@@ -147,6 +147,10 @@ model WarehouseSetting {
   appTagline               String  @default("Time Slot Booking") @map("app_tagline") @db.VarChar(80)
   /// Nama pendek untuk judul tab dan layar sempit. Kosong = pakai appName.
   appShortName             String? @map("app_short_name") @db.VarChar(20)
+  /// Logo aplikasi (hasil unggahan Admin). Null = lencana huruf pertama appName.
+  appLogoUrl               String? @map("app_logo_url") @db.VarChar(2048)
+  /// Paragraf sambutan di bawah judul halaman masuk. Null = teks bawaan.
+  loginDescription         String? @map("login_description") @db.VarChar(240)
   /// Gambar sisi kanan halaman masuk (hasil unggahan Admin). Null = gradien bawaan.
   loginCoverUrl            String? @map("login_cover_url") @db.VarChar(2048)
   /// Warna aksen halaman masuk, hex 6 digit. Null = warna bawaan tema.

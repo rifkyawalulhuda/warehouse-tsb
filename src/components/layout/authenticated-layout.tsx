@@ -2,6 +2,7 @@ import { Outlet } from '@tanstack/react-router'
 import { getCookie } from '@/lib/cookies'
 import { tabTitle, useBranding } from '@/lib/branding'
 import { useDocumentTitle } from '@/lib/use-document-title'
+import { useFavicon } from '@/lib/use-favicon'
 import { cn } from '@/lib/utils'
 import { LayoutProvider } from '@/context/layout-provider'
 import { PageTitleProvider, usePageTitle } from '@/context/page-title-provider'
@@ -66,5 +67,6 @@ function DocumentTitle() {
   const brand = useBranding()
   const app = tabTitle(brand.appName, brand.appShortName)
   useDocumentTitle(pageTitle ? `${pageTitle} · ${app}` : app)
+  useFavicon(brand.appLogoUrl)
   return null
 }

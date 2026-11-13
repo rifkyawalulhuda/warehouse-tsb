@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   CalendarClock,
   Clock,
+  LogIn,
   Palette,
   ShieldCheck,
   Truck,
@@ -12,7 +13,8 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { apiErrorMessage } from '@/lib/api/client'
-import { brandInitial, tabTitle } from '@/lib/branding'
+import { BrandLogo } from '@/components/brand-logo'
+import { DEFAULT_LOGIN_DESCRIPTION, tabTitle } from '@/lib/branding'
 import { fetchSettings, saveSettings } from '@/lib/api/endpoints'
 import type { Settings } from '@/lib/api/types'
 import { cn } from '@/lib/utils'
@@ -33,6 +35,7 @@ import {
   hoursNote,
   impactOf,
   isDirty,
+  LOGIN_DESCRIPTION_MAX,
   restoreSection,
   sectionError,
   sectionPayload,
@@ -43,6 +46,8 @@ import {
 import { OperationsSummary, PolicyFlag } from './operations-summary'
 import { FieldRow, NumberField, SectionPanel } from './section-panel'
 import { LoginPanelFields } from './login-panel-fields'
+import { LoginPreview } from './login-preview'
+import { LogoField } from './logo-field'
 
 type Tab = SectionKey | 'appearance'
 
@@ -59,10 +64,16 @@ const TABS: {
     group: 'Gudang',
   },
   {
-    key: 'branding',
-    label: 'Nama aplikasi',
+    key: 'brand',
+    label: 'Identitas merek',
     icon: Type,
-    group: 'Gudang',
+    group: 'Merek',
+  },
+  {
+    key: 'login',
+    label: 'Halaman masuk',
+    icon: LogIn,
+    group: 'Merek',
   },
   { key: 'hours', label: 'Jam operasional', icon: Clock, group: 'Operasional' },
   {
@@ -238,22 +249,28 @@ function SettingsForm({ settings }: { settings: Settings }) {
               </SectionPanel>
             )}
 
-            {activeTab.key === 'branding' && (
+            {activeTab.key === 'brand' && (
               <SectionPanel
                 icon={Type}
-                title='Nama aplikasi'
-                description='Tampil di kepala sidebar, halaman masuk, dan judul tab peramban. Panel kanan halaman masuk bisa memakai gambar atau warna pilihan Anda. Bukan nama gudang — identitas gudang tetap di seksi Identitas gudang.'
-                error={sectionError('branding', form)}
-                dirty={isDirty('branding', form, saved)}
-                pending={save.isPending && save.variables === 'branding'}
-                onSave={() => save.mutate('branding')}
-                onReset={() => resetSection('branding')}
-                footerNote='Berlaku untuk semua pengguna setelah disimpan. Halaman tiket supir memakai nama perusahaan customer, bukan nama ini.'
+                title='Identitas merek'
+                description='Logo, judul, dan subjudul yang tampil di kepala sidebar, halaman masuk, dan judul tab peramban. Bukan nama gudang — identitas gudang tetap di seksi Identitas gudang.'
+                error={sectionError('brand', form)}
+                dirty={isDirty('brand', form, saved)}
+                pending={save.isPending && save.variables === 'brand'}
+                onSave={() => save.mutate('brand')}
+                onReset={() => resetSection('brand')}
+                footerNote='Berlaku untuk semua pengguna setelah disimpan. Halaman tiket supir tetap memakai nama perusahaan customer, bukan judul ini.'
               >
+                <LogoField
+                  logoUrl={form.appLogoUrl}
+                  appName={form.appName}
+                  onChange={setField}
+                />
+
                 <FieldRow
                   label='Judul aplikasi'
                   htmlFor='app-name'
-                  hint='1–60 karakter. Huruf pertama dipakai sebagai huruf lencana logo.'
+                  hint='1–60 karakter. Huruf pertama dipakai sebagai lencana saat logo belum diunggah.'
                 >
                   <Input
                     id='app-name'
@@ -300,18 +317,61 @@ function SettingsForm({ settings }: { settings: Settings }) {
                   />
                 </FieldRow>
 
+                <BrandPreview
+                  appName={form.appName}
+                  appTagline={form.appTagline}
+                  appShortName={form.appShortName}
+                  logoUrl={form.appLogoUrl}
+                />
+              </SectionPanel>
+            )}
+
+            {activeTab.key === 'login' && (
+              <SectionPanel
+                icon={LogIn}
+                title='Halaman masuk'
+                description='Kalimat sambutan dan tampilan panel kanan di halaman masuk. Yang diubah di sini hanya yang dilihat sebelum masuk.'
+                error={sectionError('login', form)}
+                dirty={isDirty('login', form, saved)}
+                pending={save.isPending && save.variables === 'login'}
+                onSave={() => save.mutate('login')}
+                onReset={() => resetSection('login')}
+                footerNote='Teks sambutan tampil juga di ponsel di bawah nama aplikasi; gambar panel hanya di layar lebar.'
+              >
+                <FieldRow
+                  label='Teks sambutan'
+                  htmlFor='login-description'
+                  hint={`1–${LOGIN_DESCRIPTION_MAX} karakter. Kosongkan untuk memakai teks bawaan.`}
+                >
+                  <div className='flex w-full flex-col gap-1.5 sm:w-96'>
+                    <textarea
+                      id='login-description'
+                      value={form.loginDescription}
+                      onChange={(event) =>
+                        setField('loginDescription', event.target.value)
+                      }
+                      maxLength={LOGIN_DESCRIPTION_MAX}
+                      rows={3}
+                      placeholder={DEFAULT_LOGIN_DESCRIPTION}
+                      className='min-h-20 w-full resize-y rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50'
+                    />
+                    <span className='self-end text-[11px] text-muted-foreground tabular-nums'>
+                      {form.loginDescription.length}/{LOGIN_DESCRIPTION_MAX}
+                    </span>
+                  </div>
+                </FieldRow>
+
                 <LoginPanelFields
                   coverUrl={form.loginCoverUrl}
                   brandColor={form.loginBrandColor}
                   onChange={setField}
                 />
 
-                <BrandPreview
+                <LoginPreview
                   appName={form.appName}
                   appTagline={form.appTagline}
-                  appShortName={form.appShortName}
-                  coverUrl={form.loginCoverUrl}
-                  brandColor={form.loginBrandColor}
+                  appLogoUrl={form.appLogoUrl}
+                  description={form.loginDescription}
                 />
               </SectionPanel>
             )}
@@ -633,36 +693,36 @@ function SettingsForm({ settings }: { settings: Settings }) {
 }
 
 /**
- * Pratinjau memakai ukuran dan pemotongan yang sama dengan sidebar sungguhan,
- * supaya judul yang terlalu panjang terlihat terpotong di sini — bukan setelah
- * disimpan dan semua orang melihatnya.
+ * Pratinjau merek memakai ukuran dan pemotongan yang sama dengan tempat
+ * aslinya — kepala sidebar 28 px dan ikon tab 16 px — supaya judul yang terlalu
+ * panjang atau logo yang terlalu rinci terlihat bermasalah di sini, bukan
+ * setelah disimpan dan semua orang melihatnya.
  */
 function BrandPreview({
   appName,
   appTagline,
   appShortName,
-  coverUrl,
-  brandColor,
+  logoUrl,
 }: {
   appName: string
   appTagline: string
   appShortName: string
-  coverUrl: string
-  brandColor: string
+  logoUrl: string
 }) {
+  const name = appName.trim() || '—'
   const short = appShortName.trim()
-  const hasPanel = Boolean(coverUrl || brandColor)
   return (
     <div className='mt-4 rounded-lg border border-dashed px-4 py-3'>
       <p className='text-[11px] font-medium tracking-wide text-muted-foreground uppercase'>
         Pratinjau
       </p>
-      <div className='mt-2 flex items-center gap-2'>
-        <div className='flex size-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground'>
-          <span className='text-sm font-bold'>{brandInitial(appName)}</span>
-        </div>
+
+      {/* Kepala sidebar: satu-satunya tempat logo, judul, dan subjudul tampil
+          berdampingan, dan ruangnya paling sempit. */}
+      <div className='mt-2 flex items-center gap-2 rounded-md border bg-sidebar px-3 py-2'>
+        <BrandLogo name={name} logoUrl={logoUrl.trim() || null} size={28} />
         <div className='grid min-w-0 leading-tight'>
-          <span className='truncate font-bold'>{appName.trim() || '—'}</span>
+          <span className='truncate font-bold'>{name}</span>
           {appTagline.trim() && (
             <span className='truncate text-xs text-muted-foreground'>
               {appTagline.trim()}
@@ -671,35 +731,18 @@ function BrandPreview({
         </div>
       </div>
 
-      {/* Panel sisi kanan halaman masuk hanya ada di layar lebar; pratinjau
-          mengikuti aturan itu supaya admin tidak menduga gambar akan tampil di
-          ponsel. Tanpa gambar maupun warna, halaman masuk memakai gradien tema. */}
-      <div
-        className='mt-3 flex h-16 items-center justify-center overflow-hidden rounded-md border'
-        style={
-          coverUrl
-            ? {
-                backgroundImage: `url("${coverUrl}")`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-              }
-            : brandColor
-              ? { backgroundColor: brandColor }
-              : undefined
-        }
-      >
-        <span className='text-[11px] text-muted-foreground'>
-          {hasPanel
-            ? 'Panel halaman masuk (layar lebar)'
-            : 'Tanpa gambar — memakai gradien tema'}
+      {/* Tab peramban: ikon 16 px dan judul. */}
+      <div className='mt-3 flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-1.5'>
+        <BrandLogo name={name} logoUrl={logoUrl.trim() || null} size={16} />
+        <span className='truncate text-xs text-muted-foreground'>
+          {tabTitle(name, short || null)}
         </span>
+        <span className='ms-auto text-[10px] text-muted-foreground/70'>×</span>
       </div>
 
       <p className='mt-3 text-xs text-muted-foreground'>
-        Judul tab peramban:{' '}
-        <span className='font-medium text-foreground'>
-          {tabTitle(appName.trim() || '—', short || null)}
-        </span>
+        Nama pendek dipakai sebagai judul tab; kalau kosong, judul aplikasi yang
+        dipakai.
       </p>
     </div>
   )
@@ -707,7 +750,8 @@ function BrandPreview({
 
 const MESSAGE_BY_SECTION: Record<SectionKey, string> = {
   identity: 'Identitas gudang disimpan',
-  branding: 'Nama aplikasi disimpan',
+  brand: 'Identitas merek disimpan',
+  login: 'Halaman masuk disimpan',
   hours: 'Jam operasional disimpan',
   arrival: 'Aturan kedatangan disimpan',
   window: 'Jendela pemesanan disimpan',
