@@ -27,6 +27,10 @@ export function useRealtimeSync(enabled = true) {
       void queryClient.invalidateQueries({ queryKey: ['ticket'] })
       void queryClient.invalidateQueries({ queryKey: ['reports'] })
       void queryClient.invalidateQueries({ queryKey: ['master'] })
+      // Antrean persetujuan punya kunci sendiri. Tanpa baris ini keputusan
+      // Admin lain tidak terlihat sampai halaman dimuat ulang — dan penanda
+      // jumlah di menu ikut tertinggal.
+      void queryClient.invalidateQueries({ queryKey: ['approvals'] })
     }
 
     const onConnect = () => refreshAll()

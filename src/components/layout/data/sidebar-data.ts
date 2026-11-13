@@ -90,13 +90,31 @@ export function navGroupsForRole(role: Role | null): NavGroup[] {
   }
 }
 
+/**
+ * Menu sidebar untuk satu peran.
+ *
+ * `pendingApprovals` menandai menu Antrean Hari Ini, karena antrean
+ * persetujuan hidup sebagai tab di dalam layar itu — bukan menu tersendiri.
+ * Penandanya sengaja hanya isyarat: tujuan menu tidak diubah, jadi Checker
+ * tetap mendarat di tab Antrean seperti biasa.
+ */
 export function buildSidebarData(
   role: Role | null,
-  user: { name: string; email: string; company?: string }
+  user: { name: string; email: string; company?: string },
+  options: { pendingApprovals?: number } = {}
 ): SidebarData {
+  const pending = options.pendingApprovals ?? 0
+
   return {
     user: { ...user, avatar: '' },
     teams: [],
-    navGroups: navGroupsForRole(role),
+    navGroups: navGroupsForRole(role).map((group) => ({
+      ...group,
+      items: group.items.map((item) =>
+        pending > 0 && item.url === '/queue'
+          ? { ...item, attention: pending }
+          : item
+      ),
+    })),
   }
 }

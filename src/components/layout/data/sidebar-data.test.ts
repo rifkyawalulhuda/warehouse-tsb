@@ -55,3 +55,66 @@ describe('menu samping per peran', () => {
     expect(admin.user.company).toBeUndefined()
   })
 })
+
+describe('penanda persetujuan di menu', () => {
+  const user = { name: 'Admin', email: 'admin@tsb.test' }
+
+  function items(
+    role: Parameters<typeof buildSidebarData>[0],
+    pending?: number
+  ) {
+    return buildSidebarData(role, user, {
+      pendingApprovals: pending,
+    }).navGroups.flatMap((group) => group.items)
+  }
+
+  it('tidak menandai menu apa pun saat antrean persetujuan kosong', () => {
+    const queue = items('ADMIN').find((item) => item.url === '/queue')
+
+    expect(queue?.attention).toBeUndefined()
+  })
+
+  it('menandai Antrean Hari Ini dengan jumlah yang menunggu', () => {
+    const queue = items('ADMIN', 3).find((item) => item.url === '/queue')
+
+    expect(queue?.attention).toBe(3)
+  })
+
+  it('hanya menandai Antrean Hari Ini, bukan menu lain', () => {
+    const lain = items('ADMIN', 3).filter((item) => item.url !== '/queue')
+
+    expect(lain.length).toBeGreaterThan(0)
+    expect(lain.every((item) => item.attention === undefined)).toBe(true)
+  })
+
+  it('tidak mengubah tujuan menu, hanya menambah penanda', () => {
+    // Penanda adalah isyarat, bukan pengalihan: menu "Antrean Hari Ini" harus
+    // tetap membuka tab Antrean walau ada persetujuan yang menunggu. Karena
+    // itu satu-satunya kunci tambahan adalah `attention`.
+    const bertanda = items('ADMIN', 2).find((item) => item.url === '/queue')
+    const polos = items('ADMIN').find((item) => item.url === '/queue')
+
+    expect(bertanda?.url).toBe('/queue')
+    expect(Object.keys(bertanda ?? {}).sort()).toEqual(
+      [...Object.keys(polos ?? {}), 'attention'].sort()
+    )
+  })
+
+  it('tidak menandai peran yang tidak punya menu Antrean Hari Ini', () => {
+    // Gate officer memang tidak membuka layar antrean; penanda di sini akan
+    // menunjuk halaman yang menolaknya.
+    const gate = items('GATE_OFFICER', 5)
+
+    expect(gate.some((item) => item.url === '/queue')).toBe(false)
+    expect(gate.every((item) => item.attention === undefined)).toBe(true)
+  })
+
+  it('tidak mengubah menu asli saat menandai', () => {
+    // `navGroupsForRole` mengembalikan larik tingkat modul; menandai menu tidak
+    // boleh menulis ke sana, kalau tidak penanda terbawa ke sesi berikutnya.
+    items('ADMIN', 4)
+    const sesudahnya = items('ADMIN').find((item) => item.url === '/queue')
+
+    expect(sesudahnya?.attention).toBeUndefined()
+  })
+})

@@ -19,6 +19,10 @@ import {
 } from '@/components/ui/sidebar'
 import { Badge } from '../ui/badge'
 import {
+  ApprovalPulseDot,
+  PendingApprovalBadge,
+} from '@/components/pending-approval-badge'
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -62,19 +66,59 @@ function NavBadge({ children }: { children: ReactNode }) {
   return <Badge className='rounded-full px-1 py-0 text-xs'>{children}</Badge>
 }
 
+/**
+ * Penanda perhatian di baris menu.
+ *
+ * `compact` dipakai saat sidebar menyempit jadi rel ikon: tidak ada ruang
+ * untuk angka, jadi titiknya menempel di sudut ikon dan jumlahnya tetap
+ * terbaca lewat tooltip serta teks pembaca layar.
+ */
+function NavAttention({
+  count,
+  compact = false,
+}: {
+  count: number
+  compact?: boolean
+}) {
+  if (compact)
+    return (
+      <span className='absolute end-1.5 top-1.5'>
+        <ApprovalPulseDot />
+      </span>
+    )
+  return (
+    <span className='ms-auto'>
+      <PendingApprovalBadge count={count} />
+    </span>
+  )
+}
+
 function SidebarMenuLink({ item, href }: { item: NavLink; href: string }) {
-  const { setOpenMobile } = useSidebar()
+  const { state, isMobile, setOpenMobile } = useSidebar()
+  const collapsed = state === 'collapsed' && !isMobile
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
         asChild
         isActive={checkIsActive(href, item)}
-        tooltip={item.title}
+        tooltip={
+          item.attention
+            ? `${item.title} · ${item.attention} menunggu persetujuan`
+            : item.title
+        }
       >
-        <Link to={item.url} onClick={() => setOpenMobile(false)}>
+        <Link
+          to={item.url}
+          onClick={() => setOpenMobile(false)}
+          className='relative'
+        >
           {item.icon && <item.icon />}
           <span>{item.title}</span>
-          {item.badge && <NavBadge>{item.badge}</NavBadge>}
+          {item.attention ? (
+            <NavAttention count={item.attention} compact={collapsed} />
+          ) : (
+            item.badge && <NavBadge>{item.badge}</NavBadge>
+          )}
         </Link>
       </SidebarMenuButton>
     </SidebarMenuItem>

@@ -17,10 +17,12 @@ import { todayISO } from '@/lib/format'
 import { dockOptionLabel } from '@/lib/dock-label'
 import { cn } from '@/lib/utils'
 import { useNow } from '@/hooks/use-now'
+import { usePendingApprovals } from '@/hooks/use-pending-approvals'
 import { useRealtimeSync } from '@/hooks/use-realtime'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ConfirmDialog } from '@/components/confirm-dialog'
+import { PendingApprovalBadge } from '@/components/pending-approval-badge'
 import { DatePicker } from '@/components/date-picker'
 import { Main } from '@/components/layout/main'
 import { PageHeader } from '@/components/page-header'
@@ -48,6 +50,18 @@ type AssignVars = { bookingId: string; dockId: number; dockCode: string }
 type PendingAssign = { booking: Booking; dock: DockWithBooking }
 
 /**
+ * Tab dipasok rute, bukan dibaca di sini.
+ *
+ * Penanda persetujuan di menu perlu tujuan yang bisa ditautkan; rute yang
+ * memetakan `?tab=persetujuan` ke tab, sehingga mengeklik menu bermuatan titik
+ * merah langsung membuka daftar yang menunggu keputusan.
+ */
+type QueuePageProps = {
+  tab: 'queue' | 'approvals'
+  onTabChange: (next: 'queue' | 'approvals') => void
+}
+
+/**
  * Papan antrean satu hari: empat lane menurut tahap kerja, bukan tiga tabel
  * bertumpuk. Kartu diurutkan dari yang paling lama menunggu, dan jam tunggu
  * berdetak dari gate-in supaya truk yang tertahan terlihat tanpa dibuka dulu.
@@ -58,12 +72,11 @@ type PendingAssign = { booking: Booking; dock: DockWithBooking }
  * keputusan yang mengubah kuota slot tidak boleh bergantung pada kecepatan mata.
  * Setelah truk ditempatkan, toast tetap memberi jalan "Urungkan".
  */
-export function QueuePage() {
+export function QueuePage({ tab, onTabChange }: QueuePageProps) {
   useRealtimeSync()
   const queryClient = useQueryClient()
   const currentUser = useAuthStore((state) => state.user)
   const [date, setDate] = useState(todayISO())
-  const [tab, setTab] = useState<'queue' | 'approvals'>('queue')
   const [noShowTarget, setNoShowTarget] = useState<Booking | null>(null)
   const [pendingAssign, setPendingAssign] = useState<PendingAssign | null>(null)
   /** Dinaikkan setiap penugasan dipakai, supaya pemilih dock kembali kosong. */
@@ -82,6 +95,9 @@ export function QueuePage() {
   // tidak ditawarkan — Checker tanpa flag tidak punya hak menyetujui.
   const canApprove =
     currentUser?.role === 'ADMIN' || currentUser?.canApproveBooking === true
+
+  /** Sama dengan angka di menu, supaya tab dan sidebar tidak pernah beda. */
+  const pendingApprovals = usePendingApprovals()
 
   const queue = useQuery({
     queryKey: ['ops', 'queue', date],
@@ -194,12 +210,19 @@ export function QueuePage() {
 
       <Tabs
         value={tab}
-        onValueChange={(value) => setTab(value as 'queue' | 'approvals')}
+        onValueChange={(value) =>
+          onTabChange(value as 'queue' | 'approvals')
+        }
       >
         <TabsList>
           <TabsTrigger value='queue'>Antrean</TabsTrigger>
           {canApprove && (
-            <TabsTrigger value='approvals'>Persetujuan</TabsTrigger>
+            <TabsTrigger value='approvals'>
+              Persetujuan
+              {pendingApprovals > 0 && (
+                <PendingApprovalBadge count={pendingApprovals} />
+              )}
+            </TabsTrigger>
           )}
         </TabsList>
       </Tabs>

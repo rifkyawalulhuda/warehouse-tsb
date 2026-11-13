@@ -5,8 +5,10 @@ import { useRole } from '@/stores/auth-store'
 import { cn } from '@/lib/utils'
 import { usePageTitle } from '@/context/page-title-provider'
 import { useCanGoBack } from '@/hooks/use-can-go-back'
+import { usePendingApprovals } from '@/hooks/use-pending-approvals'
 import { Button } from '@/components/ui/button'
 import { useSidebar } from '@/components/ui/sidebar'
+import { ApprovalPulseDot } from '@/components/pending-approval-badge'
 import { navGroupsForRole } from './data/sidebar-data'
 
 /**
@@ -22,6 +24,7 @@ export function MobileNav() {
   const { setOpenMobile } = useSidebar()
   const title = usePageTitle()
   const role = useRole()
+  const pendingApprovals = usePendingApprovals()
 
   // Halaman puncak diturunkan dari menu sidebar role ini, bukan dari daftar
   // terpisah: begitu ada tujuan menu baru, halaman itu otomatis ikut dianggap
@@ -47,14 +50,28 @@ export function MobileNav() {
         'md:hidden'
       )}
     >
+      {/*
+        Di ponsel menu tertutup, jadi penanda persetujuan di sidebar tidak
+        pernah terlihat. Titik merah di tombol ini adalah satu-satunya isyarat
+        yang tampak sebelum menu dibuka.
+      */}
       <Button
         variant='ghost'
         size='icon'
-        className='size-11 shrink-0'
+        className='relative size-11 shrink-0'
         onClick={() => setOpenMobile(true)}
       >
         <Menu className='size-5' aria-hidden />
-        <span className='sr-only'>Buka menu navigasi</span>
+        {pendingApprovals > 0 && (
+          <span className='absolute end-1.5 top-1.5'>
+            <ApprovalPulseDot />
+          </span>
+        )}
+        <span className='sr-only'>
+          {pendingApprovals > 0
+            ? `Buka menu navigasi, ${pendingApprovals} menunggu persetujuan`
+            : 'Buka menu navigasi'}
+        </span>
       </Button>
 
       {showBack && (

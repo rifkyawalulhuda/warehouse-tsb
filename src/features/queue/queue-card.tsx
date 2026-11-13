@@ -158,11 +158,10 @@ export function QueueCard({
         )}
 
         {pendingApproval && (
+          // Badge sudah menuliskan "Menunggu persetujuan"; teks kembar di
+          // sebelahnya hanya mengulang kalimat yang sama.
           <div className='flex flex-wrap items-center gap-1.5'>
             <ApprovalBadge status={booking.approvalStatus} />
-            <span className='text-xs text-muted-foreground'>
-              Menunggu persetujuan
-            </span>
           </div>
         )}
 

@@ -62,6 +62,33 @@ approvalsRouter.get('/', async (req, res, next) => {
 })
 
 /* ------------------------------------------------------------------ */
+/* Jumlah antrean                                                      */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Hanya angka, bukan daftar.
+ *
+ * Menu sidebar menanyakan ini dari setiap halaman untuk menyalakan penanda
+ * persetujuan. Mengirim 200 booking penuh ke setiap halaman membebani jaringan
+ * tanpa ada yang membacanya — yang dibutuhkan hanya "ada berapa".
+ *
+ * Saringannya sama dengan daftar di atas, jadi angka ini menghitung baris yang
+ * sama dengan yang akan dilihat Admin setelah mengeklik menunya. Daftar sendiri
+ * dipotong di 200 baris; angka ini sengaja tidak dipotong supaya penanda tidak
+ * pernah berbohong tentang besarnya antrean.
+ */
+approvalsRouter.get('/count', async (_req, res, next) => {
+  try {
+    const pending = await prisma.booking.count({
+      where: { approvalStatus: 'PENDING' },
+    })
+    res.json({ data: { pending } })
+  } catch (error) {
+    next(error)
+  }
+})
+
+/* ------------------------------------------------------------------ */
 /* Setujui                                                             */
 /* ------------------------------------------------------------------ */
 

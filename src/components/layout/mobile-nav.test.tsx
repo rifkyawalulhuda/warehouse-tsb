@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   pathname: '/bookings/bkg-1',
   canGoBack: true,
   role: 'ADMIN' as string | null,
+  pendingApprovals: 0,
   back: vi.fn(),
   setOpenMobile: vi.fn(),
 }))
@@ -25,6 +26,12 @@ vi.mock('@/components/ui/sidebar', () => ({
 // supaya tes tidak bergantung pada isi store yang tersisa dari tes lain.
 vi.mock('@/stores/auth-store', () => ({
   useRole: () => mocks.role,
+}))
+
+// Angka persetujuan datang dari query jaringan; di sini yang diuji hanya
+// tampilannya, jadi nilainya disuntikkan langsung.
+vi.mock('@/hooks/use-pending-approvals', () => ({
+  usePendingApprovals: () => mocks.pendingApprovals,
 }))
 
 vi.mock('@tanstack/react-router', async (importOriginal) => {
@@ -58,6 +65,7 @@ describe('MobileNav', () => {
     mocks.pathname = '/bookings/bkg-1'
     mocks.canGoBack = true
     mocks.role = 'ADMIN'
+    mocks.pendingApprovals = 0
     // Bilah ini `md:hidden`, jadi viewport tesnya harus selebar ponsel.
     await page.viewport(390, 844)
   })
@@ -98,5 +106,24 @@ describe('MobileNav', () => {
     await render(<MobileNav />)
 
     expect(backButton().elements()).toHaveLength(0)
+  })
+
+  it('menandai tombol menu saat ada persetujuan menunggu', async () => {
+    // Tanpa penanda ini pengguna ponsel tidak punya isyarat apa pun sebelum
+    // membuka menu — sidebar-nya tertutup.
+    mocks.pendingApprovals = 3
+    await render(<MobileNav />)
+
+    await expect
+      .element(page.getByRole('button', { name: /3 menunggu persetujuan/i }))
+      .toBeVisible()
+  })
+
+  it('tidak menandai tombol menu saat antrean persetujuan kosong', async () => {
+    await render(<MobileNav />)
+
+    expect(
+      page.getByRole('button', { name: /menunggu persetujuan/i }).elements()
+    ).toHaveLength(0)
   })
 })

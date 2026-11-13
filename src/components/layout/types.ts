@@ -17,6 +17,11 @@ type Team = {
 type BaseNavItem = {
   title: string
   badge?: string
+  /**
+   * Jumlah yang menunggu tindakan pengguna. Bila terisi, menu menampilkan
+   * titik merah berdenyut beserta angkanya (lihat `NavAttention`).
+   */
+  attention?: number
   icon?: React.ElementType
 }
 

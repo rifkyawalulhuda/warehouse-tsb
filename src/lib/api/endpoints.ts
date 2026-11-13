@@ -229,6 +229,16 @@ export function fetchApprovals(params?: {
   return getData<ApprovalQueue>('/approvals', { params })
 }
 
+/**
+ * Jumlah booking yang menunggu persetujuan.
+ *
+ * Dipakai penanda menu sidebar. Sengaja terpisah dari `fetchApprovals` supaya
+ * setiap halaman tidak perlu mengunduh seluruh antrean hanya untuk satu angka.
+ */
+export function fetchApprovalCount() {
+  return getData<{ pending: number }>('/approvals/count')
+}
+
 export function approveBooking(id: string) {
   return postData<Booking>(`/approvals/${id}/approve`)
 }

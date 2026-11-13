@@ -374,3 +374,50 @@ describe('POST /api/approvals/batch-approve', () => {
     ])
   })
 })
+
+describe('GET /api/approvals/count', () => {
+  it('menghitung booking yang menunggu persetujuan', async () => {
+    await setMode('MANUAL')
+
+    const kosong = await request(app)
+      .get('/api/approvals/count')
+      .set('Cookie', adminCookie)
+    expect(kosong.status).toBe(200)
+    expect(kosong.body.data.pending).toBe(0)
+
+    const first = await request(app)
+      .post('/api/bookings')
+      .set('Cookie', customerCookie)
+      .send(payload({ referenceDocNo: 'DO-COUNT-1', startMinute: 9 * 60 }))
+    const second = await request(app)
+      .post('/api/bookings')
+      .set('Cookie', customer2Cookie)
+      .send(payload({ referenceDocNo: 'DO-COUNT-2', startMinute: 10 * 60 }))
+    expect(first.status).toBe(201)
+    expect(second.status).toBe(201)
+
+    const ada = await request(app)
+      .get('/api/approvals/count')
+      .set('Cookie', adminCookie)
+    expect(ada.body.data.pending).toBe(2)
+
+    // Angka di menu harus turun begitu satu diputuskan, tanpa menunggu
+    // halaman dimuat ulang.
+    await request(app)
+      .post(`/api/approvals/${first.body.data.id}/approve`)
+      .set('Cookie', adminCookie)
+
+    const sisa = await request(app)
+      .get('/api/approvals/count')
+      .set('Cookie', adminCookie)
+    expect(sisa.body.data.pending).toBe(1)
+  })
+
+  it('menolak akun yang tidak berhak menyetujui', async () => {
+    const response = await request(app)
+      .get('/api/approvals/count')
+      .set('Cookie', customerCookie)
+
+    expect(response.status).toBe(403)
+  })
+})
