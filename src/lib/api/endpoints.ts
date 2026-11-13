@@ -164,7 +164,6 @@ export function updateTruckType(id: number, payload: Partial<TruckTypeInput>) {
 export type AvailabilityResponse = {
   date: string
   activity: ActivityType
-  capacity: number
   truckType: TruckType
   slots: AvailabilitySlot[]
 }

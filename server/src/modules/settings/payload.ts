@@ -9,15 +9,23 @@ import { listBlockStarts, minuteToLabel } from '../../lib/quota'
  * hitungan yang diturunkan darinya (`capacity`, `blocksPerDay`, label jam).
  * Turunan itu sengaja tidak disimpan, agar angka di layar tidak pernah berbeda
  * dari yang dipakai mesin kuota.
+ *
+ * `includeInternal: false` (dipakai untuk CUSTOMER) membuang angka perencanaan
+ * gudang: kapasitas per aktivitas dan jumlah blok per hari. Keduanya hanya
+ * dibaca layar staf (dashboard dan pengaturan); customer tetap menerima jam
+ * operasional, aturan kedatangan, dan jenis truk yang ia butuhkan untuk
+ * memesan. Sisa slot yang memang perlu ia lihat datang dari endpoint
+ * ketersediaan, bukan dari sini.
  */
-export async function settingsPayload() {
+export async function settingsPayload(options: { includeInternal?: boolean } = {}) {
+  const { includeInternal = true } = options
   const settings = await getSettings()
   const [truckTypes, capacities] = await Promise.all([
     prisma.truckType.findMany({
       where: { isActive: true },
       orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
     }),
-    capacityMap(),
+    includeInternal ? capacityMap() : null,
   ])
 
   const window = toWindow(settings)
@@ -43,8 +51,9 @@ export async function settingsPayload() {
     approvalLeadMinutes: settings.approvalLeadMinutes,
     approvalMinDecisionMinutes: settings.approvalMinDecisionMinutes,
     approvalUrgentBufferMinutes: settings.approvalUrgentBufferMinutes,
-    capacity: capacities,
-    blocksPerDay: listBlockStarts(window).length,
+    ...(capacities
+      ? { capacity: capacities, blocksPerDay: listBlockStarts(window).length }
+      : {}),
     truckTypes,
   }
 }

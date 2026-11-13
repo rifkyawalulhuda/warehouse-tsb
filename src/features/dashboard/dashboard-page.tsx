@@ -69,10 +69,11 @@ export function DashboardPage() {
     : []
 
   const kpi = today.data?.kpi
-  const dailyCapacity = settings.data
-    ? settings.data.blocksPerDay *
-      (settings.data.capacity.UNLOADING + settings.data.capacity.LOADING)
-    : null
+  const dailyCapacity =
+    settings.data?.blocksPerDay != null && settings.data.capacity
+      ? settings.data.blocksPerDay *
+        (settings.data.capacity.UNLOADING + settings.data.capacity.LOADING)
+      : null
   const dockUtilization =
     today.data && today.data.byDock.length > 0
       ? Math.round(

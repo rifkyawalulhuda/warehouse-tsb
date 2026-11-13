@@ -31,9 +31,14 @@ function emptyToNull(value: string | null | undefined): string | null | undefine
   return trimmed === '' ? null : trimmed
 }
 
-settingsRouter.get('/', requireAuth, async (_req, res, next) => {
+settingsRouter.get('/', requireAuth, async (req, res, next) => {
   try {
-    res.json({ data: await settingsPayload() })
+    // Customer hanya menerima bagian yang dipakai layarnya untuk memesan.
+    // Angka kapasitas gudang tetap milik staf, sesuai aturan yang juga
+    // diterapkan pada laporan customer.
+    res.json({
+      data: await settingsPayload({ includeInternal: req.user!.role !== 'CUSTOMER' }),
+    })
   } catch (error) {
     next(error)
   }

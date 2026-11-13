@@ -91,9 +91,10 @@ bookingsRouter.get('/slots/availability', async (req, res, next) => {
       data: {
         date: query.date,
         activity: query.activity,
-        capacity,
         truckType,
-        slots: slots.map((slot) =>
+        // Tanpa `capacity`: angka itu kapasitas gudang per blok, milik staf.
+        // Customer cukup tahu berapa slot yang masih bisa ia ambil.
+        slots: slots.map(({ capacity: _capacity, ...slot }) =>
           isToday && slot.startMinute <= nowMinute
             ? { ...slot, status: 'FULL' as const, remaining: 0, limitReason: 'Jam sudah lewat' }
             : slot

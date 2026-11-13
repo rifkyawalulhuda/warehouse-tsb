@@ -525,7 +525,7 @@ function SlotGrid({
               </span>
             ) : (
               <Badge variant='outline' className='mt-1 text-xs'>
-                {slot.remaining}/{slot.capacity} sisa
+                {slot.remaining} slot tersisa
               </Badge>
             )}
           </button>
