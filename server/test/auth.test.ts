@@ -94,4 +94,19 @@ describe('sesi login', () => {
 
     expect(second.status).toBe(200)
   })
+
+  it('membatasi percobaan login yang gagal', async () => {
+    const attempt = () =>
+      request(app)
+        .post('/api/auth/login')
+        .send({ email: 'target@test.local', password: 'tebakan-salah' })
+
+    for (let index = 0; index < 10; index += 1) {
+      expect((await attempt()).status).toBe(401)
+    }
+
+    const blocked = await attempt()
+    expect(blocked.status).toBe(429)
+    expect(blocked.body.error.code).toBe('TOO_MANY_ATTEMPTS')
+  })
 })

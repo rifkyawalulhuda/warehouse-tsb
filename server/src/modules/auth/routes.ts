@@ -17,6 +17,7 @@ import { env } from '../../config/env'
 import { parse } from '../../lib/validate'
 import { unauthorized } from '../../lib/http-error'
 import { requireAuth, type RequestUser } from '../../middleware/auth'
+import { loginLimiter } from '../../middleware/rate-limit'
 
 export const authRouter = Router()
 
@@ -129,7 +130,7 @@ function publicUser(user: RequestUser) {
   }
 }
 
-authRouter.post('/login', async (req, res, next) => {
+authRouter.post('/login', loginLimiter, async (req, res, next) => {
   try {
     const body = parse(loginSchema, req.body, 'Data login')
     const user = await prisma.user.findUnique({

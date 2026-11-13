@@ -16,6 +16,7 @@ import { publicTicketRouter } from './modules/public-ticket/routes'
 import { opsRouter } from './modules/ops/routes'
 import { reportsRouter } from './modules/reports/routes'
 import { errorHandler, notFoundHandler } from './middleware/error'
+import { apiLimiter } from './middleware/rate-limit'
 
 export function createApp() {
   const app = express()
@@ -48,6 +49,7 @@ export function createApp() {
     })
   })
 
+  app.use('/api', apiLimiter)
   app.use('/api/auth', authRouter)
   app.use('/api/users', usersRouter)
   app.use('/api/settings', settingsRouter)

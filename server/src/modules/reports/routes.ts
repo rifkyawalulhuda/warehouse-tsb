@@ -40,7 +40,7 @@ const customerRangeSchema = z.object({
   to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 })
 
-export const MAX_CUSTOMER_RANGE_DAYS = 366
+export const MAX_REPORT_RANGE_DAYS = 366
 
 function rangeDayCount(from: string, to: string): number {
   const start = Date.parse(`${from}T00:00:00.000Z`)
@@ -49,10 +49,14 @@ function rangeDayCount(from: string, to: string): number {
 }
 
 /**
- * Rentang customer dibatasi karena ekspornya menghasilkan berkas: satu tahun
- * cukup untuk rekap tahunan, dan batas ini menjaga waktu hitung server.
+ * Rentang laporan dibatasi untuk kedua peran.
+ *
+ * Pola `\d{4}-\d{2}-\d{2}` di skema hanya memeriksa bentuk: `2026-13-45` lolos
+ * dan berubah menjadi `Invalid Date` yang membuat Prisma melempar galat. Ekspor
+ * juga membangun seluruh workbook di memori, jadi rentang tanpa batas adalah
+ * cara termurah menghabiskan memori proses.
  */
-function assertCustomerRange(from: string, to: string) {
+function assertReportRange(from: string, to: string) {
   if (!isDateISO(from) || !isDateISO(to)) {
     throw badRequest('VALIDATION_ERROR', 'Rentang tanggal tidak valid', [
       { path: 'from', message: 'Tanggal tidak dikenal' },
@@ -63,9 +67,9 @@ function assertCustomerRange(from: string, to: string) {
       { path: 'to', message: 'Tanggal awal tidak boleh melewati tanggal akhir' },
     ])
   }
-  if (rangeDayCount(from, to) > MAX_CUSTOMER_RANGE_DAYS) {
+  if (rangeDayCount(from, to) > MAX_REPORT_RANGE_DAYS) {
     throw badRequest('VALIDATION_ERROR', 'Rentang tanggal tidak valid', [
-      { path: 'to', message: `Rentang maksimal ${MAX_CUSTOMER_RANGE_DAYS} hari` },
+      { path: 'to', message: `Rentang maksimal ${MAX_REPORT_RANGE_DAYS} hari` },
     ])
   }
 }
@@ -90,9 +94,14 @@ type ReportRow = {
   lateMinutes: number
 }
 
-function formatInstant(value: Date | null): string | null {
+/**
+ * Waktu di laporan memakai bentuk yang bisa diurutkan apa adanya, bukan
+ * `toLocaleString` yang menyelipkan detik dan pemisah yang bergantung pada data
+ * ICU Node. Kolom waktu di Excel jadi bisa diurutkan sebagai teks.
+ */
+function formatReportInstant(value: Date | null): string | null {
   if (!value) return null
-  return value.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', hour12: false })
+  return dayjs(value).tz(TZ).format('YYYY-MM-DD HH:mm')
 }
 
 async function buildReport(from: string, to: string, customerId?: string) {
@@ -131,11 +140,11 @@ async function buildReport(from: string, to: string, customerId?: string) {
       dockCode: booking.assignedDock?.dockCode ?? null,
       status: booking.status,
       approvalStatus: booking.approvalStatus,
-      scheduledStart: formatInstant(booking.startTime) ?? '',
-      gateInAt: formatInstant(log?.gateInAt ?? null),
-      processStartedAt: formatInstant(log?.processStartedAt ?? null),
-      processCompletedAt: formatInstant(log?.processCompletedAt ?? null),
-      gateOutAt: formatInstant(log?.gateOutAt ?? null),
+      scheduledStart: formatReportInstant(booking.startTime) ?? '',
+      gateInAt: formatReportInstant(log?.gateInAt ?? null),
+      processStartedAt: formatReportInstant(log?.processStartedAt ?? null),
+      processCompletedAt: formatReportInstant(log?.processCompletedAt ?? null),
+      gateOutAt: formatReportInstant(log?.gateOutAt ?? null),
       waitingMinutes: diffMinutes(log?.gateInAt, log?.processStartedAt),
       processingMinutes: diffMinutes(log?.processStartedAt, log?.processCompletedAt),
       turnaroundMinutes: diffMinutes(log?.gateInAt, log?.gateOutAt),
@@ -337,6 +346,7 @@ async function buildReport(from: string, to: string, customerId?: string) {
 reportsRouter.get('/kpi', staffOnly, async (req, res, next) => {
   try {
     const query = parse(rangeSchema, req.query, 'Rentang tanggal')
+    assertReportRange(query.from, query.to)
     const report = await buildReport(query.from, query.to, query.customerId)
     res.json({ data: report })
   } catch (error) {
@@ -347,6 +357,7 @@ reportsRouter.get('/kpi', staffOnly, async (req, res, next) => {
 reportsRouter.get('/export.xlsx', staffOnly, async (req, res, next) => {
   try {
     const query = parse(rangeSchema, req.query, 'Rentang tanggal')
+    assertReportRange(query.from, query.to)
     const { rows, kpi } = await buildReport(query.from, query.to, query.customerId)
 
     const workbook = new ExcelJS.Workbook()
@@ -466,15 +477,6 @@ const approvalStatusLabels: Record<string, string> = {
 const activityTypeLabels: Record<string, string> = {
   LOADING: 'Muat',
   UNLOADING: 'Bongkar',
-}
-
-/**
- * Waktu di berkas Excel memakai bentuk yang bisa diurutkan apa adanya,
- * bukan `toLocaleString` yang menyelipkan detik dan pemisah berbeda-beda.
- */
-function formatReportInstant(value: Date | null): string | null {
-  if (!value) return null
-  return dayjs(value).tz(TZ).format('YYYY-MM-DD HH:mm')
 }
 
 /**
@@ -736,7 +738,7 @@ async function buildCustomerReport(from: string, to: string, customerId: string)
 reportsRouter.get('/my', customerOnly, async (req, res, next) => {
   try {
     const query = parse(customerRangeSchema, req.query, 'Rentang tanggal')
-    assertCustomerRange(query.from, query.to)
+    assertReportRange(query.from, query.to)
 
     // Kepemilikan tidak pernah datang dari klien. Tanpa baris ini, seorang
     // customer bisa membaca laporan perusahaan lain lewat query string.
@@ -753,7 +755,7 @@ reportsRouter.get('/my', customerOnly, async (req, res, next) => {
 reportsRouter.get('/my/export.xlsx', customerOnly, async (req, res, next) => {
   try {
     const query = parse(customerRangeSchema, req.query, 'Rentang tanggal')
-    assertCustomerRange(query.from, query.to)
+    assertReportRange(query.from, query.to)
 
     const customerId = req.user?.customerId
     if (!customerId) throw forbidden('Akun tidak terhubung ke customer')
