@@ -23,6 +23,9 @@ import {
   todayISO,
 } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { useT, type MessageKey, type Vars } from '@/lib/i18n'
+
+type Translate = (key: MessageKey, vars?: Vars) => string
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -55,28 +58,36 @@ import { Main } from '@/components/layout/main'
 import { PageHeader } from '@/components/page-header'
 import { ErrorBlock, LoadingBlock } from '@/components/query-state'
 
-const formSchema = z.object({
-  bookingDate: z.string().min(1, 'Pilih tanggal'),
-  activityType: z.enum(['LOADING', 'UNLOADING']),
-  truckTypeId: z.string().min(1, 'Pilih jenis truk'),
-  startMinute: z.string().min(1, 'Pilih jam kedatangan'),
-  referenceDocNo: z.string().trim().min(2, 'Nomor dokumen wajib diisi').max(80),
-  licensePlate: z.string().trim().max(16).optional(),
-  driverName: z.string().trim().max(120).optional(),
-  driverPhone: z.string().trim().max(20).optional(),
-})
+const makeFormSchema = (t: Translate) =>
+  z.object({
+    bookingDate: z.string().min(1, t('bookings.create.dateRequired')),
+    activityType: z.enum(['LOADING', 'UNLOADING']),
+    truckTypeId: z.string().min(1, t('bookings.create.truckTypeRequired')),
+    startMinute: z.string().min(1, t('bookings.create.arrivalRequired')),
+    referenceDocNo: z
+      .string()
+      .trim()
+      .min(2, t('bookings.create.docNoRequired'))
+      .max(80),
+    licensePlate: z.string().trim().max(16).optional(),
+    driverName: z.string().trim().max(120).optional(),
+    driverPhone: z.string().trim().max(20).optional(),
+  })
 
-type FormValues = z.infer<typeof formSchema>
+type FormValues = z.infer<ReturnType<typeof makeFormSchema>>
 
 export function CreateBooking() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const company = useCustomerName()
+  const t = useT()
 
   const settings = useQuery({ queryKey: ['settings'], queryFn: fetchSettings })
 
+  const schema = useMemo(() => makeFormSchema(t), [t])
+
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(schema),
     defaultValues: {
       bookingDate: todayISO(),
       activityType: 'UNLOADING',
@@ -127,7 +138,7 @@ export function CreateBooking() {
       }),
     onSuccess: (booking) => {
       void queryClient.invalidateQueries({ queryKey: ['bookings'] })
-      toast.success(`Booking ${booking.bookingCode} berhasil dibuat`)
+      toast.success(t('bookings.create.successBody', { code: booking.bookingCode }))
       void navigate({ to: '/bookings' })
     },
     onError: (error) => toast.error(apiErrorMessage(error)),
@@ -140,7 +151,8 @@ export function CreateBooking() {
     [availability.data]
   )
 
-  if (settings.isPending) return <LoadingBlock label='Memuat pengaturan...' />
+  if (settings.isPending)
+    return <LoadingBlock label={t('bookings.create.loadSettings')} />
   if (settings.isError)
     return (
       <ErrorBlock
@@ -153,8 +165,8 @@ export function CreateBooking() {
     <Main className='flex flex-1 flex-col gap-6'>
       <PageHeader
         eyebrow={company ?? undefined}
-        title='Buat Booking'
-        description='Pilih jadwal kedatangan truk Anda. Slot yang penuh otomatis tidak bisa dipilih.'
+        title={t('bookings.create.title')}
+        description={t('bookings.create.subtitle')}
         actions={
           <Button
             variant='outline'
@@ -162,7 +174,7 @@ export function CreateBooking() {
             onClick={() => void navigate({ to: '/bookings' })}
           >
             <ArrowLeft />
-            Kembali
+            {t('bookings.create.back')}
           </Button>
         }
       />
@@ -175,10 +187,11 @@ export function CreateBooking() {
           <div className='space-y-6'>
             <Card>
               <CardHeader>
-                <CardTitle className='text-base'>1. Aktivitas & truk</CardTitle>
+                <CardTitle className='text-base'>
+                  {t('bookings.create.stepActivity')}
+                </CardTitle>
                 <CardDescription>
-                  Durasi tiap jenis truk menentukan berapa slot 30 menit yang
-                  dipakai.
+                  {t('bookings.create.stepActivityDesc')}
                 </CardDescription>
               </CardHeader>
               <CardContent className='grid gap-4 sm:grid-cols-2'>
@@ -187,7 +200,7 @@ export function CreateBooking() {
                   name='activityType'
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Aktivitas</FormLabel>
+                      <FormLabel>{t('bookings.activity')}</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}
@@ -217,14 +230,16 @@ export function CreateBooking() {
                   name='truckTypeId'
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Jenis truk</FormLabel>
+                      <FormLabel>{t('bookings.create.truckType')}</FormLabel>
                       <Select
                         onValueChange={field.onChange}
                         value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder='Pilih jenis truk' />
+                            <SelectValue
+                              placeholder={t('bookings.create.truckType')}
+                            />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -246,11 +261,12 @@ export function CreateBooking() {
             <Card>
               <CardHeader>
                 <CardTitle className='text-base'>
-                  2. Tanggal kedatangan
+                  {t('bookings.create.stepDate')}
                 </CardTitle>
                 <CardDescription>
-                  Pemesanan dibuka sampai {settings.data.bookingWindowDays} hari
-                  ke depan.
+                  {t('bookings.create.windowHint', {
+                    days: settings.data.bookingWindowDays,
+                  })}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -259,7 +275,7 @@ export function CreateBooking() {
                   name='bookingDate'
                   render={({ field }) => (
                     <FormItem className='max-w-xs'>
-                      <FormLabel>Tanggal</FormLabel>
+                      <FormLabel>{t('bookings.create.date')}</FormLabel>
                       <FormControl>
                         <DatePicker
                           value={field.value}
@@ -282,11 +298,15 @@ export function CreateBooking() {
 
             <Card>
               <CardHeader>
-                <CardTitle className='text-base'>3. Jam kedatangan</CardTitle>
+                <CardTitle className='text-base'>
+                  {t('bookings.create.stepTime')}
+                </CardTitle>
                 <CardDescription>
                   {values.truckTypeId
-                    ? `${availableCount} slot tersedia untuk tanggal ini.`
-                    : 'Pilih jenis truk dulu untuk melihat ketersediaan.'}
+                    ? t('bookings.create.slotsAvailable', {
+                        count: availableCount,
+                      })
+                    : t('bookings.create.truckTypeFirst')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -298,10 +318,10 @@ export function CreateBooking() {
                       <FormControl>
                         {!values.truckTypeId ? (
                           <p className='py-6 text-center text-sm text-muted-foreground'>
-                            Menunggu pilihan jenis truk.
+                            {t('bookings.create.awaitTruckType')}
                           </p>
                         ) : availability.isPending ? (
-                          <LoadingBlock label='Memeriksa ketersediaan...' />
+                          <LoadingBlock label={t('bookings.create.checking')} />
                         ) : availability.isError ? (
                           <ErrorBlock
                             error={availability.error}
@@ -325,11 +345,10 @@ export function CreateBooking() {
             <Card>
               <CardHeader>
                 <CardTitle className='text-base'>
-                  4. Dokumen & kendaraan
+                  {t('bookings.create.stepDocs')}
                 </CardTitle>
                 <CardDescription>
-                  Plat nomor dan nama supir boleh menyusul, tetapi truk tidak
-                  bisa gate-in sebelum lengkap.
+                  {t('bookings.create.stepDocsDesc')}
                 </CardDescription>
               </CardHeader>
               <CardContent className='grid gap-4 sm:grid-cols-2'>
@@ -338,9 +357,12 @@ export function CreateBooking() {
                   name='referenceDocNo'
                   render={({ field }) => (
                     <FormItem className='sm:col-span-2'>
-                      <FormLabel>Nomor dokumen (DO / Invoice)</FormLabel>
+                      <FormLabel>{t('bookings.create.docNoLabel')}</FormLabel>
                       <FormControl>
-                        <Input placeholder='DO-2026-00123' {...field} />
+                        <Input
+                          placeholder={t('bookings.create.docNoPlaceholder')}
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -351,10 +373,10 @@ export function CreateBooking() {
                   name='licensePlate'
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Plat nomor (opsional)</FormLabel>
+                      <FormLabel>{t('bookings.create.plateOptional')}</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder='B 1234 XYZ'
+                          placeholder={t('bookings.create.platePlaceholder')}
                           className='uppercase'
                           {...field}
                         />
@@ -368,9 +390,12 @@ export function CreateBooking() {
                   name='driverName'
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nama supir (opsional)</FormLabel>
+                      <FormLabel>{t('bookings.create.driverOptional')}</FormLabel>
                       <FormControl>
-                        <Input placeholder='Nama supir' {...field} />
+                        <Input
+                          placeholder={t('bookings.create.driverPlaceholder')}
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -381,12 +406,15 @@ export function CreateBooking() {
                   name='driverPhone'
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nomor HP supir (opsional)</FormLabel>
+                      <FormLabel>{t('bookings.create.phoneOptional')}</FormLabel>
                       <FormControl>
-                        <Input placeholder='0812xxxxxxx' {...field} />
+                        <Input
+                          placeholder={t('bookings.create.phonePlaceholder')}
+                          {...field}
+                        />
                       </FormControl>
                       <FormDescription>
-                        Untuk kirim link tiket via WhatsApp.
+                        {t('bookings.create.phoneHint')}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -399,19 +427,21 @@ export function CreateBooking() {
           <div className='lg:sticky lg:top-6 lg:self-start'>
             <Card>
               <CardHeader>
-                <CardTitle className='text-base'>Ringkasan</CardTitle>
+                <CardTitle className='text-base'>
+                  {t('bookings.create.summary')}
+                </CardTitle>
               </CardHeader>
               <CardContent className='space-y-3 text-sm'>
                 <SummaryRow
-                  label='Aktivitas'
+                  label={t('bookings.activity')}
                   value={activityLabels[values.activityType]}
                 />
                 <SummaryRow
-                  label='Jenis truk'
+                  label={t('bookings.create.truckType')}
                   value={selectedTruck?.truckName ?? '-'}
                 />
                 <SummaryRow
-                  label='Durasi'
+                  label={t('bookings.duration')}
                   value={
                     selectedTruck
                       ? durationLabel(selectedTruck.durationMinutes)
@@ -420,13 +450,13 @@ export function CreateBooking() {
                 />
                 <Separator />
                 <SummaryRow
-                  label='Tanggal'
+                  label={t('bookings.create.date')}
                   value={
                     values.bookingDate ? formatDate(values.bookingDate) : '-'
                   }
                 />
                 <SummaryRow
-                  label='Jam'
+                  label={t('bookings.time')}
                   value={
                     values.startMinute
                       ? minuteToLabel(Number(values.startMinute))
@@ -434,12 +464,14 @@ export function CreateBooking() {
                   }
                 />
                 <SummaryRow
-                  label='Dokumen'
+                  label={t('bookings.create.docNo')}
                   value={values.referenceDocNo || '-'}
                 />
                 {selectedTruck && values.startMinute && (
                   <div className='rounded-md bg-muted p-3 text-xs text-muted-foreground'>
-                    Truk memakai {selectedTruck.blocksRequired} slot × 30 menit.
+                    {t('bookings.create.slotsUsed', {
+                      count: selectedTruck.blocksRequired,
+                    })}
                   </div>
                 )}
 
@@ -460,7 +492,7 @@ export function CreateBooking() {
                   ) : (
                     <Check />
                   )}
-                  Konfirmasi booking
+                  {t('bookings.create.confirm')}
                 </Button>
               </CardContent>
             </Card>
@@ -489,10 +521,12 @@ function SlotGrid({
   value: string
   onChange: (value: string) => void
 }) {
+  const t = useT()
+
   if (slots.length === 0) {
     return (
       <p className='py-6 text-center text-sm text-muted-foreground'>
-        Tidak ada slot pada tanggal ini.
+        {t('bookings.create.noSlots')}
       </p>
     )
   }
@@ -521,11 +555,13 @@ function SlotGrid({
             </span>
             {full ? (
               <span className='mt-1 block text-xs text-muted-foreground'>
-                {slot.limitReason ?? 'Penuh'}
+                {slot.limitReason ?? t('bookings.create.full')}
               </span>
             ) : (
               <Badge variant='outline' className='mt-1 text-xs'>
-                {slot.remaining} slot tersisa
+                {t('bookings.create.slotsRemaining', {
+                  count: slot.remaining,
+                })}
               </Badge>
             )}
           </button>

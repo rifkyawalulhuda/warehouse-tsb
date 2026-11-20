@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { useT } from '@/lib/i18n'
 import { dockFilterCounts, waitingCount } from './dock-model'
 
 function SummaryTile({
@@ -57,49 +58,55 @@ export function DockSummary({
   docks: DockWithBooking[]
   waiting: number
 }) {
+  const t = useT()
   const counts = dockFilterCounts(docks)
   const maintenanceHint =
-    counts.maintenance > 0 ? `${counts.maintenance} dalam perawatan` : 'Siap menerima truk'
+    counts.maintenance > 0
+      ? t('dock.summaryMaintenance', { count: counts.maintenance })
+      : t('dock.summaryReady')
 
   return (
     <div className='grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4'>
       <SummaryTile
         icon={Truck}
-        label='Sedang diproses'
+        label={t('dock.groupServing')}
         value={counts.serving}
-        hint={`dari ${counts.all} dock`}
+        hint={t('dock.summaryOfAll', { count: counts.all })}
       />
       <SummaryTile
         icon={PlayCircle}
-        label='Perlu dimulai'
+        label={t('dock.groupStarting')}
         value={counts.action}
-        hint={counts.action > 0 ? 'Truk menunggu tombol mulai' : 'Tidak ada yang menunggu'}
+        hint={
+          counts.action > 0 ? t('dock.summaryWaiting') : t('dock.summaryNoneWaiting')
+        }
         emphasis={counts.action > 0}
       />
       <SummaryTile
         icon={Warehouse}
-        label='Dock kosong'
+        label={t('dock.groupAvailable')}
         value={counts.empty}
         hint={maintenanceHint}
       />
       <SummaryTile
         icon={Clock}
-        label='Antrean hari ini'
+        label={t('dock.summaryQueueTitle')}
         value={waiting}
-        hint='Truk menunggu di gerbang'
+        hint={t('dock.summaryQueueDesc')}
       />
     </div>
   )
 }
 
 function QueueChip({ booking }: { booking: Booking }) {
+  const t = useT()
   return (
     <span className='inline-flex min-w-0 items-center gap-2 rounded-lg border bg-background px-2.5 py-1.5'>
       <span className='truncate font-mono text-xs font-medium'>
         {booking.bookingCode}
       </span>
       <span className='max-w-24 truncate text-xs text-muted-foreground'>
-        {booking.licensePlate ?? 'tanpa plat'}
+        {booking.licensePlate ?? t('dock.noPlate')}
       </span>
       {booking.lateMinutes > 0 && (
         <Badge
@@ -122,6 +129,7 @@ function QueueChip({ booking }: { booking: Booking }) {
  * sebagai satu antrean bersama dengan tautan ke halaman Antrean.
  */
 export function DockQueueStrip({ queue }: { queue: QueueResponse }) {
+  const t = useT()
   const waiting = waitingCount(queue)
   if (waiting === 0) return null
 
@@ -134,10 +142,10 @@ export function DockQueueStrip({ queue }: { queue: QueueResponse }) {
         <div className='min-w-0 space-y-0.5'>
           <p className='flex items-center gap-2 text-sm font-medium'>
             <Clock className='size-4 text-muted-foreground' aria-hidden />
-            {waiting} truk menunggu di antrean
+            {t('dock.queueWaiting', { count: waiting })}
           </p>
           <p className='text-xs text-muted-foreground'>
-            Sudah check-in, belum masuk dock.
+            {t('dock.queueHint')}
           </p>
         </div>
         <div className='flex flex-wrap items-center gap-2'>
@@ -146,7 +154,7 @@ export function DockQueueStrip({ queue }: { queue: QueueResponse }) {
           ))}
           <Button asChild variant='outline' size='sm' className='h-9'>
             <Link to='/queue'>
-              Buka antrean <ArrowRight />
+              {t('dock.queueLink')} <ArrowRight />
             </Link>
           </Button>
         </div>

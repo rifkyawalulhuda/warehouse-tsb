@@ -13,11 +13,19 @@ import {
   CommandSeparator,
 } from '@/components/ui/command'
 import { useAuthStore } from '@/stores/auth-store'
+import { useT, type MessageKey } from '@/lib/i18n'
 import { buildSidebarData } from './layout/data/sidebar-data'
 import { ScrollArea } from './ui/scroll-area'
 
+const THEME_COMMANDS: { theme: 'light' | 'dark' | 'system'; label: MessageKey; icon: typeof Sun }[] = [
+  { theme: 'light', label: 'theme.light', icon: Sun },
+  { theme: 'dark', label: 'theme.dark', icon: Moon },
+  { theme: 'system', label: 'theme.system', icon: Laptop },
+]
+
 export function CommandMenu() {
   const navigate = useNavigate()
+  const t = useT()
   const { setTheme } = useTheme()
   const { open, setOpen } = useSearch()
   const role = useAuthStore((state) => state.user?.role ?? null)
@@ -37,10 +45,10 @@ export function CommandMenu() {
 
   return (
     <CommandDialog modal open={open} onOpenChange={setOpen}>
-      <CommandInput placeholder='Cari menu atau perintah...' />
+      <CommandInput placeholder={t('command.placeholder')} />
       <CommandList>
         <ScrollArea type='hover' className='h-72 pe-1'>
-          <CommandEmpty>Tidak ada hasil.</CommandEmpty>
+          <CommandEmpty>{t('command.empty')}</CommandEmpty>
           {sidebarData.navGroups.map((group) => (
             <CommandGroup key={group.title} heading={group.title}>
               {group.items.map((navItem, i) => {
@@ -78,18 +86,15 @@ export function CommandMenu() {
             </CommandGroup>
           ))}
           <CommandSeparator />
-          <CommandGroup heading='Tampilan'>
-            <CommandItem onSelect={() => runCommand(() => setTheme('light'))}>
-              <Sun /> <span>Terang</span>
-            </CommandItem>
-            <CommandItem onSelect={() => runCommand(() => setTheme('dark'))}>
-              <Moon className='scale-90' />
-              <span>Gelap</span>
-            </CommandItem>
-            <CommandItem onSelect={() => runCommand(() => setTheme('system'))}>
-              <Laptop />
-              <span>Ikuti sistem</span>
-            </CommandItem>
+          <CommandGroup heading={t('theme.label')}>
+            {THEME_COMMANDS.map(({ theme, label, icon: Icon }) => (
+              <CommandItem
+                key={theme}
+                onSelect={() => runCommand(() => setTheme(theme))}
+              >
+                <Icon /> <span>{t(label)}</span>
+              </CommandItem>
+            ))}
           </CommandGroup>
         </ScrollArea>
       </CommandList>

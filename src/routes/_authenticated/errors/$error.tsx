@@ -1,9 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { Header } from '@/components/layout/header'
-import { ProfileDropdown } from '@/components/profile-dropdown'
 import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { useSetPageTitle } from '@/context/page-title-provider'
+import { useT, type MessageKey } from '@/lib/i18n'
 import { ForbiddenError } from '@/features/errors/forbidden'
 import { GeneralError } from '@/features/errors/general-error'
 import { MaintenanceError } from '@/features/errors/maintenance-error'
@@ -15,16 +15,17 @@ export const Route = createFileRoute('/_authenticated/errors/$error')({
 })
 
 /** Judul untuk bilah atas mobile; halaman error tidak memakai PageHeader. */
-const TITLES: Record<string, string> = {
-  unauthorized: 'Tidak Terautentikasi',
-  forbidden: 'Akses Ditolak',
-  'not-found': 'Halaman Tidak Ditemukan',
-  'internal-server-error': 'Terjadi Kesalahan',
-  'maintenance-error': 'Dalam Perbaikan',
+const TITLE_KEYS: Record<string, MessageKey> = {
+  unauthorized: 'errors.unauthorized',
+  forbidden: 'errors.forbidden',
+  'not-found': 'errors.notFound',
+  'internal-server-error': 'errors.general',
+  'maintenance-error': 'errors.maintenance',
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
 function RouteComponent() {
+  const t = useT()
   const { error } = Route.useParams()
 
   const errorMap: Record<string, React.ComponentType> = {
@@ -36,7 +37,7 @@ function RouteComponent() {
   }
   const ErrorComponent = errorMap[error] || NotFoundError
 
-  useSetPageTitle(TITLES[error] ?? 'Halaman Tidak Ditemukan')
+  useSetPageTitle(t(TITLE_KEYS[error] ?? 'errors.notFound'))
 
   return (
     <>
@@ -48,7 +49,6 @@ function RouteComponent() {
       <Header fixed className='border-b max-md:hidden'>
         <Search className='me-auto' />
         <ThemeSwitch />
-        <ProfileDropdown />
       </Header>
       <div className='flex-1 [&>div]:h-full'>
         <ErrorComponent />

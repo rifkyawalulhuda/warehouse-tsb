@@ -10,15 +10,18 @@ import type { TicketModel } from './ticket-model'
  */
 export function TicketCard({
   model,
+  label,
   className,
 }: {
   model: TicketModel
+  /** Label aksesibilitas; komponen ini tidak memegang bahasa sendiri. */
+  label?: string
   className?: string
 }) {
   return (
     <article
       data-ticket-card
-      aria-label={`Tiket ${model.code}`}
+      aria-label={label ?? model.code}
       className={cn(
         'mx-auto w-full max-w-[360px] overflow-hidden rounded-[18px] bg-white text-[#0f172a] shadow-lg ring-1 ring-black/5',
         className
@@ -26,8 +29,8 @@ export function TicketCard({
     >
       <div className='px-5 pt-4'>
         <div className='flex items-center justify-between text-[10px] leading-none font-bold tracking-[0.14em] uppercase'>
-          <span className='text-[#1d4ed8]'>Warehouse TSB</span>
-          <span className='font-semibold text-[#94a3b8]'>E-Tiket</span>
+          <span className='text-[#1d4ed8]'>{model.appName}</span>
+          <span className='font-semibold text-[#94a3b8]'>{model.badge}</span>
         </div>
 
         <div className='mt-[22px] flex justify-center'>

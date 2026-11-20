@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { CheckIcon, ChevronsUpDownIcon } from 'lucide-react'
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -42,12 +43,14 @@ export function DockPicker<T extends DockOption>({
   docks,
   onSelect,
   disabled,
-  placeholder = 'Pilih dock',
+  placeholder,
   label,
   className,
   variant = 'outline',
   size = 'sm',
 }: DockPickerProps<T>) {
+  const t = useT()
+  const fallback = placeholder ?? t('picker.selectDock')
   const [open, setOpen] = useState(false)
   const [selected, setSelected] = useState<T | null>(null)
 
@@ -61,8 +64,11 @@ export function DockPicker<T extends DockOption>({
           aria-expanded={open}
           aria-label={
             selected
-              ? `${label ?? 'Pilih dock'}: ${dockOptionLabel(selected)}`
-              : (label ?? placeholder)
+              ? t('picker.dockLabel', {
+                  label: label ?? t('picker.selectDock'),
+                  dock: dockOptionLabel(selected),
+                })
+              : (label ?? fallback)
           }
           title={selected ? dockOptionLabel(selected) : undefined}
           disabled={disabled}
@@ -74,16 +80,16 @@ export function DockPicker<T extends DockOption>({
           )}
         >
           <span className='truncate'>
-            {selected ? dockOptionLabel(selected) : placeholder}
+            {selected ? dockOptionLabel(selected) : fallback}
           </span>
           <ChevronsUpDownIcon data-icon='inline-end' className='opacity-60' />
         </Button>
       </PopoverTrigger>
       <PopoverContent className='w-72 p-0' align='start'>
         <Command>
-          <CommandInput placeholder='Cari dock, area, atau gudang…' />
+          <CommandInput placeholder={t('picker.searchDock')} />
           <CommandList>
-            <CommandEmpty>Tidak ada dock yang cocok.</CommandEmpty>
+            <CommandEmpty>{t('picker.noDock')}</CommandEmpty>
             <CommandGroup>
               {docks.map((dock) => {
                 const place = dockOptionPlace(dock)

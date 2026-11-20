@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Settings } from '@/lib/api/types'
+import { translate } from '@/lib/i18n/translate'
 import {
   dirtySections,
   hoursNote,
@@ -10,7 +11,10 @@ import {
   sectionError,
   sectionPayload,
   toForm,
+  type Translate,
 } from './form'
+
+const tId: Translate = (key, vars) => translate('id', key, vars)
 
 const settings: Settings = {
   warehouseName: 'Gudang TSB Cikarang',
@@ -90,30 +94,30 @@ describe('seksi identitas merek', () => {
   })
 
   it('menolak judul kosong — header tidak boleh tanpa nama', () => {
-    expect(sectionError('brand', { ...saved, appName: '   ' })).toBe(
+    expect(sectionError('brand', { ...saved, appName: '   ' }, tId)).toBe(
       'Judul aplikasi wajib diisi.'
     )
-    expect(sectionError('brand', saved)).toBeNull()
+    expect(sectionError('brand', saved, tId)).toBeNull()
   })
 
   it('menolak teks yang lebih panjang dari kolom database', () => {
     expect(
-      sectionError('brand', { ...saved, appName: 'a'.repeat(61) })
+      sectionError('brand', { ...saved, appName: 'a'.repeat(61) }, tId)
     ).toContain('maksimal 60')
     expect(
-      sectionError('brand', { ...saved, appTagline: 'a'.repeat(81) })
+      sectionError('brand', { ...saved, appTagline: 'a'.repeat(81) }, tId)
     ).toContain('Subjudul maksimal 80')
     expect(
-      sectionError('brand', { ...saved, appShortName: 'a'.repeat(21) })
+      sectionError('brand', { ...saved, appShortName: 'a'.repeat(21) }, tId)
     ).toContain('Nama pendek maksimal 20')
   })
 
   it('menolak logo yang bukan unggahan atau alamat https', () => {
     expect(
-      sectionError('brand', { ...saved, appLogoUrl: 'javascript:alert(1)' })
+      sectionError('brand', { ...saved, appLogoUrl: 'javascript:alert(1)' }, tId)
     ).toContain('Logo harus PNG atau JPG')
     expect(
-      sectionError('brand', { ...saved, appLogoUrl: '/api/uploads/logo-a.png' })
+      sectionError('brand', { ...saved, appLogoUrl: '/api/uploads/logo-a.png' }, tId)
     ).toBeNull()
   })
 
@@ -157,16 +161,24 @@ describe('seksi halaman masuk', () => {
 
   it('menolak teks sambutan yang melebihi batas kolom', () => {
     expect(
-      sectionError('login', {
-        ...saved,
-        loginDescription: 'a'.repeat(LOGIN_DESCRIPTION_MAX + 1),
-      })
+      sectionError(
+        'login',
+        {
+          ...saved,
+          loginDescription: 'a'.repeat(LOGIN_DESCRIPTION_MAX + 1),
+        },
+        tId
+      )
     ).toContain('maksimal 240')
     expect(
-      sectionError('login', {
-        ...saved,
-        loginDescription: 'a'.repeat(LOGIN_DESCRIPTION_MAX),
-      })
+      sectionError(
+        'login',
+        {
+          ...saved,
+          loginDescription: 'a'.repeat(LOGIN_DESCRIPTION_MAX),
+        },
+        tId
+      )
     ).toBeNull()
   })
 
@@ -190,35 +202,35 @@ describe('validasi seksi', () => {
   it('menolak satuan blok yang tidak membagi habis jam operasional', () => {
     const form = { ...saved, slotUnitMinutes: '45' }
     // 08:00–17:00 = 540 menit; 540 / 45 = 12, jadi masih habis dibagi.
-    expect(sectionError('hours', form)).toBeNull()
+    expect(sectionError('hours', form, tId)).toBeNull()
 
     expect(
-      sectionError('hours', { ...saved, open: '08:00', close: '17:20' })
+      sectionError('hours', { ...saved, open: '08:00', close: '17:20' }, tId)
     ).toContain('tidak habis dibagi')
   })
 
   it('menolak jam tutup yang mendahului jam buka', () => {
     const form = { ...saved, open: '17:00', close: '08:00' }
-    expect(sectionError('hours', form)).toBe(
+    expect(sectionError('hours', form, tId)).toBe(
       'Jam tutup harus setelah jam buka.'
     )
   })
 
   it('menolak field angka yang dikosongkan, bukan membacanya sebagai nol', () => {
-    expect(sectionError('window', { ...saved, bookingWindowDays: '' })).toBe(
+    expect(sectionError('window', { ...saved, bookingWindowDays: '' }, tId)).toBe(
       'Jendela pemesanan harus 1–90 hari.'
     )
     // Masa tenggang boleh nol, tapi tetap tidak boleh kosong.
     expect(
-      sectionError('arrival', { ...saved, gracePeriodMinutes: '' })
+      sectionError('arrival', { ...saved, gracePeriodMinutes: '' }, tId)
     ).not.toBeNull()
     expect(
-      sectionError('arrival', { ...saved, gracePeriodMinutes: '0' })
+      sectionError('arrival', { ...saved, gracePeriodMinutes: '0' }, tId)
     ).toBeNull()
   })
 
   it('menolak nama gudang kosong', () => {
-    expect(sectionError('identity', { ...saved, warehouseName: '  ' })).toBe(
+    expect(sectionError('identity', { ...saved, warehouseName: '  ' }, tId)).toBe(
       'Nama gudang minimal 2 karakter.'
     )
   })
@@ -244,28 +256,37 @@ describe('payload seksi', () => {
 
 describe('ringkasan dampak', () => {
   it('menghitung blok per hari dari draf, bukan dari server', () => {
-    const impact = impactOf({ ...toForm(settings), slotUnitMinutes: '60' })
+    const impact = impactOf(
+      { ...toForm(settings), slotUnitMinutes: '60' },
+      tId
+    )
     expect(impact.hours).toBe('08:00–17:00')
     expect(impact.duration).toBe('9 jam')
     expect(impact.blocks).toBe('9 blok')
   })
 
   it('menampilkan durasi berpecahan dengan koma desimal', () => {
-    const impact = impactOf({
-      ...toForm(settings),
-      open: '08:00',
-      close: '16:30',
-    })
+    const impact = impactOf(
+      {
+        ...toForm(settings),
+        open: '08:00',
+        close: '16:30',
+      },
+      tId
+    )
     expect(impact.duration).toBe('8,5 jam')
   })
 
   it('tidak mengarang angka saat draf belum valid', () => {
-    const impact = impactOf({
-      ...toForm(settings),
-      open: '',
-      close: '',
-      slotUnitMinutes: '',
-    })
+    const impact = impactOf(
+      {
+        ...toForm(settings),
+        open: '',
+        close: '',
+        slotUnitMinutes: '',
+      },
+      tId
+    )
     expect(impact.hours).toBe('—')
     expect(impact.blocks).toBe('—')
     expect(impact.duration).toBe('—')
@@ -274,10 +295,10 @@ describe('ringkasan dampak', () => {
 
 describe('catatan sisa menit', () => {
   it('menyebut sisa menit yang tidak masuk blok', () => {
-    expect(hoursNote('08:00', '17:20', '30')).toContain('20 menit')
+    expect(hoursNote('08:00', '17:20', '30', tId)).toContain('20 menit')
   })
 
   it('diam saat rentang habis dibagi', () => {
-    expect(hoursNote('08:00', '17:00', '30')).toBeNull()
+    expect(hoursNote('08:00', '17:00', '30', tId)).toBeNull()
   })
 })

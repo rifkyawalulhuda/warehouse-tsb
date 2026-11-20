@@ -4,6 +4,7 @@ import {
   CaretSortIcon,
 } from '@radix-ui/react-icons'
 import { type Column } from '@tanstack/react-table'
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import './types'
@@ -26,6 +27,8 @@ export function DataTableColumnHeader<TData, TValue>({
   title,
   className,
 }: DataTableColumnHeaderProps<TData, TValue>) {
+  const t = useT()
+
   if (!column.getCanSort()) {
     return <span className={cn(className)}>{title}</span>
   }
@@ -38,8 +41,16 @@ export function DataTableColumnHeader<TData, TValue>({
       size='sm'
       className={cn('-ms-2 h-8 px-2 font-medium', className)}
       onClick={() => column.toggleSorting(sorted === 'asc')}
-      title={`Urutkan ${title.toLowerCase()}`}
-      aria-label={`Urutkan ${title.toLowerCase()}, ${sorted === 'asc' ? 'menaik' : sorted === 'desc' ? 'menurun' : 'belum diurutkan'}`}
+      title={t('table.sort', { column: title.toLowerCase() })}
+      aria-label={t('table.sortAria', {
+        column: title.toLowerCase(),
+        dir:
+          sorted === 'asc'
+            ? t('table.sortAsc')
+            : sorted === 'desc'
+              ? t('table.sortDesc')
+              : t('table.sortNone'),
+      })}
     >
       {title}
       {sorted === 'desc' ? (

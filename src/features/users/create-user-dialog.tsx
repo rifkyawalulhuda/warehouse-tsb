@@ -6,6 +6,7 @@ import { apiErrorMessage } from '@/lib/api/client'
 import { createUser } from '@/lib/api/endpoints'
 import type { ManagedUser, Role } from '@/lib/api/types'
 import { roleLabels } from '@/lib/format'
+import { useT } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -38,6 +39,7 @@ export function CreateUserDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const t = useT()
   const queryClient = useQueryClient()
   const [form, setForm] = useState({
     name: '',
@@ -57,7 +59,7 @@ export function CreateUserDialog({
         phone: form.phone.trim() || undefined,
       }),
     onSuccess: (user: ManagedUser) => {
-      toast.success(`Akun ${user.email} dibuat`)
+      toast.success(t('users.created', { email: user.email }))
       void queryClient.invalidateQueries({ queryKey: ['master', 'users'] })
       void queryClient.invalidateQueries({ queryKey: ['users'] })
       setForm({
@@ -81,15 +83,13 @@ export function CreateUserDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='sm:max-w-lg'>
         <DialogHeader>
-          <DialogTitle>Tambah pengguna</DialogTitle>
-          <DialogDescription>
-            Akun staf gudang. Untuk akun Customer, buka tab Customer.
-          </DialogDescription>
+          <DialogTitle>{t('users.createTitle')}</DialogTitle>
+          <DialogDescription>{t('users.createDesc')}</DialogDescription>
         </DialogHeader>
 
         <div className='grid gap-3'>
           <div className='space-y-1'>
-            <Label htmlFor='new-name'>Nama</Label>
+            <Label htmlFor='new-name'>{t('users.label.name')}</Label>
             <Input
               id='new-name'
               value={form.name}
@@ -100,7 +100,7 @@ export function CreateUserDialog({
           </div>
           <div className='grid gap-3 sm:grid-cols-2'>
             <div className='space-y-1'>
-              <Label htmlFor='new-email'>Email</Label>
+              <Label htmlFor='new-email'>{t('users.label.email')}</Label>
               <Input
                 id='new-email'
                 type='email'
@@ -111,7 +111,7 @@ export function CreateUserDialog({
               />
             </div>
             <div className='space-y-1'>
-              <Label htmlFor='new-phone'>No. HP</Label>
+              <Label htmlFor='new-phone'>{t('users.label.phone')}</Label>
               <Input
                 id='new-phone'
                 value={form.phone}
@@ -122,7 +122,7 @@ export function CreateUserDialog({
             </div>
           </div>
           <div className='space-y-1'>
-            <Label>Peran</Label>
+            <Label>{t('users.label.role')}</Label>
             <Select
               value={form.role}
               onValueChange={(value) =>
@@ -142,7 +142,7 @@ export function CreateUserDialog({
             </Select>
           </div>
           <div className='space-y-1'>
-            <Label htmlFor='new-password'>Password awal</Label>
+            <Label htmlFor='new-password'>{t('users.label.initialPassword')}</Label>
             <Input
               id='new-password'
               type='password'
@@ -150,21 +150,21 @@ export function CreateUserDialog({
               onChange={(event) =>
                 setForm({ ...form, password: event.target.value })
               }
-              placeholder='Minimal 7 karakter'
+              placeholder={t('users.passwordPlaceholder')}
             />
           </div>
         </div>
 
         <DialogFooter>
           <Button variant='outline' onClick={() => onOpenChange(false)}>
-            Batal
+            {t('common.cancel')}
           </Button>
           <Button
             disabled={!valid || create.isPending}
             onClick={() => create.mutate()}
           >
             {create.isPending && <Loader2 className='animate-spin' />}
-            Simpan
+            {t('common.save')}
           </Button>
         </DialogFooter>
       </DialogContent>

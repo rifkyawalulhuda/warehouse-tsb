@@ -30,6 +30,7 @@ import {
 } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { useCanGoBack } from '@/hooks/use-can-go-back'
+import { useT } from '@/lib/i18n'
 import { useSetPageTitle } from '@/context/page-title-provider'
 import { Main } from '@/components/layout/main'
 import { ConfirmDialog } from '@/components/confirm-dialog'
@@ -53,10 +54,11 @@ export function BookingDetail() {
   const { bookingId } = useParams({ from: '/_authenticated/bookings/$bookingId' })
   useRealtimeSync()
   const now = useNow()
+  const t = useT()
 
   // Halaman ini tidak memakai PageHeader (judulnya berupa kode booking), jadi
   // judul bilah atas mobile didaftarkan langsung di sini.
-  useSetPageTitle('Detail Booking')
+  useSetPageTitle(t('bookings.detail.pageTitle'))
 
   // Dipakai untuk memutuskan apakah tautan "Kembali ke Jadwal Saya" masih perlu
   // tampil di layar sempit (lihat komentarnya di bawah).
@@ -74,14 +76,14 @@ export function BookingDetail() {
   const cancel = useMutation({
     mutationFn: () => cancelBooking(bookingId),
     onSuccess: () => {
-      toast.success('Booking dibatalkan')
+      toast.success(t('bookings.detail.cancelled'))
       void queryClient.invalidateQueries({ queryKey: ['bookings'] })
       setCancelOpen(false)
     },
     onError: (err) => toast.error(apiErrorMessage(err)),
   })
 
-  if (isPending) return <LoadingBlock label='Memuat booking...' />
+  if (isPending) return <LoadingBlock label={t('bookings.detail.loading')} />
   if (isError) return <ErrorBlock error={error} onRetry={() => void refetch()} />
 
   const booking = data
@@ -105,18 +107,18 @@ export function BookingDetail() {
           className={cn('-ms-2 text-muted-foreground', canGoBack && 'max-md:hidden')}
         >
           <Link to='/bookings'>
-            <ArrowLeft /> Kembali ke Jadwal Saya
+            <ArrowLeft /> {t('bookings.detail.back')}
           </Link>
         </Button>
         <div className='flex flex-wrap items-center gap-2'>
           <Button asChild variant='outline' size='sm'>
             <Link to='/t/$token' params={{ token: booking.qrToken }} target='_blank'>
-              <ExternalLink /> Buka tiket
+              <ExternalLink /> {t('bookings.detail.openTicket')}
             </Link>
           </Button>
           {booking.status === 'BOOKED_INCOMPLETE' && (
             <Button size='sm' onClick={() => setVehicleOpen(true)}>
-              <PencilLine /> Lengkapi kendaraan
+              <PencilLine /> {t('bookings.detail.completeVehicle')}
             </Button>
           )}
           {CANCELLABLE.includes(booking.status) && (
@@ -126,7 +128,7 @@ export function BookingDetail() {
               className='text-destructive hover:text-destructive'
               onClick={() => setCancelOpen(true)}
             >
-              <XCircle /> Batalkan
+              <XCircle /> {t('bookings.detail.cancel')}
             </Button>
           )}
         </div>
@@ -171,25 +173,25 @@ export function BookingDetail() {
 
           <p className='text-sm text-muted-foreground'>
             {activityLabels[booking.activityType]} · {booking.truckType.truckName} ·{' '}
-            {durationLabel(bookingDurationMinutes(booking))} ({booking.blocksLocked} blok)
+            {durationLabel(bookingDurationMinutes(booking))} ({t('bookings.detail.blocks', { count: booking.blocksLocked })})
             {urgency.key !== 'in-progress' && urgency.key !== 'overdue' && (
               <> · {urgency.label}</>
             )}
           </p>
 
           <div className='grid gap-2 border-t pt-4 sm:grid-cols-3'>
-            <Fact icon={Truck} label='Kendaraan'>
-              {booking.licensePlate ?? 'Belum diisi'}
+            <Fact icon={Truck} label={t('bookings.detail.vehicle')}>
+              {booking.licensePlate ?? t('bookings.detail.empty')}
               {booking.driverName && (
                 <span className='block text-xs font-normal text-muted-foreground'>
-                  Supir: {booking.driverName}
+                  {t('bookings.detail.driver')}: {booking.driverName}
                 </span>
               )}
             </Fact>
-            <Fact icon={MapPin} label='Dock'>
+            <Fact icon={MapPin} label={t('bookings.detail.dock')}>
               {dockLabel(booking)}
             </Fact>
-            <Fact icon={FileText} label='Nomor dokumen'>
+            <Fact icon={FileText} label={t('bookings.detail.docNo')}>
               {booking.referenceDocNo}
             </Fact>
           </div>
@@ -208,23 +210,27 @@ export function BookingDetail() {
       <div className='grid gap-4 lg:grid-cols-3'>
         <Card className='gap-4 lg:col-span-2'>
           <CardHeader>
-            <CardTitle className='text-base'>Detail booking</CardTitle>
-            <CardDescription>
-              Slot yang dipesan tidak bisa diubah. Batalkan lalu buat ulang bila perlu pindah jam.
-            </CardDescription>
+            <CardTitle className='text-base'>{t('bookings.detail.detailsTitle')}</CardTitle>
+            <CardDescription>{t('bookings.detail.detailsDesc')}</CardDescription>
           </CardHeader>
           <CardContent className='grid gap-4 sm:grid-cols-2'>
-            <Field label='Tanggal'>{formatDate(booking.bookingDate)}</Field>
-            <Field label='Jam'>
+            <Field label={t('bookings.detail.date')}>{formatDate(booking.bookingDate)}</Field>
+            <Field label={t('bookings.detail.time')}>
               {formatTime(booking.startTime)}–{formatTime(booking.endTime)}
             </Field>
-            <Field label='Durasi'>
-              {durationLabel(bookingDurationMinutes(booking))} ({booking.blocksLocked} blok)
+            <Field label={t('bookings.detail.duration')}>
+              {durationLabel(bookingDurationMinutes(booking))} ({t('bookings.detail.blocks', { count: booking.blocksLocked })})
             </Field>
-            <Field label='Dock'>{booking.assignedDock?.dockCode ?? 'Ditentukan saat check-in'}</Field>
-            <Field label='Plat nomor'>{booking.licensePlate ?? 'Belum diisi'}</Field>
-            <Field label='Supir'>{booking.driverName ?? 'Belum diisi'}</Field>
-            <Field label='Nomor HP supir'>
+            <Field label={t('bookings.detail.dock')}>
+              {booking.assignedDock?.dockCode ?? t('bookings.detail.dockTbd')}
+            </Field>
+            <Field label={t('bookings.detail.plate')}>
+              {booking.licensePlate ?? t('bookings.detail.empty')}
+            </Field>
+            <Field label={t('bookings.detail.driver')}>
+              {booking.driverName ?? t('bookings.detail.empty')}
+            </Field>
+            <Field label={t('bookings.detail.driverPhone')}>
               {booking.driverPhone ? (
                 <span className='inline-flex items-center gap-1.5'>
                   <Phone className='size-3.5 text-muted-foreground' aria-hidden />
@@ -242,11 +248,11 @@ export function BookingDetail() {
                 '-'
               )}
             </Field>
-            <Field label='Nomor dokumen'>{booking.referenceDocNo}</Field>
+            <Field label={t('bookings.detail.docNo')}>{booking.referenceDocNo}</Field>
             {booking.lateMinutes > 0 && (
-              <Field label='Keterlambatan'>
+              <Field label={t('bookings.detail.late')}>
                 <span className='text-orange-700 dark:text-orange-300'>
-                  {booking.lateMinutes} menit
+                  {t('bookings.detail.minutes', { count: booking.lateMinutes })}
                 </span>
               </Field>
             )}
@@ -255,17 +261,17 @@ export function BookingDetail() {
 
         <Card className='gap-4'>
           <CardHeader>
-            <CardTitle className='text-base'>Riwayat waktu</CardTitle>
-            <CardDescription>Jejak setiap perpindahan status.</CardDescription>
+            <CardTitle className='text-base'>{t('bookings.detail.historyTitle')}</CardTitle>
+            <CardDescription>{t('bookings.detail.historyDesc')}</CardDescription>
           </CardHeader>
           <CardContent>
             <ol className='space-y-0'>
-              <Timeline label='Data kendaraan lengkap' value={booking.timeLog?.vehicleCompletedAt} />
-              <Timeline label='Masuk gate' value={booking.timeLog?.gateInAt} />
-              <Timeline label='Dapat dock' value={booking.timeLog?.dockAssignedAt} />
-              <Timeline label='Mulai proses' value={booking.timeLog?.processStartedAt} />
-              <Timeline label='Selesai proses' value={booking.timeLog?.processCompletedAt} />
-              <Timeline label='Keluar gate' value={booking.timeLog?.gateOutAt} last />
+              <Timeline label={t('bookings.detail.vehicleComplete')} value={booking.timeLog?.vehicleCompletedAt} />
+              <Timeline label={t('bookings.detail.gateIn')} value={booking.timeLog?.gateInAt} />
+              <Timeline label={t('bookings.detail.dockAssigned')} value={booking.timeLog?.dockAssignedAt} />
+              <Timeline label={t('bookings.detail.processStart')} value={booking.timeLog?.processStartedAt} />
+              <Timeline label={t('bookings.detail.processDone')} value={booking.timeLog?.processCompletedAt} />
+              <Timeline label={t('bookings.detail.gateOut')} value={booking.timeLog?.gateOutAt} last />
             </ol>
           </CardContent>
         </Card>
@@ -276,9 +282,9 @@ export function BookingDetail() {
       <ConfirmDialog
         open={cancelOpen}
         onOpenChange={setCancelOpen}
-        title='Batalkan booking?'
-        desc={`Booking ${booking.bookingCode} akan dibatalkan dan slot jamnya dikembalikan.`}
-        confirmText='Ya, batalkan'
+        title={t('bookings.detail.cancelTitle')}
+        desc={t('bookings.detail.cancelBody', { code: booking.bookingCode })}
+        confirmText={t('bookings.detail.cancelConfirm')}
         destructive
         isLoading={cancel.isPending}
         handleConfirm={() => cancel.mutate()}
@@ -366,6 +372,7 @@ function ApprovalNotice({
   approvedAt: string | null
   rejectionReason: string | null
 }) {
+  const t = useT()
   const tone =
     status === 'PENDING'
       ? 'border-amber-300/70 bg-amber-50/60 dark:border-amber-900/60 dark:bg-amber-950/25'
@@ -379,25 +386,35 @@ function ApprovalNotice({
       <p className='text-sm text-muted-foreground'>
         {status === 'PENDING' && (
           <>
-            Menunggu persetujuan Admin gudang.
+            {t('bookings.detail.approvalPending')}
             {deadline && (
               <>
-                {' '}Tenggat {formatDate(deadline.slice(0, 10))} {formatTime(deadline)}.
+                {' '}
+                {t('bookings.detail.approvalDeadline', {
+                  date: formatDate(deadline.slice(0, 10)),
+                  time: formatTime(deadline),
+                })}
               </>
             )}{' '}
-            QR baru aktif setelah disetujui.
+            {t('bookings.detail.approvalQrInactive')}
           </>
         )}
         {status === 'APPROVED' && (
           <>
-            Disetujui{approvedAt ? ` pada ${formatTime(approvedAt)}` : ''}. QR sudah aktif bila
-            data kendaraan lengkap.
+            {approvedAt
+              ? t('bookings.detail.approvalApprovedAt', { time: formatTime(approvedAt) })
+              : t('bookings.detail.approvalApproved')}{' '}
+            {t('bookings.detail.approvalQrActive')}
           </>
         )}
-        {status === 'REJECTED' && <>Alasan: {rejectionReason ?? 'tidak dicatat'}. Silakan buat booking baru.</>}
-        {status === 'EXPIRED' && (
-          <>Booking kedaluwarsa karena tidak diputuskan sampai tenggat. Silakan buat booking baru.</>
+        {status === 'REJECTED' && (
+          <>
+            {t('bookings.detail.approvalRejected', {
+              reason: rejectionReason ?? t('bookings.detail.notRecorded'),
+            })}
+          </>
         )}
+        {status === 'EXPIRED' && <>{t('bookings.detail.approvalExpired')}</>}
       </p>
     </div>
   )

@@ -2,13 +2,15 @@ import { Wrench } from 'lucide-react'
 import type { DockWithBooking } from '@/lib/api/types'
 import { cn } from '@/lib/utils'
 import { Card } from '@/components/ui/card'
-import { dockActivityLabel, dockPhase } from './dock-model'
+import { useT } from '@/lib/i18n'
+import { dockActivityLabelKey, dockPhase } from './dock-model'
 
 /**
  * Baris ringkas untuk dock tanpa truk. Dipakai supaya dock yang menganggur
  * tidak memakan tinggi kartu sebesar dock yang sedang melayani.
  */
 export function DockTile({ dock }: { dock: DockWithBooking }) {
+  const t = useT()
   const maintenance = dockPhase(dock) === 'maintenance'
 
   return (
@@ -25,13 +27,13 @@ export function DockTile({ dock }: { dock: DockWithBooking }) {
           <div className='min-w-0'>
             <p className='font-semibold leading-tight'>{dock.dockCode}</p>
             <p className='text-xs text-muted-foreground'>
-              {dockActivityLabel(dock.allowedActivity)}
+              {t(dockActivityLabelKey(dock.allowedActivity))}
             </p>
           </div>
         </div>
         <span className='inline-flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground'>
           {maintenance && <Wrench className='size-3.5' aria-hidden />}
-          {maintenance ? 'Perawatan' : 'Menunggu truk'}
+          {maintenance ? t('dock.phase.maintenance') : t('dock.tileWaiting')}
         </span>
       </div>
     </Card>

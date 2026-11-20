@@ -1,6 +1,7 @@
 import { Download } from 'lucide-react'
 import type { DockReport } from '@/lib/api/types'
 import { activityLabels } from '@/lib/format'
+import { useT } from '@/lib/i18n'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -32,6 +33,7 @@ export function DockUtilization({
   rangeLabel: string
   onExport?: () => void
 }) {
+  const t = useT()
   const totalTrucks = rows.reduce((sum, row) => sum + row.trucks, 0)
   const averageUtilization =
     rows.length === 0
@@ -42,16 +44,19 @@ export function DockUtilization({
     <Card className='gap-4'>
       <CardHeader className='flex-row items-start justify-between gap-3 space-y-0'>
         <div className='space-y-1.5'>
-          <CardTitle>Utilisasi Dock</CardTitle>
+          <CardTitle>{t('dashboard.utilTitle')}</CardTitle>
           <CardDescription>
-            {rangeLabel} · {totalTrucks} truk · rata-rata utilisasi{' '}
-            {averageUtilization}%
+            {t('dashboard.utilDesc', {
+              range: rangeLabel,
+              trucks: totalTrucks,
+              percent: averageUtilization,
+            })}
           </CardDescription>
         </div>
         {onExport ? (
           <Button variant='outline' size='sm' className='shrink-0' onClick={onExport}>
             <Download className='size-3.5' />
-            Excel
+            {t('dashboard.excel')}
           </Button>
         ) : null}
       </CardHeader>
@@ -60,12 +65,14 @@ export function DockUtilization({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className='ps-6'>Dock</TableHead>
-                <TableHead>Aktivitas</TableHead>
-                <TableHead className='text-right'>Truk</TableHead>
-                <TableHead className='text-right'>Jam pakai</TableHead>
-                <TableHead className='text-right'>Rata-rata proses</TableHead>
-                <TableHead className='pe-6 text-right'>Utilisasi</TableHead>
+                <TableHead className='ps-6'>{t('dashboard.colDock')}</TableHead>
+                <TableHead>{t('dashboard.colActivity')}</TableHead>
+                <TableHead className='text-right'>{t('dashboard.colTrucks')}</TableHead>
+                <TableHead className='text-right'>{t('dashboard.colUsedHours')}</TableHead>
+                <TableHead className='text-right'>{t('dashboard.colAvgProcess')}</TableHead>
+                <TableHead className='pe-6 text-right'>
+                  {t('dashboard.colUtilization')}
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -82,7 +89,7 @@ export function DockUtilization({
                     {row.usedHours.toFixed(1)}
                   </TableCell>
                   <TableCell className='text-right tabular-nums'>
-                    {row.averageProcessingMinutes} mnt
+                    {row.averageProcessingMinutes} {t('duration.minutesShort')}
                   </TableCell>
                   <TableCell className='pe-6 text-right'>
                     <Badge
@@ -106,7 +113,7 @@ export function DockUtilization({
                     colSpan={6}
                     className='h-24 text-center text-sm text-muted-foreground'
                   >
-                    Belum ada truk yang menempati dock pada rentang ini.
+                    {t('dashboard.utilEmpty')}
                   </TableCell>
                 </TableRow>
               ) : null}

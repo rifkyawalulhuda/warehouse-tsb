@@ -1,4 +1,6 @@
 import type { BookingStatus, Role } from './api/types'
+import { getLocale, localeToIntl } from './i18n'
+import { translate, type MessageKey, type Vars } from './i18n/translate'
 
 /** Zona waktu operasional. Semua label jam di UI memakai Asia/Jakarta. */
 export const TIME_ZONE = 'Asia/Jakarta'
@@ -14,7 +16,7 @@ function toDate(value: string | Date | null | undefined): Date | null {
 export function formatTime(value: string | Date | null | undefined) {
   const date = toDate(value)
   if (!date) return DASH
-  return new Intl.DateTimeFormat('id-ID', {
+  return new Intl.DateTimeFormat(localeToIntl(), {
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
@@ -25,7 +27,7 @@ export function formatTime(value: string | Date | null | undefined) {
 export function formatDate(value: string | Date | null | undefined) {
   const date = toDate(value)
   if (!date) return DASH
-  return new Intl.DateTimeFormat('id-ID', {
+  return new Intl.DateTimeFormat(localeToIntl(), {
     weekday: 'short',
     day: '2-digit',
     month: 'short',
@@ -37,7 +39,7 @@ export function formatDate(value: string | Date | null | undefined) {
 export function formatDateShort(value: string | Date | null | undefined) {
   const date = toDate(value)
   if (!date) return DASH
-  return new Intl.DateTimeFormat('id-ID', {
+  return new Intl.DateTimeFormat(localeToIntl(), {
     day: '2-digit',
     month: 'short',
     timeZone: TIME_ZONE,
@@ -52,7 +54,7 @@ export function formatDateShort(value: string | Date | null | undefined) {
 export function formatDateCompact(value: string | Date | null | undefined) {
   const date = toDate(value)
   if (!date) return DASH
-  return new Intl.DateTimeFormat('id-ID', {
+  return new Intl.DateTimeFormat(localeToIntl(), {
     weekday: 'short',
     day: '2-digit',
     month: 'short',
@@ -115,10 +117,13 @@ export function dateToISO(date: Date) {
 }
 
 export function durationLabel(minutes: number) {
-  if (minutes < 60) return `${minutes} menit`
+  const t = (key: MessageKey, vars?: Vars) => translate(getLocale(), key, vars)
+  if (minutes < 60) return t('duration.minutes', { count: minutes })
   const h = Math.floor(minutes / 60)
   const m = minutes % 60
-  return m === 0 ? `${h} jam` : `${h} jam ${m} menit`
+  return m === 0
+    ? t('duration.hours', { count: h })
+    : t('duration.hoursMinutes', { hours: h, minutes: m })
 }
 
 /**
@@ -136,18 +141,19 @@ export function bookingDurationMinutes(booking: {
   return Math.max(0, Math.round((end - start) / 60_000))
 }
 
-export const statusLabels: Record<BookingStatus, string> = {
-  BOOKED_INCOMPLETE: 'Menunggu data kendaraan',
-  BOOKED_READY: 'Siap masuk',
-  CHECKED_IN_ON_TIME: 'Check-in tepat waktu',
-  LATE_WAITING_LIST: 'Antrean terlambat',
-  DOCK_ASSIGNED: 'Dapat dock',
-  IN_PROGRESS: 'Sedang diproses',
-  COMPLETED: 'Selesai bongkar/muat',
-  CHECKED_OUT: 'Sudah keluar',
-  CANCELLED: 'Dibatalkan',
-  NO_SHOW: 'Tidak datang',
+/**
+ * Label status/peran/aktivitas dibaca dari kamus saat diakses, bukan disalin
+ * sekali saat modul dimuat — kalau disalin, mengganti bahasa tidak mengubah
+ * label yang sudah dirender.
+ */
+function labelMap<T extends string>(prefix: string): Record<T, string> {
+  return new Proxy({} as Record<T, string>, {
+    get: (_target, key) =>
+      translate(getLocale(), `${prefix}.${String(key)}` as MessageKey),
+  })
 }
+
+export const statusLabels = labelMap<BookingStatus>('status')
 
 export const statusTone: Record<BookingStatus, string> = {
   BOOKED_INCOMPLETE:
@@ -170,17 +176,9 @@ export const statusTone: Record<BookingStatus, string> = {
     'border-rose-300/70 bg-rose-50 text-rose-800 dark:border-rose-800/60 dark:bg-rose-950/40 dark:text-rose-300',
 }
 
-export const roleLabels: Record<Role, string> = {
-  ADMIN: 'Admin Gudang',
-  CUSTOMER: 'Customer',
-  GATE_OFFICER: 'Petugas Gate',
-  CHECKER: 'Checker Dock',
-}
+export const roleLabels = labelMap<Role>('role')
 
-export const activityLabels = {
-  LOADING: 'Loading (muat)',
-  UNLOADING: 'Unloading (bongkar)',
-} as const
+export const activityLabels = labelMap<'LOADING' | 'UNLOADING'>('activity')
 
 export function initials(name: string) {
   return name

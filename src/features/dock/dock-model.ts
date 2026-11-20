@@ -1,5 +1,9 @@
 import { bookingDurationMinutes } from '@/lib/format'
+import type { MessageKey, Vars } from '@/lib/i18n'
 import type { Booking, DockWithBooking, QueueResponse } from '@/lib/api/types'
+
+/** Penerjemah yang dipakai fungsi model; sama bentuknya dengan `useT()`. */
+export type Translate = (key: MessageKey, vars?: Vars) => string
 
 /**
  * Keadaan satu dock dilihat dari sudut checker. `starting` berarti truk sudah
@@ -18,12 +22,12 @@ export const dockFilters = [
 
 export type DockFilter = (typeof dockFilters)[number]
 
-export const dockFilterLabels: Record<DockFilter, string> = {
-  all: 'Semua',
-  action: 'Perlu dimulai',
-  serving: 'Diproses',
-  empty: 'Kosong',
-  maintenance: 'Perawatan',
+export const dockFilterLabelKeys: Record<DockFilter, MessageKey> = {
+  all: 'dock.filter.all',
+  action: 'dock.filter.action',
+  serving: 'dock.filter.serving',
+  empty: 'dock.filter.empty',
+  maintenance: 'dock.filter.maintenance',
 }
 
 export function dockPhase(dock: DockWithBooking): DockPhase {
@@ -33,16 +37,25 @@ export function dockPhase(dock: DockWithBooking): DockPhase {
   return 'available'
 }
 
-export const dockPhaseLabels: Record<DockPhase, string> = {
-  starting: 'Siap dimulai',
-  serving: 'Sedang diproses',
-  available: 'Tersedia',
-  maintenance: 'Perawatan',
+export const dockPhaseLabelKeys: Record<DockPhase, MessageKey> = {
+  starting: 'dock.phase.starting',
+  serving: 'dock.phase.serving',
+  available: 'dock.phase.available',
+  maintenance: 'dock.phase.maintenance',
 }
 
-export function dockActivityLabel(activity: DockWithBooking['allowedActivity']) {
-  if (activity === 'BOTH') return 'Bongkar & muat'
-  return activity === 'LOADING' ? 'Muat saja' : 'Bongkar saja'
+export const dockGroupLabelKeys: Record<DockPhase, MessageKey> = {
+  starting: 'dock.group.starting',
+  serving: 'dock.group.serving',
+  available: 'dock.group.available',
+  maintenance: 'dock.group.maintenance',
+}
+
+export function dockActivityLabelKey(
+  activity: DockWithBooking['allowedActivity']
+): MessageKey {
+  if (activity === 'BOTH') return 'dock.activityBoth'
+  return activity === 'LOADING' ? 'dock.activityLoading' : 'dock.activityUnloading'
 }
 
 export function dockFilterCounts(docks: DockWithBooking[]) {
@@ -156,20 +169,23 @@ export function processClock(booking: Booking, now: Date): ProcessClock {
   }
 }
 
-/** Ringkas menit menjadi "42 mnt" atau "1 j 05 mnt" tanpa kata "jam" panjang. */
 /** Label jam ringkas untuk ruang sempit: "3j 35m" alih-alih "3 j 35 mnt". */
-export function shortClock(minutes: number) {
+export function shortClock(minutes: number, t: Translate) {
   const hours = Math.floor(minutes / 60)
   const rest = minutes % 60
-  if (hours === 0) return `${rest}m`
-  return rest === 0 ? `${hours}j` : `${hours}j ${rest}m`
+  if (hours === 0) return t('dock.shortMinutes', { count: rest })
+  return rest === 0
+    ? t('dock.shortHours', { count: hours })
+    : `${t('dock.shortHours', { count: hours })} ${t('dock.shortMinutes', { count: rest })}`
 }
 
-export function clockLabel(minutes: number) {
-  if (minutes < 60) return `${minutes} mnt`
+export function clockLabel(minutes: number, t: Translate) {
+  if (minutes < 60) return t('dock.clockMinutes', { count: minutes })
   const hours = Math.floor(minutes / 60)
   const rest = minutes % 60
-  return rest === 0 ? `${hours} j` : `${hours} j ${String(rest).padStart(2, '0')} mnt`
+  return rest === 0
+    ? t('dock.clockHours', { count: hours })
+    : t('dock.clockBoth', { hours, minutes: String(rest).padStart(2, '0') })
 }
 
 export function waitingCount(queue: QueueResponse | undefined) {

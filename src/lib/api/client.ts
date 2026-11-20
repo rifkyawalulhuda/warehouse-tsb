@@ -1,4 +1,10 @@
 import axios, { type AxiosError, type AxiosRequestConfig } from 'axios'
+import { getLocale } from '@/lib/i18n/locale'
+import {
+  hasMessage,
+  translate,
+  type MessageKey,
+} from '@/lib/i18n/translate'
 
 /** Semua respons API dibungkus `{ data: ... }`. */
 type Envelope<T> = { data: T }
@@ -16,10 +22,15 @@ export const api = axios.create({
 /** Pesan error yang aman ditampilkan ke pengguna. */
 export function apiErrorMessage(error: unknown): string {
   if (axios.isAxiosError<ApiErrorBody>(error)) {
+    const code = error.response?.data?.error?.code
+    if (code && hasMessage(`error.${code}`)) {
+      return translate(getLocale(), `error.${code}` as MessageKey)
+    }
+    if (!error.response) return translate(getLocale(), 'error.NETWORK')
     return error.response?.data?.error?.message ?? error.message
   }
   if (error instanceof Error) return error.message
-  return 'Terjadi kesalahan yang tidak diketahui'
+  return translate(getLocale(), 'common.unknownError')
 }
 
 export function apiErrorCode(error: unknown): string | null {

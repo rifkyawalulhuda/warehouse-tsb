@@ -1,14 +1,16 @@
 import { CalendarClock, LayoutGrid, LayoutList, type LucideIcon } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { BOOKING_FILTERS, type BookingFilter, type BookingsView } from '../booking-view'
 
-const VIEW_OPTIONS: { value: BookingsView; label: string; icon: LucideIcon }[] = [
-  { value: 'grid', label: 'Kotak', icon: LayoutGrid },
-  { value: 'list', label: 'Daftar', icon: LayoutList },
-  { value: 'schedule', label: 'Jadwal', icon: CalendarClock },
-]
+const VIEW_OPTIONS: { value: BookingsView; key: 'grid' | 'list' | 'schedule'; icon: LucideIcon }[] =
+  [
+    { value: 'grid', key: 'grid', icon: LayoutGrid },
+    { value: 'list', key: 'list', icon: LayoutList },
+    { value: 'schedule', key: 'schedule', icon: CalendarClock },
+  ]
 
 /**
  * Pemilih tampilan. Desktop memakai segmented control; di layar kecil tombol
@@ -24,22 +26,25 @@ export function ViewSwitcher({
   onChange: (view: BookingsView) => void
   disabled?: boolean
 }) {
+  const t = useT()
+
   return (
     <div
       role='group'
-      aria-label='Tampilan daftar booking'
+      aria-label={t('bookings.viewLabel')}
       className='inline-flex shrink-0 items-center gap-1 rounded-lg border bg-muted/40 p-1'
     >
       {VIEW_OPTIONS.map((option) => {
         const Icon = option.icon
         const active = value === option.value
+        const label = t(`bookings.view.${option.key}`)
         return (
           <Tooltip key={option.value}>
             <TooltipTrigger asChild>
               <button
                 type='button'
                 aria-pressed={active}
-                aria-label={`Tampilan ${option.label.toLowerCase()}`}
+                aria-label={label}
                 disabled={disabled}
                 onClick={() => onChange(option.value)}
                 className={cn(
@@ -52,10 +57,10 @@ export function ViewSwitcher({
                 )}
               >
                 <Icon className='size-4' aria-hidden />
-                <span className='hidden sm:inline'>{option.label}</span>
+                <span className='hidden sm:inline'>{label}</span>
               </button>
             </TooltipTrigger>
-            <TooltipContent className='sm:hidden'>Tampilan {option.label.toLowerCase()}</TooltipContent>
+            <TooltipContent className='sm:hidden'>{label}</TooltipContent>
           </Tooltip>
         )
       })}
@@ -80,6 +85,7 @@ export function FilterChips({
   /** Batasi chip yang ditampilkan; filter yang tidak relevan disembunyikan. */
   only?: BookingFilter[]
 }) {
+  const t = useT()
   const items = only
     ? BOOKING_FILTERS.filter((filter) => only.includes(filter.value))
     : BOOKING_FILTERS
@@ -87,7 +93,7 @@ export function FilterChips({
   return (
     <div
       role='group'
-      aria-label='Filter booking'
+      aria-label={t('bookings.filterLabel')}
       className='-mx-1 flex min-w-0 items-center gap-1.5 overflow-x-auto px-1 py-0.5 no-scrollbar'
     >
       {items.map((filter) => {
@@ -107,7 +113,7 @@ export function FilterChips({
                 : 'border-border bg-background text-muted-foreground hover:text-foreground'
             )}
           >
-            {filter.label}
+            {t(filter.key)}
             <Badge
               variant={active ? 'default' : 'secondary'}
               className='h-4 min-w-4 px-1 text-[10px] leading-none tabular-nums'
@@ -120,4 +126,3 @@ export function FilterChips({
     </div>
   )
 }
-

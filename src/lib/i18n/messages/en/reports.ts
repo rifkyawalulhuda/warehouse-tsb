@@ -1,0 +1,93 @@
+export const reports = {
+  'report.title': 'Reports',
+  'report.description':
+    'A summary of your company bookings: punctuality, service duration, and slot usage.',
+  'report.from': 'From date',
+  'report.to': 'To date',
+  'report.reload': 'Reload report',
+  'report.export': 'Export Excel',
+  'report.presets': 'Quick date ranges',
+  'report.presetToday': 'Today',
+  'report.preset7': '7 days',
+  'report.preset30': '30 days',
+  'report.reset': 'Reset',
+  'report.updating': 'Updating report...',
+  'report.rangeInvalid': 'The start date cannot be later than the end date.',
+  'report.calculating': 'Calculating report...',
+
+  'report.kpi.total': 'Total bookings',
+  'report.kpi.onTime': 'On-time rate',
+  'report.kpi.onTimeHint': 'Of those that gated in',
+  'report.kpi.turnaround': 'Average turnaround',
+  'report.kpi.turnaroundHint': 'Gate-in to gate-out',
+  'report.kpi.slot': 'Slot usage',
+  'report.kpi.slotHint': 'Against the blocks you booked',
+
+  'report.section.detail': 'Breakdown',
+  'report.section.detailDesc':
+    'Booking status and average duration for this range.',
+  'report.completed': 'Completed',
+  'report.cancelled': 'Cancelled',
+  'report.noShow': 'No-show',
+  'report.expired': 'Expired',
+  'report.avgWaiting': 'Average wait',
+  'report.avgProcessing': 'Average processing',
+  'report.overrun': 'Over block',
+  'report.overrunHint': 'Bookings whose processing exceeded the block',
+
+  'report.byDay': 'Bookings per day',
+  'report.byDayDesc': 'Total, completed, and late each day in the range.',
+  'report.byHour': 'Truck arrivals per hour',
+  'report.byHourDesc': 'How many of your trucks gated in each operating hour.',
+
+  'report.table': 'Booking detail',
+  'report.tableDesc': '{count} rows. Download the Excel for the full data.',
+  'report.empty': 'No bookings in this date range.',
+
+  'report.col.code': 'Code',
+  'report.col.date': 'Date',
+  'report.col.plate': 'Plate',
+  'report.col.dock': 'Dock',
+  'report.col.status': 'Status',
+  'report.col.waiting': 'Wait',
+  'report.col.processing': 'Processing',
+  'report.col.turnaround': 'Turnaround',
+  'report.col.late': 'Late',
+  'report.col.slot': 'Slot',
+  'report.total': 'Total',
+
+  'report.legend.total': 'Total',
+  'report.legend.completed': 'Completed',
+  'report.legend.late': 'Late',
+  'report.legend.arrivals': 'Arrivals',
+
+  'report.minutes': '{count} min',
+  'report.lateNotice': '{count} minutes late',
+  'report.overrunBy': '(+{count} min)',
+
+  'report.staffTitle': 'Reports',
+  'report.staffDescription':
+    'Operational KPIs and a daily recap for the selected date range.',
+  'report.customerLabel': 'Customer',
+  'report.allCustomers': 'All customers',
+  'report.loadingCustomers': 'Loading customers…',
+  'report.customersFailed': 'Could not load the customer list.',
+  'report.kpi.avgWaiting': 'Average wait',
+  'report.kpi.avgWaitingHint': 'Gate-in to processing start',
+  'report.kpi.avgProcessing': 'Average processing',
+  'report.kpi.avgProcessingHint': 'Processing start to finish',
+  'report.kpi.expiredHint': 'Not decided by an Admin',
+  'report.col.customer': 'Customer',
+  'report.chart.byDayTitle': 'Bookings per day',
+  'report.chart.byDayDesc':
+    'Total, completed, and late bookings for each day in the range.',
+  'report.chart.byHourCapacity': 'Arrivals vs slot capacity',
+  'report.chart.byHourCapacityDesc':
+    'Gate-ins per hour compared with that hour’s capacity.',
+  'report.chart.byHourCustomer': 'Arrivals per hour',
+  'report.chart.byHourCustomerDesc':
+    'Gate-ins per hour for the selected customer. Warehouse capacity is not compared because the chart covers a single company.',
+  'report.chart.capacity': 'Slot capacity',
+  'report.chart.arrivalsActual': 'Actual arrivals',
+
+} as const

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Loader2, RotateCcw, Save, type LucideIcon } from 'lucide-react'
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,6 +37,7 @@ export function SectionPanel({
   onReset?: () => void
   footerNote?: ReactNode
 }) {
+  const t = useT()
   // Seksi tanpa `onSave` bersifat preferensi lokal (tema): tidak punya status
   // kotor dan tidak pernah menampilkan tombol simpan.
   const savable = typeof onSave === 'function'
@@ -56,13 +58,13 @@ export function SectionPanel({
                 className='size-1.5 rounded-full bg-amber-500'
                 aria-hidden
               />
-              Belum disimpan
+              {t('settings.panel.unsaved')}
             </span>
           )}
           {pending && (
             <span className='ms-auto flex shrink-0 items-center gap-1.5 text-xs font-medium text-muted-foreground'>
               <Loader2 className='size-3.5 animate-spin' aria-hidden />
-              Menyimpan
+              {t('settings.panel.saving')}
             </span>
           )}
         </div>
@@ -89,9 +91,7 @@ export function SectionPanel({
           >
             {error ??
               footerNote ??
-              (dirty
-                ? 'Perubahan di seksi ini belum dikirim ke server.'
-                : 'Tidak ada perubahan pada seksi ini.')}
+              (dirty ? t('settings.panel.dirty') : t('settings.panel.clean'))}
           </p>
           <div className='flex items-center gap-2'>
             <Button
@@ -101,7 +101,7 @@ export function SectionPanel({
               disabled={!dirty || pending}
             >
               <RotateCcw />
-              Batalkan
+              {t('settings.panel.reset')}
             </Button>
             {/* Saat tidak ada perubahan, tombol simpan turun jadi outline.
                 `disabled` saja tidak cukup: di tema gelap warna primary hampir
@@ -114,7 +114,7 @@ export function SectionPanel({
               disabled={!dirty || Boolean(error) || pending}
             >
               {pending ? <Loader2 className='animate-spin' /> : <Save />}
-              Simpan seksi
+              {t('settings.panel.save')}
             </Button>
           </div>
         </div>

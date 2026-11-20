@@ -7,6 +7,7 @@ import { apiErrorMessage } from '@/lib/api/client'
 import { completeVehicleByTicket, fetchPublicTicket } from '@/lib/api/endpoints'
 import { useBranding } from '@/lib/branding'
 import { formatTime, waNumber } from '@/lib/format'
+import { useT } from '@/lib/i18n'
 import { closeTicketSocket, getTicketSocket } from '@/lib/socket'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -14,6 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ApprovalBadge } from '@/components/approval-badge'
 import { BrandLogo } from '@/components/brand-logo'
+import { LocaleSwitch } from '@/components/locale-switch'
 import { ErrorBlock, LoadingBlock } from '@/components/query-state'
 import { StatusBadge } from '@/components/status-badge'
 import { TicketPanel } from './ticket-panel'
@@ -28,6 +30,7 @@ export function TicketPage() {
   const { token } = useParams({ from: '/t/$token' })
   const queryClient = useQueryClient()
   const brand = useBranding()
+  const t = useT()
 
   const { data, isPending, isError, error, refetch } = useQuery({
     queryKey: ['ticket', token],
@@ -60,7 +63,7 @@ export function TicketPage() {
     }
   }, [token, queryClient])
 
-  if (isPending) return <LoadingBlock label='Memuat tiket...' />
+  if (isPending) return <LoadingBlock label={t('ticket.loading')} />
   if (isError)
     return (
       <div className='mx-auto max-w-md p-6'>
@@ -81,6 +84,9 @@ export function TicketPage() {
 
   return (
     <div className='mx-auto max-w-md space-y-4 p-4 pb-10 sm:p-6'>
+      <div className='flex justify-end'>
+        <LocaleSwitch />
+      </div>
       <div className='space-y-1 text-center'>
         {/* Merek aplikasi di halaman tanpa sesi: supir perlu tahu tiket ini
             dari sistem mana, dan logonya jauh lebih cepat dikenali daripada
@@ -91,7 +97,7 @@ export function TicketPage() {
         <p className='text-xs tracking-wide text-muted-foreground uppercase'>
           {ticket.warehouseName}
         </p>
-        <h1 className='text-xl font-semibold'>Tiket Truk</h1>
+        <h1 className='text-xl font-semibold'>{t('ticket.title')}</h1>
       </div>
 
       {(ticket.approvalStatus === 'REJECTED' ||
@@ -99,13 +105,13 @@ export function TicketPage() {
         <div className='rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm'>
           <p className='font-medium text-destructive'>
             {ticket.approvalStatus === 'REJECTED'
-              ? 'Booking ditolak Admin'
-              : 'Booking kedaluwarsa'}
+              ? t('ticket.rejected')
+              : t('ticket.expired')}
           </p>
           <p className='mt-1 text-muted-foreground'>
             {ticket.approvalStatus === 'REJECTED'
-              ? (ticket.rejectionReason ?? 'Tidak ada alasan yang dicatat.')
-              : 'Booking tidak diputuskan sampai tenggat, jadi dibatalkan otomatis. Silakan buat booking baru.'}
+              ? (ticket.rejectionReason ?? t('ticket.noReason'))
+              : t('ticket.expiredBody')}
           </p>
         </div>
       )}
@@ -121,26 +127,30 @@ export function TicketPage() {
         <Card>
           <CardContent className='flex flex-col items-center gap-2 pt-6 text-center'>
             <Lock className='size-6 text-muted-foreground' />
-            <p className='text-sm font-medium'>QR terkunci</p>
+            <p className='text-sm font-medium'>{t('ticket.qrLocked')}</p>
             <p className='text-xs text-muted-foreground'>
               {approvalBlocked
-                ? 'Booking masih menunggu persetujuan Admin gudang. QR aktif setelah disetujui.'
-                : 'Lengkapi plat nomor dan nama supir untuk membuka QR gate-in.'}
+                ? t('ticket.qrLockedApproval')
+                : t('ticket.qrLockedVehicle')}
             </p>
             {approvalBlocked && !ticket.vehicleComplete && (
               <p className='text-xs text-amber-600 dark:text-amber-400'>
-                Data kendaraan juga belum lengkap.
+                {t('ticket.vehicleAlsoIncomplete')}
               </p>
             )}
             <Button className='mt-2 h-11' asChild variant='outline'>
               <a
                 href={`https://wa.me/?text=${encodeURIComponent(
-                  `Tiket truk ${ticket.bookingCode} - ${ticket.warehouseName}\n${window.location.href}`
+                  t('ticket.waTemplate', {
+                    code: ticket.bookingCode,
+                    warehouse: ticket.warehouseName,
+                    link: window.location.href,
+                  })
                 )}`}
                 target='_blank'
                 rel='noreferrer'
               >
-                <MessageCircle /> Kirim WhatsApp
+                <MessageCircle /> {t('ticket.sendWhatsapp')}
               </a>
             </Button>
           </CardContent>
@@ -160,16 +170,18 @@ export function TicketPage() {
         <Card>
           <CardContent className='space-y-2 pt-6 text-sm'>
             <p className='text-xs tracking-wide text-muted-foreground uppercase'>
-              Riwayat
+              {t('ticket.history')}
             </p>
-            <Row label='Masuk gate'>{formatTime(ticket.timeLog.gateInAt)}</Row>
-            <Row label='Mulai proses'>
+            <Row label={t('ticket.gateIn')}>
+              {formatTime(ticket.timeLog.gateInAt)}
+            </Row>
+            <Row label={t('ticket.processStart')}>
               {formatTime(ticket.timeLog.processStartedAt)}
             </Row>
-            <Row label='Selesai proses'>
+            <Row label={t('ticket.processDone')}>
               {formatTime(ticket.timeLog.processCompletedAt)}
             </Row>
-            <Row label='Keluar gate'>
+            <Row label={t('ticket.gateOut')}>
               {formatTime(ticket.timeLog.gateOutAt)}
             </Row>
           </CardContent>
@@ -189,6 +201,7 @@ function VehicleForm({
   const [licensePlate, setLicensePlate] = useState('')
   const [driverName, setDriverName] = useState('')
   const [driverPhone, setDriverPhone] = useState('')
+  const t = useT()
 
   const save = useMutation({
     mutationFn: () =>
@@ -200,7 +213,7 @@ function VehicleForm({
           : undefined,
       }),
     onSuccess: () => {
-      toast.success('Data kendaraan tersimpan, QR terbuka')
+      toast.success(t('ticket.vehicleSaved'))
       onSaved()
     },
     onError: (error) => toast.error(apiErrorMessage(error)),
@@ -209,9 +222,9 @@ function VehicleForm({
   return (
     <Card>
       <CardContent className='space-y-3 pt-6'>
-        <p className='text-sm font-medium'>Lengkapi data kendaraan</p>
+        <p className='text-sm font-medium'>{t('ticket.vehicleFormTitle')}</p>
         <div className='space-y-1'>
-          <Label htmlFor='plate'>Plat nomor</Label>
+          <Label htmlFor='plate'>{t('ticket.plate')}</Label>
           <Input
             id='plate'
             value={licensePlate}
@@ -221,16 +234,16 @@ function VehicleForm({
           />
         </div>
         <div className='space-y-1'>
-          <Label htmlFor='driver'>Nama supir</Label>
+          <Label htmlFor='driver'>{t('ticket.driver')}</Label>
           <Input
             id='driver'
             value={driverName}
             onChange={(event) => setDriverName(event.target.value)}
-            placeholder='Nama supir'
+            placeholder={t('ticket.driver')}
           />
         </div>
         <div className='space-y-1'>
-          <Label htmlFor='phone'>Nomor HP supir (opsional)</Label>
+          <Label htmlFor='phone'>{t('ticket.phone')}</Label>
           <Input
             id='phone'
             value={driverPhone}
@@ -248,7 +261,7 @@ function VehicleForm({
           onClick={() => save.mutate()}
         >
           {save.isPending && <Loader2 className='animate-spin' />}
-          Simpan & buka QR
+          {t('ticket.saveOpenQr')}
         </Button>
       </CardContent>
     </Card>

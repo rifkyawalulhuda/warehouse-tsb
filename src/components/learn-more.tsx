@@ -1,6 +1,7 @@
 import { type Root, type Content, type Trigger } from '@radix-ui/react-popover'
 import { CircleQuestionMark } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useT } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 import {
   Popover,
@@ -19,6 +20,7 @@ export function LearnMore({
   triggerProps,
   ...props
 }: LearnMoreProps) {
+  const t = useT()
   return (
     <Popover {...props}>
       <PopoverTrigger
@@ -27,7 +29,7 @@ export function LearnMore({
         className={cn('size-5 rounded-full', triggerProps?.className)}
       >
         <Button variant='outline' size='icon'>
-          <span className='sr-only'>Learn more</span>
+          <span className='sr-only'>{t('common.learnMore')}</span>
           <CircleQuestionMark className='size-4 [&>circle]:hidden' />
         </Button>
       </PopoverTrigger>

@@ -9,6 +9,7 @@ import {
   fetchSettings,
 } from '@/lib/api/endpoints'
 import { useRealtimeSync } from '@/hooks/use-realtime'
+import { useT } from '@/lib/i18n'
 import { addDaysISO, formatDate, todayISO } from '@/lib/format'
 import { Main } from '@/components/layout/main'
 import { PageHeader } from '@/components/page-header'
@@ -36,6 +37,7 @@ function LiveDot() {
 export function DashboardPage() {
   useRealtimeSync()
   const navigate = useNavigate()
+  const t = useT()
 
   const date = todayISO()
   const weekStart = addDaysISO(date, -6)
@@ -84,39 +86,46 @@ export function DashboardPage() {
 
   const kpiItems: KpiItem[] = [
     {
-      label: 'Truk hari ini',
+      label: t('dashboard.kpiTrucks'),
       value: kpi?.totalBookings ?? '-',
-      unit: 'booking',
-      delta: `${atDockCount} sedang di dock`,
+      unit: t('dashboard.kpiTrucksUnit'),
+      delta: t('dashboard.kpiAtDock', { count: atDockCount }),
       trend: 'flat',
-      hint: dailyCapacity ? `Kapasitas ${dailyCapacity} slot dock` : 'Seluruh booking hari ini',
+      hint: dailyCapacity
+        ? t('dashboard.kpiCapacity', { count: dailyCapacity })
+        : t('dashboard.kpiAllBookings'),
       icon: 'truck',
     },
     {
-      label: 'On-time arrival',
+      label: t('dashboard.kpiOnTime'),
       value: kpi ? kpi.onTimeRate : '-',
       unit: kpi ? '%' : undefined,
-      delta: lateCount > 0 ? `${lateCount} truk terlambat` : 'Tidak ada yang terlambat',
+      delta:
+        lateCount > 0
+          ? t('dashboard.kpiLate', { count: lateCount })
+          : t('dashboard.kpiNoLate'),
       trend: lateCount > 0 ? 'down' : 'up',
-      hint: 'Dari truk yang sudah gate-in',
+      hint: t('dashboard.kpiOnTimeHint'),
       icon: 'clock',
     },
     {
-      label: 'Utilisasi dock',
+      label: t('dashboard.kpiDockUtil'),
       value: today.data ? dockUtilization : '-',
       unit: today.data ? '%' : undefined,
-      delta: `${busyDocks}/${totalDocks} dock terpakai`,
+      delta: t('dashboard.kpiDocksBusy', { used: busyDocks, total: totalDocks }),
       trend: 'flat',
-      hint: 'Jam proses vs jam operasional',
+      hint: t('dashboard.kpiDockUtilHint'),
       icon: 'gauge',
     },
     {
-      label: 'Rata-rata turnaround',
+      label: t('dashboard.kpiTurnaround'),
       value: kpi ? kpi.averageTurnaroundMinutes : '-',
-      unit: kpi ? 'mnt' : undefined,
-      delta: kpi ? `tunggu ${kpi.averageWaitingMinutes} mnt` : 'Belum ada data',
+      unit: kpi ? t('duration.minutesShort') : undefined,
+      delta: kpi
+        ? t('dashboard.kpiWait', { count: kpi.averageWaitingMinutes })
+        : t('dashboard.kpiNoData'),
       trend: 'flat',
-      hint: 'Gate-in sampai gate-out',
+      hint: t('dashboard.kpiTurnaroundHint'),
       icon: 'timer',
     },
   ]
@@ -145,8 +154,11 @@ export function DashboardPage() {
   return (
     <Main className='flex flex-1 flex-col gap-4 sm:gap-6'>
       <PageHeader
-        title='Dashboard Operasional'
-        description={`${formatDate(`${date}T00:00:00.000Z`)} · ${totalDocks} dock aktif · shift operasional`}
+        title={t('dashboard.title')}
+        description={t('dashboard.subtitle', {
+          date: formatDate(`${date}T00:00:00.000Z`),
+          count: totalDocks,
+        })}
         actions={
           <>
             <Badge
@@ -154,7 +166,7 @@ export function DashboardPage() {
               className='gap-1.5 border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300'
             >
               <LiveDot />
-              Live
+              {t('dashboard.live')}
             </Badge>
             <Button
               variant='outline'
@@ -162,21 +174,21 @@ export function DashboardPage() {
               className='size-9'
               onClick={refreshAll}
               disabled={isRefreshing}
-              aria-label='Muat ulang data dashboard'
-              title='Muat ulang'
+              aria-label={t('dashboard.refreshAria')}
+              title={t('dashboard.refresh')}
             >
               <RefreshCw className={isRefreshing ? 'size-4 animate-spin' : 'size-4'} />
             </Button>
             <Button variant='outline' size='sm' className='h-9' asChild>
               <Link to='/reports'>
                 <Download className='size-4' />
-                <span className='hidden sm:inline'>Laporan</span>
+                <span className='hidden sm:inline'>{t('dashboard.reports')}</span>
               </Link>
             </Button>
             <Button size='sm' className='h-9' asChild>
               <Link to='/queue'>
                 <CalendarDays className='size-4' />
-                Buka antrean
+                {t('dashboard.openQueue')}
               </Link>
             </Button>
           </>
@@ -184,7 +196,7 @@ export function DashboardPage() {
       />
 
       {isBusy ? (
-        <LoadingBlock label='Memuat dashboard...' />
+        <LoadingBlock label={t('dashboard.loading')} />
       ) : queue.isError || docks.isError ? (
         <ErrorBlock
           error={queue.error ?? docks.error}
@@ -196,9 +208,9 @@ export function DashboardPage() {
       ) : (
         <Tabs defaultValue='ringkasan' className='space-y-4'>
           <TabsList>
-            <TabsTrigger value='ringkasan'>Ringkasan</TabsTrigger>
-            <TabsTrigger value='dock'>Monitoring dock</TabsTrigger>
-            <TabsTrigger value='laporan'>Laporan &amp; KPI</TabsTrigger>
+            <TabsTrigger value='ringkasan'>{t('dashboard.tabSummary')}</TabsTrigger>
+            <TabsTrigger value='dock'>{t('dashboard.tabDock')}</TabsTrigger>
+            <TabsTrigger value='laporan'>{t('dashboard.tabReports')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value='ringkasan' className='space-y-4'>
@@ -234,10 +246,12 @@ export function DashboardPage() {
               {today.data ? (
                 <DockUtilization
                   rows={today.data.byDock}
-                  rangeLabel={`Hari ini · ${formatDate(`${date}T00:00:00.000Z`)}`}
+                  rangeLabel={t('dashboard.todayRange', {
+                    date: formatDate(`${date}T00:00:00.000Z`),
+                  })}
                 />
               ) : (
-                <LoadingBlock label='Menghitung utilisasi...' />
+                <LoadingBlock label={t('dashboard.calculatingUtilization')} />
               )}
             </div>
           </TabsContent>
@@ -248,7 +262,9 @@ export function DashboardPage() {
               <>
                 <DockUtilization
                   rows={today.data.byDock}
-                  rangeLabel={`Hari ini · ${formatDate(`${date}T00:00:00.000Z`)}`}
+                  rangeLabel={t('dashboard.todayRange', {
+                    date: formatDate(`${date}T00:00:00.000Z`),
+                  })}
                 />
                 <div className='grid gap-4 xl:grid-cols-2'>
                   <ArrivalChart data={today.data.arrivalsByHour} />
@@ -256,7 +272,7 @@ export function DashboardPage() {
                 </div>
               </>
             ) : (
-              <LoadingBlock label='Menghitung KPI...' />
+              <LoadingBlock label={t('dashboard.calculatingKpi')} />
             )}
           </TabsContent>
         </Tabs>

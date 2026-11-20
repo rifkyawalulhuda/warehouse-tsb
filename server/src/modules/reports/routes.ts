@@ -22,6 +22,14 @@ import {
   buildKpi,
   notNull,
 } from './aggregate'
+import {
+  activityTypeLabel,
+  approvalStatusLabel,
+  bookingStatusLabel,
+  REPORT_LABELS,
+  reportFilePrefix,
+  type ReportLang,
+} from './labels'
 
 export const reportsRouter = Router()
 
@@ -40,12 +48,15 @@ const rangeSchema = z.object({
   to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   /// Kosong = semua customer.
   customerId: z.uuid().optional(),
+  /// Bahasa isi berkas Excel; bawaan Indonesia seperti sebelum ada pilihan.
+  lang: z.enum(['id', 'en']).optional(),
 })
 
 /** Laporan customer hanya menerima tanggal; kepemilikan datang dari sesi. */
 const customerRangeSchema = z.object({
   from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  lang: z.enum(['id', 'en']).optional(),
 })
 
 export const MAX_REPORT_RANGE_DAYS = 366
@@ -224,56 +235,69 @@ reportsRouter.get('/export.xlsx', staffOnly, async (req, res, next) => {
   try {
     const query = parse(rangeSchema, req.query, 'Rentang tanggal')
     assertReportRange(query.from, query.to)
+    const lang: ReportLang = query.lang ?? 'id'
+    const labels = REPORT_LABELS[lang]
+    const col = labels.columns
     const { rows, kpi } = await buildReport(query.from, query.to, query.customerId)
 
     const workbook = new ExcelJS.Workbook()
     workbook.creator = 'Warehouse TSB'
     workbook.created = new Date()
 
-    const summary = workbook.addWorksheet('Ringkasan')
+    const summary = workbook.addWorksheet(labels.sheets.customerSummary)
     summary.columns = [
-      { header: 'Metrik', key: 'metric', width: 32 },
-      { header: 'Nilai', key: 'value', width: 18 },
+      { header: col.metric, key: 'metric', width: 32 },
+      { header: col.value, key: 'value', width: 18 },
     ]
     summary.addRows([
-      { metric: 'Periode', value: `${query.from} s/d ${query.to}` },
-      { metric: 'Total booking', value: kpi.totalBookings },
-      { metric: 'Selesai (gate-out)', value: kpi.completed },
-      { metric: 'Dibatalkan', value: kpi.cancelled },
-      { metric: 'No-show', value: kpi.noShow },
-      { metric: 'Kedaluwarsa (tidak disetujui)', value: kpi.expiredPending },
-      { metric: 'Tingkat on-time (%)', value: kpi.onTimeRate },
-      { metric: 'Rata-rata waktu tunggu (menit)', value: kpi.averageWaitingMinutes },
-      { metric: 'Rata-rata waktu proses (menit)', value: kpi.averageProcessingMinutes },
-      { metric: 'Rata-rata turnaround (menit)', value: kpi.averageTurnaroundMinutes },
-      { metric: 'Rata-rata keterlambatan (menit)', value: kpi.averageLateMinutes },
+      {
+        metric: labels.metrics.period,
+        value: `${query.from} ${labels.rangeSeparator} ${query.to}`,
+      },
+      { metric: labels.metrics.totalBookings, value: kpi.totalBookings },
+      { metric: labels.metrics.completed, value: kpi.completed },
+      { metric: labels.metrics.cancelled, value: kpi.cancelled },
+      { metric: labels.metrics.noShow, value: kpi.noShow },
+      { metric: labels.metrics.expired, value: kpi.expiredPending },
+      { metric: labels.metrics.onTimeRate, value: kpi.onTimeRate },
+      { metric: labels.metrics.averageWaiting, value: kpi.averageWaitingMinutes },
+      { metric: labels.metrics.averageProcessing, value: kpi.averageProcessingMinutes },
+      { metric: labels.metrics.averageTurnaround, value: kpi.averageTurnaroundMinutes },
+      { metric: labels.metrics.averageLate, value: kpi.averageLateMinutes },
     ])
     summary.getRow(1).font = { bold: true }
 
-    const sheet = workbook.addWorksheet('Detail Booking')
+    const sheet = workbook.addWorksheet(labels.sheets.staffDetail)
     sheet.columns = [
-      { header: 'Kode', key: 'bookingCode', width: 22 },
-      { header: 'Tanggal', key: 'bookingDate', width: 12 },
-      { header: 'Aktivitas', key: 'activityType', width: 12 },
-      { header: 'Customer', key: 'customer', width: 26 },
-      { header: 'Jenis Truk', key: 'truckType', width: 18 },
-      { header: 'Dock', key: 'dockCode', width: 10 },
-      { header: 'Status', key: 'status', width: 20 },
-      { header: 'Jadwal', key: 'scheduledStart', width: 20 },
-      { header: 'Gate In', key: 'gateInAt', width: 20 },
-      { header: 'Mulai Proses', key: 'processStartedAt', width: 20 },
-      { header: 'Selesai Proses', key: 'processCompletedAt', width: 20 },
-      { header: 'Gate Out', key: 'gateOutAt', width: 20 },
-      { header: 'Tunggu (mnt)', key: 'waitingMinutes', width: 13 },
-      { header: 'Proses (mnt)', key: 'processingMinutes', width: 13 },
-      { header: 'Turnaround (mnt)', key: 'turnaroundMinutes', width: 16 },
-      { header: 'Terlambat (mnt)', key: 'lateMinutes', width: 15 },
+      { header: col.bookingCode, key: 'bookingCode', width: 22 },
+      { header: col.bookingDate, key: 'bookingDate', width: 12 },
+      { header: col.activity, key: 'activityType', width: 12 },
+      { header: col.customer, key: 'customer', width: 26 },
+      { header: col.truckType, key: 'truckType', width: 18 },
+      { header: col.dock, key: 'dockCode', width: 10 },
+      { header: col.status, key: 'status', width: 20 },
+      { header: col.scheduledStart, key: 'scheduledStart', width: 20 },
+      { header: col.gateInAt, key: 'gateInAt', width: 20 },
+      { header: col.processStartedAt, key: 'processStartedAt', width: 20 },
+      { header: col.processCompletedAt, key: 'processCompletedAt', width: 20 },
+      { header: col.gateOutAt, key: 'gateOutAt', width: 20 },
+      { header: col.waiting, key: 'waitingMinutes', width: 13 },
+      { header: col.processing, key: 'processingMinutes', width: 13 },
+      { header: col.turnaround, key: 'turnaroundMinutes', width: 16 },
+      { header: col.late, key: 'lateMinutes', width: 15 },
     ]
-    sheet.addRows(rows)
+    sheet.addRows(
+      rows.map((row) => ({
+        ...row,
+        activityType: activityTypeLabel(lang, row.activityType),
+        status: bookingStatusLabel(lang, row.status),
+        approvalStatus: approvalStatusLabel(lang, row.approvalStatus),
+      }))
+    )
     sheet.getRow(1).font = { bold: true }
     sheet.autoFilter = { from: 'A1', to: 'P1' }
 
-    const fileName = `laporan-tsb-${query.from}-${query.to}.xlsx`
+    const fileName = `${reportFilePrefix(lang)}-tsb-${query.from}-${query.to}.xlsx`
     res.setHeader(
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -316,34 +340,10 @@ type CustomerReportRow = {
 }
 
 /**
- * Label Indonesia untuk berkas yang dibaca di luar aplikasi. Enum mentah
+ * Label status, persetujuan, dan aktivitas untuk berkas yang dibaca di luar
+ * aplikasi sudah pindah ke `labels.ts` (dua bahasa). Enum mentah
  * (CHECKED_OUT, NOT_REQUIRED) tidak berarti apa pun bagi customer.
  */
-const bookingStatusLabels: Record<string, string> = {
-  BOOKED_INCOMPLETE: 'Menunggu data kendaraan',
-  BOOKED_READY: 'Siap masuk',
-  CHECKED_IN_ON_TIME: 'Check-in tepat waktu',
-  LATE_WAITING_LIST: 'Antrean terlambat',
-  DOCK_ASSIGNED: 'Dapat dock',
-  IN_PROGRESS: 'Sedang diproses',
-  COMPLETED: 'Selesai bongkar/muat',
-  CHECKED_OUT: 'Sudah keluar',
-  CANCELLED: 'Dibatalkan',
-  NO_SHOW: 'Tidak datang',
-}
-
-const approvalStatusLabels: Record<string, string> = {
-  NOT_REQUIRED: 'Tidak perlu persetujuan',
-  PENDING: 'Menunggu persetujuan',
-  APPROVED: 'Disetujui',
-  REJECTED: 'Ditolak',
-  EXPIRED: 'Kedaluwarsa',
-}
-
-const activityTypeLabels: Record<string, string> = {
-  LOADING: 'Muat',
-  UNLOADING: 'Bongkar',
-}
 
 /**
  * Laporan milik satu perusahaan.
@@ -500,6 +500,9 @@ reportsRouter.get('/my/export.xlsx', customerOnly, async (req, res, next) => {
     const customerId = req.user?.customerId
     if (!customerId) throw forbidden('Akun tidak terhubung ke customer')
 
+    const lang: ReportLang = query.lang ?? 'id'
+    const labels = REPORT_LABELS[lang]
+    const col = labels.columns
     const report = await buildCustomerReport(
       query.from,
       query.to,
@@ -510,85 +513,87 @@ reportsRouter.get('/my/export.xlsx', customerOnly, async (req, res, next) => {
     workbook.creator = 'Warehouse TSB'
     workbook.created = new Date()
 
-    const summary = workbook.addWorksheet('Ringkasan')
+    const summary = workbook.addWorksheet(labels.sheets.customerSummary)
     summary.columns = [
-      { header: 'Keterangan', key: 'metric', width: 34 },
-      { header: 'Nilai', key: 'value', width: 22 },
+      { header: col.metric, key: 'metric', width: 34 },
+      { header: col.value, key: 'value', width: 22 },
     ]
     summary.addRows([
-      { metric: 'Perusahaan', value: report.customer.name },
-      { metric: 'Kode customer', value: report.customer.code },
-      { metric: 'Periode', value: `${query.from} s/d ${query.to}` },
-      { metric: 'Total booking', value: report.kpi.totalBookings },
-      { metric: 'Selesai (gate-out)', value: report.kpi.completed },
-      { metric: 'Dibatalkan', value: report.kpi.cancelled },
-      { metric: 'No-show', value: report.kpi.noShow },
+      { metric: labels.metrics.customerName, value: report.customer.name },
+      { metric: labels.metrics.customerCode, value: report.customer.code },
       {
-        metric: 'Kedaluwarsa (tidak disetujui)',
+        metric: labels.metrics.period,
+        value: `${query.from} ${labels.rangeSeparator} ${query.to}`,
+      },
+      { metric: labels.metrics.totalBookings, value: report.kpi.totalBookings },
+      { metric: labels.metrics.completed, value: report.kpi.completed },
+      { metric: labels.metrics.cancelled, value: report.kpi.cancelled },
+      { metric: labels.metrics.noShow, value: report.kpi.noShow },
+      {
+        metric: labels.metrics.expired,
         value: report.kpi.expiredPending,
       },
-      { metric: 'Tingkat on-time (%)', value: report.kpi.onTimeRate },
+      { metric: labels.metrics.onTimeRate, value: report.kpi.onTimeRate },
       {
-        metric: 'Rata-rata waktu tunggu (menit)',
+        metric: labels.metrics.averageWaiting,
         value: report.kpi.averageWaitingMinutes,
       },
       {
-        metric: 'Rata-rata waktu proses (menit)',
+        metric: labels.metrics.averageProcessing,
         value: report.kpi.averageProcessingMinutes,
       },
       {
-        metric: 'Rata-rata turnaround (menit)',
+        metric: labels.metrics.averageTurnaround,
         value: report.kpi.averageTurnaroundMinutes,
       },
       {
-        metric: 'Rata-rata keterlambatan (menit)',
+        metric: labels.metrics.averageLate,
         value: report.kpi.averageLateMinutes,
       },
       {
-        metric: 'Rata-rata pemakaian slot (%)',
+        metric: labels.metrics.averageSlotUsed,
         value: report.kpi.averageSlotUsedPercent,
       },
       {
-        metric: 'Booking melewati blok',
+        metric: labels.metrics.overruns,
         value: report.kpi.overrunCount,
       },
     ])
     summary.getRow(1).font = { bold: true }
     summary.views = [{ state: 'frozen', ySplit: 1 }]
 
-    const sheet = workbook.addWorksheet('Detail')
+    const sheet = workbook.addWorksheet(labels.sheets.customerDetail)
     sheet.columns = [
-      { header: 'Kode', key: 'bookingCode', width: 22 },
-      { header: 'Tanggal', key: 'bookingDate', width: 12 },
-      { header: 'Aktivitas', key: 'activity', width: 11 },
-      { header: 'Jenis Truk', key: 'truckType', width: 18 },
-      { header: 'Plat Nomor', key: 'licensePlate', width: 14 },
-      { header: 'Supir', key: 'driverName', width: 20 },
-      { header: 'No. Dokumen', key: 'referenceDocNo', width: 20 },
-      { header: 'Dock', key: 'dockCode', width: 9 },
-      { header: 'Status', key: 'status', width: 22 },
-      { header: 'Persetujuan', key: 'approvalStatus', width: 22 },
-      { header: 'Jadwal', key: 'scheduledStart', width: 20 },
-      { header: 'Gate In', key: 'gateInAt', width: 20 },
-      { header: 'Mulai Proses', key: 'processStartedAt', width: 20 },
-      { header: 'Selesai Proses', key: 'processCompletedAt', width: 20 },
-      { header: 'Gate Out', key: 'gateOutAt', width: 20 },
-      { header: 'Tunggu (mnt)', key: 'waitingMinutes', width: 13 },
-      { header: 'Proses (mnt)', key: 'processingMinutes', width: 13 },
-      { header: 'Turnaround (mnt)', key: 'turnaroundMinutes', width: 16 },
-      { header: 'Terlambat (mnt)', key: 'lateMinutes', width: 15 },
-      { header: 'Blok', key: 'blocksLocked', width: 8 },
-      { header: 'Menit Slot', key: 'slotMinutes', width: 11 },
-      { header: 'Pemakaian Slot (%)', key: 'slotUsedPercent', width: 18 },
-      { header: 'Lewat Blok (mnt)', key: 'slotOverrunMinutes', width: 16 },
+      { header: col.bookingCode, key: 'bookingCode', width: 22 },
+      { header: col.bookingDate, key: 'bookingDate', width: 12 },
+      { header: col.activity, key: 'activity', width: 11 },
+      { header: col.truckType, key: 'truckType', width: 18 },
+      { header: col.licensePlate, key: 'licensePlate', width: 14 },
+      { header: col.driver, key: 'driverName', width: 20 },
+      { header: col.referenceDocNo, key: 'referenceDocNo', width: 20 },
+      { header: col.dock, key: 'dockCode', width: 9 },
+      { header: col.status, key: 'status', width: 22 },
+      { header: col.approval, key: 'approvalStatus', width: 22 },
+      { header: col.scheduledStart, key: 'scheduledStart', width: 20 },
+      { header: col.gateInAt, key: 'gateInAt', width: 20 },
+      { header: col.processStartedAt, key: 'processStartedAt', width: 20 },
+      { header: col.processCompletedAt, key: 'processCompletedAt', width: 20 },
+      { header: col.gateOutAt, key: 'gateOutAt', width: 20 },
+      { header: col.waiting, key: 'waitingMinutes', width: 13 },
+      { header: col.processing, key: 'processingMinutes', width: 13 },
+      { header: col.turnaround, key: 'turnaroundMinutes', width: 16 },
+      { header: col.late, key: 'lateMinutes', width: 15 },
+      { header: col.blocks, key: 'blocksLocked', width: 8 },
+      { header: col.slotMinutes, key: 'slotMinutes', width: 11 },
+      { header: col.slotUsed, key: 'slotUsedPercent', width: 18 },
+      { header: col.slotOverrun, key: 'slotOverrunMinutes', width: 16 },
     ]
     sheet.addRows(
       report.rows.map((row) => ({
         ...row,
-        activity: activityTypeLabels[row.activityType] ?? row.activityType,
-        status: bookingStatusLabels[row.status] ?? row.status,
-        approvalStatus:
-          approvalStatusLabels[row.approvalStatus] ?? row.approvalStatus,
+        activity: activityTypeLabel(lang, row.activityType),
+        status: bookingStatusLabel(lang, row.status),
+        approvalStatus: approvalStatusLabel(lang, row.approvalStatus),
         licensePlate: row.licensePlate ?? '-',
         driverName: row.driverName ?? '-',
         dockCode: row.dockCode ?? '-',
@@ -598,29 +603,29 @@ reportsRouter.get('/my/export.xlsx', customerOnly, async (req, res, next) => {
     sheet.views = [{ state: 'frozen', ySplit: 1 }]
     sheet.autoFilter = { from: 'A1', to: 'W1' }
 
-    const daily = workbook.addWorksheet('per Hari')
+    const daily = workbook.addWorksheet(labels.sheets.byDay)
     daily.columns = [
-      { header: 'Tanggal', key: 'date', width: 12 },
-      { header: 'Total', key: 'total', width: 9 },
-      { header: 'Selesai', key: 'completed', width: 10 },
-      { header: 'Terlambat', key: 'late', width: 11 },
+      { header: col.date, key: 'date', width: 12 },
+      { header: col.total, key: 'total', width: 9 },
+      { header: col.completed, key: 'completed', width: 10 },
+      { header: col.late, key: 'late', width: 11 },
       {
-        header: 'Rata-rata Tunggu (mnt)',
+        header: col.averageWaiting,
         key: 'averageWaitingMinutes',
         width: 22,
       },
       {
-        header: 'Rata-rata Proses (mnt)',
+        header: col.averageProcessing,
         key: 'averageProcessingMinutes',
         width: 22,
       },
       {
-        header: 'Rata-rata Turnaround (mnt)',
+        header: col.averageTurnaround,
         key: 'averageTurnaroundMinutes',
         width: 26,
       },
       {
-        header: 'Rata-rata Pemakaian Slot (%)',
+        header: col.averageSlotUsed,
         key: 'averageSlotUsedPercent',
         width: 28,
       },
@@ -630,7 +635,7 @@ reportsRouter.get('/my/export.xlsx', customerOnly, async (req, res, next) => {
     daily.views = [{ state: 'frozen', ySplit: 1 }]
     daily.autoFilter = { from: 'A1', to: 'H1' }
 
-    const fileName = `laporan-${report.customer.code}-${query.from}-${query.to}.xlsx`
+    const fileName = `${reportFilePrefix(lang)}-${report.customer.code}-${query.from}-${query.to}.xlsx`
     res.setHeader(
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'

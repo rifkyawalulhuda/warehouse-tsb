@@ -1,6 +1,12 @@
 import { Grid2x2, LayoutGrid, Table2 } from 'lucide-react'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { dockViewLabels, dockViews, isDockView, type DockView } from './dock-view'
+import { useT } from '@/lib/i18n'
+import {
+  dockViewLabels,
+  dockViews,
+  isDockView,
+  type DockView,
+} from './dock-view'
 
 const icons = {
   cards: LayoutGrid,
@@ -20,13 +26,14 @@ export function DockViewSwitch({
   value: DockView
   onChange: (view: DockView) => void
 }) {
+  const t = useT()
   return (
     <ToggleGroup
       type='single'
       value={value}
       variant='outline'
       size='sm'
-      aria-label='Pilih tampilan papan dock'
+      aria-label={t('dock.viewSwitchAria')}
       onValueChange={(next) => {
         if (isDockView(next)) onChange(next)
       }}
@@ -37,11 +44,11 @@ export function DockViewSwitch({
           <ToggleGroupItem
             key={view}
             value={view}
-            aria-label={`Tampilan ${dockViewLabels[view]}`}
+            aria-label={t('dock.viewItemAria', { view: t(dockViewLabels[view]) })}
             className='h-9 gap-1.5 px-2.5 data-[state=on]:bg-secondary data-[state=on]:text-foreground data-[state=on]:shadow-sm sm:h-8'
           >
             <Icon aria-hidden />
-            <span>{dockViewLabels[view]}</span>
+            <span>{t(dockViewLabels[view])}</span>
           </ToggleGroupItem>
         )
       })}

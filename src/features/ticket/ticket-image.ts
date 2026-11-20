@@ -1,6 +1,7 @@
 import { createElement } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { getLocale, translate } from '@/lib/i18n'
 import { ticketFileName, type TicketModel } from './ticket-model'
 
 /**
@@ -107,7 +108,12 @@ function loadImage(src: string) {
   return new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image()
     image.onload = () => resolve(image)
-    image.onerror = () => reject(new Error('QR tidak bisa disiapkan'))
+    image.onerror = () =>
+      reject(
+        new Error(
+          translate(getLocale(), 'ticket.imageQrError')
+        )
+      )
     image.src = src
   })
 }
@@ -141,25 +147,28 @@ export async function renderTicketPng(model: TicketModel, scale = 2) {
   canvas.width = WIDTH * scale
   canvas.height = HEIGHT * scale
   const ctx = canvas.getContext('2d')
-  if (!ctx) throw new Error('Kanvas tidak tersedia di peramban ini')
+  if (!ctx)
+    throw new Error(translate(getLocale(), 'ticket.imageCanvasError'))
 
   ctx.scale(scale, scale)
 
   ctx.fillStyle = '#ffffff'
   ctx.fillRect(0, 0, WIDTH, HEIGHT)
 
-  // Pita atas: nama gudang dan penanda jenis dokumen.
-  applyStyle(ctx, { size: 10, weight: 700, color: ACCENT, spacing: 1.4 })
-  drawTracked(ctx, 'WAREHOUSE TSB', PAD, 32, 1.4)
+  // Pita atas: nama merek dan penanda jenis dokumen. Nama merek bisa panjang
+  // ("Time Slot Booking 2"), jadi dipotong ke lebar yang tersisa di kiri badge.
+  const badge = model.badge.toUpperCase()
   applyStyle(ctx, { size: 10, weight: 600, color: '#94a3b8', spacing: 1.4 })
-  const eTicket = 'E-TIKET'
-  drawTracked(
+  const badgeWidth = trackedWidth(ctx, badge, 1.4)
+  applyStyle(ctx, { size: 10, weight: 700, color: ACCENT, spacing: 1.4 })
+  const brand = fit(
     ctx,
-    eTicket,
-    WIDTH - PAD - trackedWidth(ctx, eTicket, 1.4),
-    32,
-    1.4
+    model.appName.toUpperCase(),
+    WIDTH - PAD * 2 - badgeWidth - 12
   )
+  drawTracked(ctx, brand, PAD, 32, 1.4)
+  applyStyle(ctx, { size: 10, weight: 600, color: '#94a3b8', spacing: 1.4 })
+  drawTracked(ctx, badge, WIDTH - PAD - badgeWidth, 32, 1.4)
 
   const qr = await qrImage(model.qrToken, QR_BOX * scale)
   ctx.drawImage(qr, (WIDTH - QR_BOX) / 2, QR_TOP, QR_BOX, QR_BOX)

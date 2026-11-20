@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { ArrowRight, Loader2, TimerReset } from 'lucide-react'
 import type { Booking, DockWithBooking } from '@/lib/api/types'
 import { activityLabels, formatTime } from '@/lib/format'
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { dockOptionLabel } from '@/lib/dock-label'
 import { Button } from '@/components/ui/button'
@@ -20,12 +21,13 @@ import {
   assignBlockReason,
   eligibleDocks,
   laneDot,
-  laneShortTitle,
-  laneTitle,
+  laneShortTitleKey,
+  laneTitleKey,
   waitClock,
   waitLabel,
   type QueueLaneKey,
   type QueueRow,
+  type Translate,
   type WaitTone,
 } from './queue-model'
 
@@ -59,22 +61,30 @@ export function QueueTable({
   now,
   ...handlers
 }: QueueActionHandlers & { rows: QueueRow[]; now: Date }) {
+  const t = useT()
   return (
     <Card className='gap-0 overflow-hidden py-0'>
       <Table>
         <TableCaption className='px-4 pb-4 text-start'>
-          Semua truk pada tanggal ini. Yang paling lama menunggu lebih dulu di
-          setiap tahap.
+          {t('queue.tableCaption')}
         </TableCaption>
         <TableHeader>
           <TableRow className='bg-muted/40 hover:bg-muted/40'>
-            <TableHead className='h-11 ps-4'>Truk</TableHead>
-            <TableHead className='h-11 max-md:hidden'>Customer</TableHead>
-            <TableHead className='h-11 max-lg:hidden'>Jadwal</TableHead>
-            <TableHead className='h-11 max-md:hidden'>Tahap</TableHead>
-            <TableHead className='h-11 max-md:hidden'>Tunggu</TableHead>
+            <TableHead className='h-11 ps-4'>{t('queue.colTruck')}</TableHead>
+            <TableHead className='h-11 max-md:hidden'>
+              {t('queue.colCustomer')}
+            </TableHead>
+            <TableHead className='h-11 max-lg:hidden'>
+              {t('queue.colSchedule')}
+            </TableHead>
+            <TableHead className='h-11 max-md:hidden'>
+              {t('queue.colLane')}
+            </TableHead>
+            <TableHead className='h-11 max-md:hidden'>
+              {t('queue.colWait')}
+            </TableHead>
             <TableHead className='h-11 pe-4 text-end max-md:hidden'>
-              Aksi
+              {t('queue.colAction')}
             </TableHead>
           </TableRow>
         </TableHeader>
@@ -100,6 +110,7 @@ function QueueTableRow({
 }: QueueActionHandlers & { row: QueueRow; now: Date }) {
   const { booking, laneKey } = row
   const pendingApproval = booking.approvalStatus === 'PENDING'
+  const t = useT()
 
   return (
     <>
@@ -109,16 +120,16 @@ function QueueTableRow({
           {booking.bookingCode}
         </p>
         <p className='text-sm font-semibold'>
-          {booking.licensePlate ?? 'Plat belum diisi'}
+          {booking.licensePlate ?? t('queue.plateEmpty')}
         </p>
         {/* Ringkasan yang hilang bersama kolomnya di layar sempit. */}
         <p className='text-xs text-muted-foreground tabular-nums md:hidden'>
-          <span className='font-medium'>{laneShortTitle[laneKey]}</span>
-          {mobileSummary(booking, laneKey, now)}
+          <span className='font-medium'>{t(laneShortTitleKey[laneKey])}</span>
+          {mobileSummary(booking, laneKey, now, t)}
         </p>
         {pendingApproval && (
           <p className='text-xs font-medium text-amber-700 dark:text-amber-300'>
-            Menunggu persetujuan
+            {t('queue.awaitingApproval')}
           </p>
         )}
       </TableCell>
@@ -126,7 +137,7 @@ function QueueTableRow({
       <TableCell className='max-w-56 whitespace-normal max-md:hidden'>
         <p className='truncate text-sm'>{booking.customer.name}</p>
         <p className='truncate text-xs text-muted-foreground'>
-          {booking.driverName ?? 'Sopir belum diisi'}
+          {booking.driverName ?? t('queue.driverEmpty')}
         </p>
       </TableCell>
 
@@ -145,7 +156,7 @@ function QueueTableRow({
             className={cn('size-2 rounded-full', laneDot[laneKey])}
             aria-hidden
           />
-          {laneTitle[laneKey]}
+          {t(laneTitleKey[laneKey])}
         </span>
       </TableCell>
 
@@ -184,13 +195,20 @@ function QueueTableRow({
 }
 
 /** "· 24 mnt menunggu" / "· L2" / "· belum gate-in" untuk baris ponsel. */
-function mobileSummary(booking: Booking, laneKey: QueueLaneKey, now: Date) {
-  if (laneKey === 'upcoming') return ' · belum gate-in'
+function mobileSummary(
+  booking: Booking,
+  laneKey: QueueLaneKey,
+  now: Date,
+  t: Translate
+) {
+  if (laneKey === 'upcoming') return t('queue.notGatedInSuffix')
   if (laneKey === 'atDock') {
-    return ` · ${booking.assignedDock?.dockCode ?? 'tanpa dock'}`
+    return ` · ${t('queue.dockAt', {
+      dock: booking.assignedDock?.dockCode ?? t('queue.noDock'),
+    })}`
   }
   const clock = waitClock(booking, now)
-  return clock ? ` · ${waitLabel(clock.minutes)}` : ''
+  return clock ? ` · ${waitLabel(clock.minutes, t)}` : ''
 }
 
 function WaitCell({
@@ -202,8 +220,11 @@ function WaitCell({
   laneKey: QueueLaneKey
   now: Date
 }) {
+  const t = useT()
   if (laneKey === 'upcoming') {
-    return <span className='text-xs text-muted-foreground'>Belum gate-in</span>
+    return (
+      <span className='text-xs text-muted-foreground'>{t('queue.notGatedInShort')}</span>
+    )
   }
 
   const clock = waitClock(booking, now)
@@ -217,12 +238,12 @@ function WaitCell({
           toneText[clock.tone]
         )}
       >
-        {waitLabel(clock.minutes)}
+        {waitLabel(clock.minutes, t)}
       </p>
       <p className='text-xs text-muted-foreground'>
         {laneKey === 'atDock'
-          ? `di ${booking.assignedDock?.dockCode ?? '—'}`
-          : `masuk ${formatTime(clock.since)}`}
+          ? t('queue.dockAt', { dock: booking.assignedDock?.dockCode ?? '—' })
+          : t('queue.enteredShort', { time: formatTime(clock.since) })}
       </p>
     </>
   )
@@ -255,14 +276,16 @@ export function QueueRowActions({
   /** Deretan tombol sebaris, dipakai di baris aksi layar sempit. */
   inline?: boolean
 }) {
+  const t = useT()
+
   if (laneKey === 'atDock') {
     return (
       <Button asChild variant='outline' size='sm' className='h-9'>
         <Link
           to='/dock'
-          aria-label={`Buka Papan Dock untuk ${booking.bookingCode}`}
+          aria-label={t('queue.openBoard', { code: booking.bookingCode })}
         >
-          Buka dock
+          {t('queue.openDockShort')}
           <ArrowRight data-icon='inline-end' />
         </Link>
       </Button>
@@ -273,7 +296,7 @@ export function QueueRowActions({
     return (
       <span className='text-xs text-muted-foreground'>
         <span aria-hidden>—</span>
-        <span className='sr-only'>Belum gate-in, belum bisa ditugaskan</span>
+        <span className='sr-only'>{t('queue.cannotAssign')}</span>
       </span>
     )
   }
@@ -283,7 +306,9 @@ export function QueueRowActions({
 
   if (pendingApproval) {
     return (
-      <span className='text-xs text-muted-foreground'>Menunggu persetujuan</span>
+      <span className='text-xs text-muted-foreground'>
+        {t('queue.awaitingApproval')}
+      </span>
     )
   }
 
@@ -300,7 +325,10 @@ export function QueueRowActions({
           size='sm'
           className='h-9'
           disabled={assigning}
-          aria-label={`Tugaskan ${booking.bookingCode} ke ${dockOptionLabel(first)}`}
+          aria-label={t('queue.assignAria', {
+            code: booking.bookingCode,
+            dock: dockOptionLabel(first),
+          })}
           onClick={() => onQuickAssign(booking, first)}
         >
           {assigning ? (
@@ -308,11 +336,11 @@ export function QueueRowActions({
           ) : (
             <TimerReset aria-hidden />
           )}
-          Tugaskan ke {first.dockCode}
+          {t('queue.assignTo', { dock: first.dockCode })}
         </Button>
       ) : (
         <span className='max-w-48 whitespace-normal text-xs text-muted-foreground'>
-          {assignBlockReason(booking, docks ?? [])}
+          {assignBlockReason(booking, docks ?? [], t)}
         </span>
       )}
 
@@ -331,8 +359,8 @@ export function QueueRowActions({
             variant='ghost'
             size='sm'
             disabled={assigning}
-            placeholder='Dock lain'
-            label={`Pilih dock lain untuk ${booking.bookingCode}`}
+            placeholder={t('queue.otherDock')}
+            label={t('queue.pickOtherDock', { code: booking.bookingCode })}
             onSelect={(dock) => onPickDock(booking, dock)}
           />
         ) : (
@@ -344,7 +372,7 @@ export function QueueRowActions({
             variant='ghost'
             size='sm'
             className='text-muted-foreground hover:text-destructive'
-            aria-label={`Tandai ${booking.bookingCode} tidak datang`}
+            aria-label={t('queue.markNoShow', { code: booking.bookingCode })}
             onClick={() => onNoShow(booking)}
           >
             No-show

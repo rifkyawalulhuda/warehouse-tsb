@@ -1,0 +1,93 @@
+export const reports = {
+  'report.title': 'Laporan',
+  'report.description':
+    'Rekap booking perusahaan Anda: ketepatan waktu, durasi layanan, dan pemakaian slot.',
+  'report.from': 'Dari tanggal',
+  'report.to': 'Sampai tanggal',
+  'report.reload': 'Muat ulang laporan',
+  'report.export': 'Ekspor Excel',
+  'report.presets': 'Rentang tanggal cepat',
+  'report.presetToday': 'Hari ini',
+  'report.preset7': '7 hari',
+  'report.preset30': '30 hari',
+  'report.reset': 'Atur ulang',
+  'report.updating': 'Memperbarui laporan...',
+  'report.rangeInvalid': 'Tanggal awal tidak boleh melewati tanggal akhir.',
+  'report.calculating': 'Menghitung laporan...',
+
+  'report.kpi.total': 'Total booking',
+  'report.kpi.onTime': 'Tingkat on-time',
+  'report.kpi.onTimeHint': 'Dari yang sudah gate-in',
+  'report.kpi.turnaround': 'Rata-rata turnaround',
+  'report.kpi.turnaroundHint': 'Gate-in sampai gate-out',
+  'report.kpi.slot': 'Pemakaian slot',
+  'report.kpi.slotHint': 'Dibanding blok yang Anda booking',
+
+  'report.section.detail': 'Rincian',
+  'report.section.detailDesc':
+    'Status booking dan durasi rata-rata pada rentang ini.',
+  'report.completed': 'Selesai',
+  'report.cancelled': 'Dibatalkan',
+  'report.noShow': 'No-show',
+  'report.expired': 'Kedaluwarsa',
+  'report.avgWaiting': 'Rata-rata tunggu',
+  'report.avgProcessing': 'Rata-rata proses',
+  'report.overrun': 'Melewati blok',
+  'report.overrunHint': 'Booking yang prosesnya melampaui blok',
+
+  'report.byDay': 'Booking per hari',
+  'report.byDayDesc': 'Total, selesai, dan terlambat tiap hari dalam rentang.',
+  'report.byHour': 'Kedatangan truk per jam',
+  'report.byHourDesc': 'Jumlah truk Anda yang gate-in pada tiap jam operasional.',
+
+  'report.table': 'Detail booking',
+  'report.tableDesc': '{count} baris. Unduh Excel untuk data lengkap.',
+  'report.empty': 'Tidak ada booking pada rentang tanggal ini.',
+
+  'report.col.code': 'Kode',
+  'report.col.date': 'Tanggal',
+  'report.col.plate': 'Plat',
+  'report.col.dock': 'Dock',
+  'report.col.status': 'Status',
+  'report.col.waiting': 'Tunggu',
+  'report.col.processing': 'Proses',
+  'report.col.turnaround': 'Turnaround',
+  'report.col.late': 'Terlambat',
+  'report.col.slot': 'Slot',
+  'report.total': 'Total',
+
+  'report.legend.total': 'Total',
+  'report.legend.completed': 'Selesai',
+  'report.legend.late': 'Terlambat',
+  'report.legend.arrivals': 'Kedatangan',
+
+  'report.minutes': '{count} mnt',
+  'report.lateNotice': 'Terlambat {count} menit',
+  'report.overrunBy': '(+{count} mnt)',
+
+  'report.staffTitle': 'Laporan',
+  'report.staffDescription':
+    'KPI operasional dan rekapitulasi per hari dalam rentang tanggal.',
+  'report.customerLabel': 'Customer',
+  'report.allCustomers': 'Semua customer',
+  'report.loadingCustomers': 'Memuat customer...',
+  'report.customersFailed': 'Daftar customer gagal dimuat.',
+  'report.kpi.avgWaiting': 'Rata-rata tunggu',
+  'report.kpi.avgWaitingHint': 'Gate-in sampai mulai proses',
+  'report.kpi.avgProcessing': 'Rata-rata proses',
+  'report.kpi.avgProcessingHint': 'Mulai sampai selesai proses',
+  'report.kpi.expiredHint': 'Tidak diputuskan Admin',
+  'report.col.customer': 'Customer',
+  'report.chart.byDayTitle': 'Booking per hari',
+  'report.chart.byDayDesc':
+    'Total, selesai, dan terlambat tiap hari dalam rentang.',
+  'report.chart.byHourCapacity': 'Kedatangan vs kapasitas slot',
+  'report.chart.byHourCapacityDesc':
+    'Jumlah gate-in per jam dibanding kapasitas jam tersebut.',
+  'report.chart.byHourCustomer': 'Kedatangan per jam',
+  'report.chart.byHourCustomerDesc':
+    'Jumlah gate-in per jam untuk customer terpilih. Kapasitas gudang tidak dibandingkan karena grafiknya hanya memuat satu perusahaan.',
+  'report.chart.capacity': 'Kapasitas slot',
+  'report.chart.arrivalsActual': 'Kedatangan aktual',
+
+} as const

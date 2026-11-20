@@ -12,7 +12,8 @@ import {
 import type { Booking, DockWithBooking } from '@/lib/api/types'
 import { useNow } from '@/hooks/use-now'
 import { useRealtimeSync } from '@/hooks/use-realtime'
-import { activityLabels, todayISO } from '@/lib/format'
+import { useT } from '@/lib/i18n'
+import { todayISO } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Main } from '@/components/layout/main'
@@ -25,26 +26,20 @@ import { Input } from '@/components/ui/input'
 import { DockCard } from './dock-card'
 import { DockGrid } from './dock-grid'
 import {
+  dockActivityLabelKey,
   dockFilterCounts,
-  dockFilterLabels,
+  dockFilterLabelKeys,
   dockFilters,
+  dockGroupLabelKeys,
   groupDocks,
   waitingCount,
   type DockFilter,
-  type DockPhase,
 } from './dock-model'
 import { DockSummary, DockQueueStrip } from './dock-summary'
 import { DockTable } from './dock-table'
 import { DockTile } from './dock-tile'
 import { DockViewSwitch } from './dock-view-switch'
 import { useDockView } from './use-dock-view'
-
-const groupTitles: Record<DockPhase, string> = {
-  starting: 'Perlu dimulai',
-  serving: 'Sedang diproses',
-  available: 'Dock kosong',
-  maintenance: 'Perawatan',
-}
 
 /**
  * Tindakan yang mengubah siapa yang boleh masuk dock, jadi selalu lewat
@@ -61,6 +56,7 @@ export function DockBoard() {
   const queryClient = useQueryClient()
   const today = todayISO()
   const { view, setView } = useDockView()
+  const t = useT()
 
   const docks = useQuery({ queryKey: ['ops', 'docks'], queryFn: fetchOpsDocks })
 
@@ -90,7 +86,7 @@ export function DockBoard() {
   const start = useMutation({
     mutationFn: (bookingId: string) => startProcess(bookingId),
     onSuccess: () => {
-      toast.success('Proses dimulai')
+      toast.success(t('dock.startToast'))
       setPending(null)
       invalidate()
     },
@@ -100,14 +96,14 @@ export function DockBoard() {
   const finish = useMutation({
     mutationFn: (bookingId: string) => finishProcess(bookingId),
     onSuccess: () => {
-      toast.success('Proses selesai, dock kembali tersedia')
+      toast.success(t('dock.finishToast'))
       setPending(null)
       invalidate()
     },
     onError: (error) => toast.error(apiErrorMessage(error)),
   })
 
-  if (docks.isPending) return <LoadingBlock label='Memuat dock...' />
+  if (docks.isPending) return <LoadingBlock label={t('dock.loading')} />
   if (docks.isError)
     return <ErrorBlock error={docks.error} onRetry={() => void docks.refetch()} />
 
@@ -124,8 +120,12 @@ export function DockBoard() {
   return (
     <Main className='flex flex-1 flex-col gap-6'>
       <PageHeader
-        title='Papan Dock'
-        description={`${counts.serving} sedang diproses · ${counts.action} perlu dimulai · ${counts.empty} kosong.`}
+        title={t('dock.title')}
+        description={t('dock.description', {
+          serving: counts.serving,
+          action: counts.action,
+          empty: counts.empty,
+        })}
         actions={<DockViewSwitch value={view} onChange={setView} />}
       />
 
@@ -137,7 +137,7 @@ export function DockBoard() {
         <div className='flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between'>
           <div
             role='group'
-            aria-label='Saring dock'
+            aria-label={t('dock.filterAria')}
             className='-mx-1 flex flex-nowrap items-center gap-2 overflow-x-auto px-1 pb-1 lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0 lg:pb-0'
           >
             {dockFilters.map((value) => {
@@ -150,7 +150,7 @@ export function DockBoard() {
                   className='h-11 shrink-0 sm:h-9'
                   onClick={() => setFilter(value)}
                 >
-                  {dockFilterLabels[value]}
+                  {t(dockFilterLabelKeys[value])}
                   <span
                     className={cn(
                       'rounded-full px-1.5 text-xs tabular-nums',
@@ -175,14 +175,14 @@ export function DockBoard() {
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                aria-label='Cari dock, kode booking, plat, atau customer'
-                placeholder='Cari dock, booking, plat...'
+                aria-label={t('dock.searchAria')}
+                placeholder={t('dock.searchPlaceholder')}
                 className='h-11 ps-9 sm:h-9'
               />
             </div>
             {isFiltered && (
               <Button variant='ghost' className='h-11 sm:h-9' onClick={resetFilters}>
-                Atur ulang
+                {t('dock.reset')}
               </Button>
             )}
           </div>
@@ -194,29 +194,30 @@ export function DockBoard() {
         role='status'
         className='sr-only'
       >
-        {groups.reduce((total, group) => total + group.docks.length, 0)} dock
-        ditampilkan
+        {t('dock.shownSr', {
+          count: groups.reduce((total, group) => total + group.docks.length, 0),
+        })}
       </div>
 
       {docks.data.length === 0 ? (
         <Card>
           <div className='flex flex-col items-center gap-2 px-6 text-center'>
             <Truck className='size-8 text-muted-foreground' aria-hidden />
-            <p className='text-sm font-medium'>Belum ada dock</p>
+            <p className='text-sm font-medium'>{t('dock.emptyTitle')}</p>
             <p className='text-sm text-muted-foreground'>
-              Tambahkan dock lewat Master Data agar papan ini terisi.
+              {t('dock.emptyBody')}
             </p>
           </div>
         </Card>
       ) : groups.length === 0 ? (
         <Card>
           <div className='flex flex-col items-center gap-3 px-6 text-center'>
-            <p className='text-sm font-medium'>Tidak ada dock yang cocok</p>
+            <p className='text-sm font-medium'>{t('dock.noMatchTitle')}</p>
             <p className='text-sm text-muted-foreground'>
-              Ubah kata kunci atau kembali ke semua dock.
+              {t('dock.noMatchBody')}
             </p>
             <Button variant='outline' onClick={resetFilters}>
-              Tampilkan semua dock
+              {t('dock.showAll')}
             </Button>
           </div>
         </Card>
@@ -256,7 +257,7 @@ export function DockBoard() {
                 id={`dock-group-${group.phase}`}
                 className='text-sm font-semibold'
               >
-                {groupTitles[group.phase]}
+                {t(dockGroupLabelKeys[group.phase])}
               </h2>
               <Badge variant='secondary' className='tabular-nums'>
                 {group.docks.length}
@@ -296,16 +297,16 @@ export function DockBoard() {
         onOpenChange={(open) => !open && setPending(null)}
         title={
           pending?.kind === 'start'
-            ? 'Mulai proses di dock ini?'
-            : 'Selesaikan proses ini?'
+            ? t('dock.confirmStartTitle')
+            : t('dock.confirmFinishTitle')
         }
         desc={
           pending ? (
             <div className='space-y-2'>
               <p>
                 {pending.kind === 'start'
-                  ? 'Waktu mulai proses dicatat sebagai sekarang dan dock ditandai sedang dipakai.'
-                  : 'Waktu selesai dicatat dan dock langsung dibebaskan untuk truk berikutnya.'}
+                  ? t('dock.confirmStartBody')
+                  : t('dock.confirmFinishBody')}
               </p>
               <div className='rounded-md border bg-muted/50 p-3 text-xs'>
                 <p className='font-mono text-sm font-semibold text-foreground'>
@@ -315,11 +316,11 @@ export function DockBoard() {
                   {pending.dock.dockCode}
                   {pending.booking.licensePlate
                     ? ` · ${pending.booking.licensePlate}`
-                    : ' · plat belum diisi'}
+                    : t('dock.plateEmptyShort')}
                 </p>
                 <p className='mt-0.5'>
                   {pending.booking.customer.name} ·{' '}
-                  {activityLabels[pending.booking.activityType]}
+                  {t(dockActivityLabelKey(pending.booking.activityType))}
                 </p>
               </div>
             </div>
@@ -328,9 +329,9 @@ export function DockBoard() {
           )
         }
         confirmText={
-          pending?.kind === 'start' ? 'Ya, mulai proses' : 'Ya, selesaikan'
+          pending?.kind === 'start' ? t('dock.confirmStart') : t('dock.confirmFinish')
         }
-        cancelBtnText='Batal'
+        cancelBtnText={t('dock.cancel')}
         isLoading={start.isPending || finish.isPending}
         handleConfirm={() => {
           if (!pending) return

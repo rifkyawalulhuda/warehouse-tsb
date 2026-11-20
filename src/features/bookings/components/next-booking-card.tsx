@@ -9,6 +9,7 @@ import {
   formatTime,
 } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { useLocale, useT } from '@/lib/i18n'
 import { ApprovalBadge } from '@/components/approval-badge'
 import { StatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
@@ -51,7 +52,9 @@ const URGENCY_TONE = {
  * tersedia di bawahnya, jadi blok ini tidak menyembunyikan apa pun.
  */
 export function NextBookingCard({ booking, now }: { booking: Booking; now: Date }) {
-  const urgency = bookingUrgency(booking, now)
+  const locale = useLocale()
+  const t = useT()
+  const urgency = bookingUrgency(booking, now, locale)
   const tone = URGENCY_TONE[urgency.key]
 
   return (
@@ -72,7 +75,7 @@ export function NextBookingCard({ booking, now }: { booking: Booking; now: Date 
         <div className='min-w-0 space-y-4'>
           <div className='flex flex-wrap items-center gap-2'>
             <span className='text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase'>
-              <span id='next-booking-heading'>Jadwal berikutnya</span>
+              <span id='next-booking-heading'>{t('bookings.nextTitle')}</span>
             </span>
             <span
               className={cn(
@@ -104,14 +107,14 @@ export function NextBookingCard({ booking, now }: { booking: Booking; now: Date 
           </div>
 
           <dl className='grid gap-x-6 gap-y-1.5 text-sm sm:grid-cols-2 lg:grid-cols-3'>
-            <Fact icon={Truck} label='Truk'>
+            <Fact icon={Truck} label={t('bookings.truck')}>
               {booking.truckType.truckName}
               {booking.licensePlate ? ` · ${booking.licensePlate}` : ''}
             </Fact>
-            <Fact icon={MapPin} label='Dock'>
-              {dockLabel(booking)}
+            <Fact icon={MapPin} label={t('bookings.dock')}>
+              {dockLabel(booking, locale)}
             </Fact>
-            <Fact icon={Clock} label='Durasi'>
+            <Fact icon={Clock} label={t('bookings.duration')}>
               {durationLabel(bookingDurationMinutes(booking))}
               <span className='ms-1 text-muted-foreground'>
                 · {activityLabels[booking.activityType]}
@@ -123,7 +126,7 @@ export function NextBookingCard({ booking, now }: { booking: Booking; now: Date 
         <div className='flex shrink-0 flex-col gap-2 sm:flex-row lg:flex-col lg:items-stretch'>
           <Button asChild size='lg' className='group/cta sm:w-auto'>
             <Link to='/bookings/$bookingId' params={{ bookingId: booking.id }}>
-              Lihat detail
+              {t('bookings.viewDetail')}
               <ArrowRight className='transition-transform duration-200 group-hover/cta:translate-x-0.5' />
             </Link>
           </Button>

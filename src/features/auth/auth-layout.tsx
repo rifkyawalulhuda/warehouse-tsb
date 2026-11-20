@@ -1,3 +1,4 @@
+import { LocaleSwitch } from '@/components/locale-switch'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { WhiteLabel } from './components/white-label'
 
@@ -24,7 +25,8 @@ export function AuthLayout({ children }: AuthLayoutProps) {
           aria-hidden='true'
           className='pointer-events-none absolute inset-0 bg-[radial-gradient(120%_90%_at_0%_0%,color-mix(in_oklab,var(--primary)_10%,transparent),transparent_60%)]'
         />
-        <div className='absolute end-4 top-4 z-10 lg:end-6 lg:top-6'>
+        <div className='absolute end-4 top-4 z-10 flex items-center gap-2 lg:end-6 lg:top-6'>
+          <LocaleSwitch />
           <ThemeSwitch />
         </div>
         <div className='relative mx-auto w-full max-w-[22rem]'>{children}</div>

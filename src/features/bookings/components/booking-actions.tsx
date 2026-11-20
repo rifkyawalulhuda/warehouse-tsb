@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import { apiErrorMessage } from '@/lib/api/client'
 import { cancelBooking } from '@/lib/api/endpoints'
 import type { Booking } from '@/lib/api/types'
+import { useT } from '@/lib/i18n'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -33,11 +34,12 @@ export function BookingActions({
   const [vehicleOpen, setVehicleOpen] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
   const queryClient = useQueryClient()
+  const t = useT()
 
   const cancel = useMutation({
     mutationFn: () => cancelBooking(booking.id),
     onSuccess: () => {
-      toast.success('Booking dibatalkan')
+      toast.success(t('bookings.cancelled'))
       void queryClient.invalidateQueries({ queryKey: ['bookings'] })
       setCancelOpen(false)
     },
@@ -63,13 +65,13 @@ export function BookingActions({
             onClick={() => setVehicleOpen(true)}
           >
             <PencilLine />
-            Lengkapi kendaraan
+            {t('bookings.completeVehicle')}
           </Button>
         )}
         <Button asChild variant={ticketVariant} size='sm' className={stacked ? 'w-full' : undefined}>
           <Link to='/t/$token' params={{ token: booking.qrToken }} target='_blank'>
             <ExternalLink />
-            Tiket
+            {t('bookings.ticket')}
           </Link>
         </Button>
         {canCancel && (
@@ -83,7 +85,7 @@ export function BookingActions({
             onClick={() => setCancelOpen(true)}
           >
             <XCircle />
-            Batalkan
+            {t('bookings.cancel')}
           </Button>
         )}
       </div>
@@ -93,9 +95,9 @@ export function BookingActions({
       <ConfirmDialog
         open={cancelOpen}
         onOpenChange={setCancelOpen}
-        title='Batalkan booking?'
-        desc={`Booking ${booking.bookingCode} akan dibatalkan dan slot jamnya dikembalikan.`}
-        confirmText='Ya, batalkan'
+        title={t('bookings.cancelTitle')}
+        desc={t('bookings.cancelBody', { code: booking.bookingCode })}
+        confirmText={t('bookings.cancelConfirm')}
         destructive
         isLoading={cancel.isPending}
         handleConfirm={() => cancel.mutate()}

@@ -1,6 +1,7 @@
 import { useId } from 'react'
 import { Inbox } from 'lucide-react'
 import type { Booking, DockWithBooking } from '@/lib/api/types'
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { QueueCard } from './queue-card'
@@ -31,12 +32,14 @@ export function QueueCardList({
   columns = 1,
   ...handlers
 }: { lane: QueueLaneData; now: Date; columns?: 1 | 2 | 3 } & CardHandlers) {
+  const t = useT()
+
   if (lane.bookings.length === 0) {
     return (
       <div className='flex flex-col items-center gap-1.5 rounded-lg border border-dashed px-3 py-6 text-center'>
         <Inbox className='size-5 text-muted-foreground/70' aria-hidden />
         <p className='text-xs font-medium text-muted-foreground'>
-          {lane.emptyLabel}
+          {t(lane.emptyLabelKey)}
         </p>
       </div>
     )
@@ -86,6 +89,7 @@ export function QueueLane({
   className?: string
 } & CardHandlers) {
   const headingId = useId()
+  const t = useT()
   const oldest = oldestWait(lane, now)
 
   return (
@@ -106,12 +110,12 @@ export function QueueLane({
               className={cn('size-2 rounded-full', laneDot[lane.key])}
               aria-hidden
             />
-            {lane.title}
+            {t(lane.titleKey)}
           </h2>
           <div className='flex items-center gap-1.5'>
             {oldest && lane.key !== 'atDock' && lane.key !== 'upcoming' && (
               <span className='text-xs text-muted-foreground tabular-nums'>
-                terlama {waitLabel(oldest.minutes)}
+                {t('queue.oldest', { duration: waitLabel(oldest.minutes, t) })}
               </span>
             )}
             <Badge variant='secondary' className='tabular-nums'>
@@ -119,7 +123,9 @@ export function QueueLane({
             </Badge>
           </div>
         </div>
-        <p className='text-xs text-muted-foreground'>{lane.description}</p>
+        <p className='text-xs text-muted-foreground'>
+          {t(lane.descriptionKey)}
+        </p>
       </header>
 
       <QueueCardList lane={lane} now={now} columns={columns} {...handlers} />

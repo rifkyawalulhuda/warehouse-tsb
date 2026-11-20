@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { ArrowRight, Timer } from 'lucide-react'
 import type { Booking } from '@/lib/api/types'
 import { formatTime } from '@/lib/format'
+import { useT } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -33,25 +34,28 @@ export function LateQueue({
   rows: Booking[]
   onAssign?: (booking: Booking) => void
 }) {
+  const t = useT()
   return (
     <Card className='gap-4 border-amber-200 dark:border-amber-900/60'>
       <CardHeader>
         <CardTitle className='flex items-center gap-2'>
           <Timer className='size-4 text-amber-600 dark:text-amber-400' />
-          Antrean Terlambat
+          {t('dashboard.lateTitle')}
         </CardTitle>
-        <CardDescription>
-          {rows.length} truk menunggu dock · dilayani setelah truk on-time
-        </CardDescription>
+        <CardDescription>{t('dashboard.lateDesc', { count: rows.length })}</CardDescription>
       </CardHeader>
       <CardContent className='px-0'>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className='ps-4 sm:ps-6'>Truk</TableHead>
-              <TableHead className='hidden sm:table-cell'>Slot</TableHead>
-              <TableHead className='text-right'>Telat</TableHead>
-              <TableHead className='pe-4 text-right sm:pe-6'>Aksi</TableHead>
+              <TableHead className='ps-4 sm:ps-6'>{t('dashboard.colTruck')}</TableHead>
+              <TableHead className='hidden sm:table-cell'>
+                {t('dashboard.colSlot')}
+              </TableHead>
+              <TableHead className='text-right'>{t('dashboard.colLate')}</TableHead>
+              <TableHead className='pe-4 text-right sm:pe-6'>
+                {t('dashboard.colAction')}
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -62,11 +66,11 @@ export function LateQueue({
                     {booking.licensePlate ?? booking.bookingCode}
                   </div>
                   <div className='text-xs text-muted-foreground'>
-                    {booking.driverName ?? 'Supir belum diisi'} ·{' '}
+                    {booking.driverName ?? t('dashboard.driverEmpty')} ·{' '}
                     {booking.truckType.truckName}
                   </div>
                   <div className='text-xs tabular-nums text-muted-foreground sm:hidden'>
-                    Slot {formatTime(booking.startTime)}
+                    {t('dashboard.slotAt', { time: formatTime(booking.startTime) })}
                   </div>
                 </TableCell>
                 <TableCell className='hidden text-sm tabular-nums text-muted-foreground sm:table-cell'>
@@ -74,7 +78,7 @@ export function LateQueue({
                 </TableCell>
                 <TableCell className='text-right'>
                   <span className='inline-flex items-center rounded-md border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium tabular-nums text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300'>
-                    +{booking.lateMinutes} mnt
+                    {t('dashboard.lateBy', { count: booking.lateMinutes })}
                   </span>
                 </TableCell>
                 <TableCell className='pe-4 text-right sm:pe-6'>
@@ -84,13 +88,13 @@ export function LateQueue({
                       variant='outline'
                       onClick={() => onAssign(booking)}
                     >
-                      Assign
+                      {t('dashboard.assign')}
                       <ArrowRight className='size-3.5' />
                     </Button>
                   ) : (
                     <Button size='sm' variant='outline' asChild>
                       <Link to='/queue'>
-                        Antrean
+                        {t('dashboard.queueShort')}
                         <ArrowRight className='size-3.5' />
                       </Link>
                     </Button>
@@ -104,7 +108,7 @@ export function LateQueue({
                   colSpan={4}
                   className='h-24 px-4 text-center text-sm whitespace-normal text-muted-foreground'
                 >
-                  Tidak ada truk terlambat. Semua armada datang sesuai slot.
+                  {t('dashboard.noLate')}
                 </TableCell>
               </TableRow>
             ) : null}

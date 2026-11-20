@@ -6,6 +6,7 @@ import { useCustomerName } from '@/stores/auth-store'
 import { fetchMyBookings } from '@/lib/api/endpoints'
 import type { Booking } from '@/lib/api/types'
 import { useNow } from '@/hooks/use-now'
+import { useLocale, useT } from '@/lib/i18n'
 import { useRealtimeSync } from '@/hooks/use-realtime'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -43,6 +44,8 @@ export function MyBookings() {
   const [filter, setFilter] = useState<BookingFilter>('all')
   const [search, setSearch] = useState('')
   const now = useNow()
+  const t = useT()
+  const locale = useLocale()
   const company = useCustomerName()
   useRealtimeSync()
 
@@ -95,7 +98,7 @@ export function MyBookings() {
     [visible, next, filter, search]
   )
 
-  const days = useMemo(() => groupByDay(listItems), [listItems])
+  const days = useMemo(() => groupByDay(listItems, locale), [listItems, locale])
 
   // Tampilan jadwal mengelompokkan per hari; tanggal di tiap baris daftar jadi
   // mubazir hanya jika semua booking ada di hari yang sama.
@@ -110,12 +113,12 @@ export function MyBookings() {
     <Main className='flex flex-1 flex-col gap-6'>
       <PageHeader
         eyebrow={company ?? undefined}
-        title='Jadwal Saya'
-        description='Semua booking truk yang Anda buat. Pilih tampilan yang paling nyaman.'
+        title={t('bookings.title')}
+        description={t('bookings.subtitle')}
         actions={
           <Button asChild>
             <Link to='/bookings/new'>
-              <Plus /> Booking Baru
+              <Plus /> {t('bookings.new')}
             </Link>
           </Button>
         }
@@ -126,8 +129,8 @@ export function MyBookings() {
         onValueChange={(value) => changeScope(value as Scope)}
       >
         <TabsList>
-          <TabsTrigger value='active'>Aktif</TabsTrigger>
-          <TabsTrigger value='past'>Riwayat</TabsTrigger>
+          <TabsTrigger value='active'>{t('bookings.tabActive')}</TabsTrigger>
+          <TabsTrigger value='past'>{t('bookings.tabPast')}</TabsTrigger>
         </TabsList>
       </Tabs>
 
@@ -162,8 +165,8 @@ export function MyBookings() {
                   type='search'
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder='Cari kode booking, plat, atau nomor dokumen'
-                  aria-label='Cari booking'
+                  placeholder={t('bookings.searchPlaceholder')}
+                  aria-label={t('bookings.searchLabel')}
                   className='ps-8'
                 />
               </div>
@@ -173,7 +176,7 @@ export function MyBookings() {
           {listItems.length === 0 ? (
             <Card>
               <CardContent className='py-10 text-center text-sm text-muted-foreground'>
-                Tidak ada booking yang cocok dengan filter atau kata kunci ini.
+                {t('bookings.noMatch')}
               </CardContent>
             </Card>
           ) : (
@@ -212,6 +215,7 @@ export function MyBookings() {
 }
 
 function LoadingState({ view }: { view: BookingsView }) {
+  const t = useT()
   return (
     <div className='space-y-4'>
       <div
@@ -238,13 +242,14 @@ function LoadingState({ view }: { view: BookingsView }) {
         </ul>
       )}
       <span className='sr-only' role='status'>
-        Memuat booking...
+        {t('bookings.count', { count: 4 })}
       </span>
     </div>
   )
 }
 
 function EmptyState({ scope }: { scope: Scope }) {
+  const t = useT()
   return (
     <Card className='border-dashed shadow-none'>
       <CardContent className='flex flex-col items-center gap-3 py-14 text-center'>
@@ -254,19 +259,19 @@ function EmptyState({ scope }: { scope: Scope }) {
         <div className='space-y-1'>
           <p className='text-sm font-medium'>
             {scope === 'active'
-              ? 'Belum ada booking aktif'
-              : 'Belum ada riwayat booking'}
+              ? t('bookings.emptyActiveTitle')
+              : t('bookings.emptyPastTitle')}
           </p>
           <p className='text-sm text-muted-foreground'>
             {scope === 'active'
-              ? 'Buat booking untuk mengunci slot jam bongkar muat.'
-              : 'Booking yang sudah selesai akan muncul di sini.'}
+              ? t('bookings.emptyActiveHint')
+              : t('bookings.emptyPastHint')}
           </p>
         </div>
         {scope === 'active' && (
           <Button asChild size='sm'>
             <Link to='/bookings/new'>
-              <Plus /> Buat booking pertama
+              <Plus /> {t('bookings.emptyCreate')}
             </Link>
           </Button>
         )}

@@ -1,12 +1,13 @@
 import { Check, Monitor, Moon, Sun } from 'lucide-react'
+import { useT, type MessageKey } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/context/theme-provider'
 
 const OPTIONS = [
   {
     value: 'light',
-    label: 'Terang',
-    description: 'Latar putih, nyaman di ruangan terang.',
+    labelKey: 'settings.appearance.light',
+    descriptionKey: 'settings.appearance.lightDesc',
     icon: Sun,
     preview: {
       shell: 'bg-white',
@@ -17,8 +18,8 @@ const OPTIONS = [
   },
   {
     value: 'dark',
-    label: 'Gelap',
-    description: 'Latar gelap, mengurangi silau di malam hari.',
+    labelKey: 'settings.appearance.dark',
+    descriptionKey: 'settings.appearance.darkDesc',
     icon: Moon,
     preview: {
       shell: 'bg-slate-900',
@@ -29,8 +30,8 @@ const OPTIONS = [
   },
   {
     value: 'system',
-    label: 'Ikuti sistem',
-    description: 'Menyesuaikan pengaturan perangkat Anda.',
+    labelKey: 'settings.appearance.system',
+    descriptionKey: 'settings.appearance.systemDesc',
     icon: Monitor,
     preview: {
       shell: 'bg-gradient-to-r from-white to-slate-900',
@@ -39,7 +40,13 @@ const OPTIONS = [
       card: 'bg-slate-300',
     },
   },
-] as const
+] as const satisfies readonly {
+  value: 'light' | 'dark' | 'system'
+  labelKey: MessageKey
+  descriptionKey: MessageKey
+  icon: typeof Sun
+  preview: Record<string, string>
+}[]
 
 /**
  * Pemilih tema berbentuk kartu pratinjau.
@@ -49,13 +56,14 @@ const OPTIONS = [
  * kotor dan tidak ikut terkirim saat seksi lain disimpan.
  */
 export function AppearancePicker() {
+  const t = useT()
   const { theme, setTheme, resolvedTheme } = useTheme()
 
   return (
     <div className='space-y-3'>
       <div
         role='radiogroup'
-        aria-label='Tema tampilan'
+        aria-label={t('settings.appearance.aria')}
         className='grid gap-2.5 sm:grid-cols-3'
       >
         {OPTIONS.map((option) => {
@@ -99,7 +107,7 @@ export function AppearancePicker() {
 
               <span className='flex items-center gap-1.5 text-sm font-medium'>
                 <Icon className='size-3.5 text-muted-foreground' aria-hidden />
-                {option.label}
+                {t(option.labelKey)}
                 <Check
                   className={cn(
                     'ms-auto size-3.5 text-primary transition-opacity duration-150',
@@ -109,7 +117,7 @@ export function AppearancePicker() {
                 />
               </span>
               <span className='mt-0.5 block text-[11px] leading-snug text-muted-foreground'>
-                {option.description}
+                {t(option.descriptionKey)}
               </span>
             </button>
           )
@@ -117,11 +125,13 @@ export function AppearancePicker() {
       </div>
 
       <p className='text-xs text-muted-foreground'>
-        Aktif sekarang{' '}
-        <span className='font-medium text-foreground'>
-          {resolvedTheme === 'dark' ? 'Gelap' : 'Terang'}
-        </span>
-        {theme === 'system' && ' — mengikuti perangkat'}
+        {t('settings.appearance.active', {
+          theme:
+            resolvedTheme === 'dark'
+              ? t('settings.appearance.dark')
+              : t('settings.appearance.light'),
+        })}
+        {theme === 'system' && t('settings.appearance.followSystem')}
       </p>
     </div>
   )

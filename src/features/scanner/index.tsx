@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { apiErrorMessage } from '@/lib/api/client'
 import { gateIn, gateOut, scanQr } from '@/lib/api/endpoints'
 import type { ScanResult } from '@/lib/api/types'
+import { useT } from '@/lib/i18n'
 import { useRealtimeSync } from '@/hooks/use-realtime'
 import {
   activityLabels,
@@ -23,6 +24,7 @@ import { QrScanner } from './qr-scanner'
 
 export function ScanPage() {
   useRealtimeSync()
+  const t = useT()
   const queryClient = useQueryClient()
   const [result, setResult] = useState<ScanResult | null>(null)
   const [scanning, setScanning] = useState(false)
@@ -57,7 +59,7 @@ export function ScanPage() {
   const doGateIn = useMutation({
     mutationFn: (token: string) => gateIn(token),
     onSuccess: (booking) => {
-      toast.success('Gate-in berhasil')
+      toast.success(t('ops.gate.successIn'))
       setConfirm(null)
       refresh(booking.qrToken)
     },
@@ -67,7 +69,7 @@ export function ScanPage() {
   const doGateOut = useMutation({
     mutationFn: (token: string) => gateOut(token),
     onSuccess: (booking) => {
-      toast.success('Gate-out berhasil')
+      toast.success(t('ops.gate.successOut'))
       setConfirm(null)
       refresh(booking.qrToken)
     },
@@ -79,17 +81,15 @@ export function ScanPage() {
   return (
     <Main className='mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6'>
       <PageHeader
-        title='Gate'
-        description='Pindai QR tiket atau ketik kode booking untuk check-in dan check-out.'
+        title={t('ops.gate.title')}
+        description={t('ops.gate.description')}
       />
 
       <Card>
         <CardHeader>
-          <CardTitle className='text-base'>Pindai tiket</CardTitle>
+          <CardTitle className='text-base'>{t('ops.scanTitle')}</CardTitle>
           <CardDescription>
-            {scanning
-              ? 'Memeriksa tiket...'
-              : 'Arahkan kamera ke QR, atau ketik token / kode booking.'}
+            {scanning ? t('ops.scanChecking') : t('ops.scanHint')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -120,22 +120,32 @@ export function ScanPage() {
           </CardHeader>
           <CardContent className='space-y-4'>
             <dl className='grid gap-3 text-sm sm:grid-cols-2'>
-              <Row label='Aktivitas'>{activityLabels[result.booking.activityType]}</Row>
-              <Row label='Jenis truk'>
+              <Row label={t('ops.field.activity')}>
+                {activityLabels[result.booking.activityType]}
+              </Row>
+              <Row label={t('ops.field.truckType')}>
                 {result.booking.truckType.truckName} (
                 {durationLabel(bookingDurationMinutes(result.booking))})
               </Row>
-              <Row label='Jadwal'>
+              <Row label={t('ops.field.schedule')}>
                 {formatDate(result.booking.bookingDate)} ·{' '}
                 {formatTime(result.booking.startTime)}–
                 {formatTime(result.booking.endTime)}
               </Row>
-              <Row label='Dokumen'>{result.booking.referenceDocNo}</Row>
-              <Row label='Plat nomor'>{result.booking.licensePlate ?? 'Belum diisi'}</Row>
-              <Row label='Supir'>{result.booking.driverName ?? 'Belum diisi'}</Row>
-              <Row label='Dock'>{result.booking.assignedDock?.dockCode ?? '-'}</Row>
-              <Row label='Masa tenggang'>
-                {result.gracePeriodMinutes} menit
+              <Row label={t('ops.field.document')}>
+                {result.booking.referenceDocNo}
+              </Row>
+              <Row label={t('ops.field.plate')}>
+                {result.booking.licensePlate ?? t('ops.notFilled')}
+              </Row>
+              <Row label={t('ops.field.driver')}>
+                {result.booking.driverName ?? t('ops.notFilled')}
+              </Row>
+              <Row label={t('ops.field.dock')}>
+                {result.booking.assignedDock?.dockCode ?? '-'}
+              </Row>
+              <Row label={t('ops.field.grace')}>
+                {t('ops.graceMinutes', { count: result.gracePeriodMinutes })}
               </Row>
             </dl>
 
@@ -143,8 +153,11 @@ export function ScanPage() {
               <Notice
                 tone='warning'
                 icon={AlertTriangle}
-                title='Datang terlalu awal'
-                body={result.earlyArrival.message}
+                title={t('ops.gate.tooEarlyTitle')}
+                body={t('ops.gate.tooEarlyBody', {
+                  early: result.earlyArrival.minutesTooEarly,
+                  limit: result.earlyArrival.limitMinutes,
+                })}
               />
             )}
 
@@ -152,8 +165,8 @@ export function ScanPage() {
               <Notice
                 tone='warning'
                 icon={AlertTriangle}
-                title='Menunggu persetujuan Admin'
-                body='Booking ini belum disetujui Admin gudang, jadi truk belum boleh masuk.'
+                title={t('ops.gate.approvalPendingTitle')}
+                body={t('ops.gate.approvalPendingBody')}
               />
             )}
 
@@ -161,8 +174,8 @@ export function ScanPage() {
               <Notice
                 tone='warning'
                 icon={AlertTriangle}
-                title='Data kendaraan belum lengkap'
-                body='Plat nomor dan nama supir wajib diisi sebelum gate-in.'
+                title={t('ops.gate.vehicleIncompleteTitle')}
+                body={t('ops.gate.vehicleIncompleteBody')}
               />
             )}
 
@@ -177,13 +190,13 @@ export function ScanPage() {
                 icon={CheckCircle2}
                 title={
                   result.projectedStatus === 'LATE_WAITING_LIST'
-                    ? 'Terlambat — masuk antrean'
-                    : 'Tepat waktu'
+                    ? t('ops.gate.lateTitle')
+                    : t('ops.gate.onTimeTitle')
                 }
                 body={
                   result.projectedStatus === 'LATE_WAITING_LIST'
-                    ? `Terlambat ${result.lateMinutes} menit. Truk akan masuk waiting list sampai dock kosong.`
-                    : 'Truk boleh masuk dan menunggu penugasan dock.'
+                    ? t('ops.gate.lateBody', { count: result.lateMinutes })
+                    : t('ops.gate.onTimeBody')
                 }
               />
             )}
@@ -201,14 +214,14 @@ export function ScanPage() {
               )}
               {result.booking.status === 'CHECKED_OUT' && (
                 <p className='text-sm text-muted-foreground'>
-                  Tiket sudah selesai dipakai.
+                  {t('ops.gate.ticketUsed')}
                 </p>
               )}
               <Button
                 variant='ghost'
                 onClick={() => setResult(null)}
               >
-                <ArrowRightLeft /> Pindai tiket lain
+                <ArrowRightLeft /> {t('ops.scanAnother')}
               </Button>
             </div>
           </CardContent>
@@ -219,7 +232,9 @@ export function ScanPage() {
         open={confirm !== null}
         onOpenChange={(open) => !open && setConfirm(null)}
         title={
-          confirm === 'gate-in' ? 'Konfirmasi gate-in?' : 'Konfirmasi gate-out?'
+          confirm === 'gate-in'
+            ? t('ops.gate.confirmInTitle')
+            : t('ops.gate.confirmOutTitle')
         }
         desc={
           result ? (
@@ -227,16 +242,16 @@ export function ScanPage() {
               <p>
                 {confirm === 'gate-in'
                   ? result.projectedStatus === 'LATE_WAITING_LIST'
-                    ? 'Waktu masuk dicatat, dan karena sudah melewati masa tenggang truk masuk waiting list sampai ada dock kosong.'
-                    : 'Waktu masuk dicatat dan truk masuk daftar tunggu dock.'
-                  : 'Tiket ditutup dan slotnya dilepas. Tindakan ini tidak bisa dibatalkan.'}
+                    ? t('ops.gate.confirmInLate')
+                    : t('ops.gate.confirmInOnTime')
+                  : t('ops.gate.confirmOutBody')}
               </p>
               <div className='rounded-md border bg-muted/50 p-3 text-xs'>
                 <p className='font-mono text-sm font-semibold text-foreground'>
                   {result.booking.bookingCode}
                 </p>
                 <p className='mt-1 text-foreground'>
-                  {result.booking.licensePlate ?? 'Plat belum diisi'}
+                  {result.booking.licensePlate ?? t('ops.gate.plateEmpty')}
                   {result.booking.driverName
                     ? ` · ${result.booking.driverName}`
                     : ''}
@@ -253,8 +268,10 @@ export function ScanPage() {
             ''
           )
         }
-        confirmText={confirm === 'gate-in' ? 'Ya, gate-in' : 'Ya, gate-out'}
-        cancelBtnText='Batal'
+        confirmText={
+          confirm === 'gate-in' ? t('ops.gate.confirmIn') : t('ops.gate.confirmOut')
+        }
+        cancelBtnText={t('common.cancel')}
         isLoading={busy}
         handleConfirm={() => {
           if (!result) return

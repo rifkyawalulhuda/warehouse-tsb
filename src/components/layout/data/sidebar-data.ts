@@ -12,70 +12,82 @@ import {
   Warehouse,
 } from 'lucide-react'
 import type { Role } from '@/lib/api/types'
+import { getLocale } from '@/lib/i18n'
+import { translate, type MessageKey } from '@/lib/i18n/translate'
 import type { NavGroup, SidebarData } from '../types'
 
-const customerNav: NavGroup[] = [
+/**
+ * Menu ditulis sebagai kunci kamus, bukan teks, supaya judulnya ikut bahasa
+ * aktif. Struktur menu sama untuk semua bahasa; hanya labelnya yang diterjemahkan
+ * saat data dibangun.
+ */
+type NavGroupDefinition = Omit<NavGroup, 'title' | 'items'> & {
+  titleKey: MessageKey
+  items: (Omit<NavGroup['items'][number], 'title'> & { titleKey: MessageKey })[]
+}
+
+const customerNav: NavGroupDefinition[] = [
   {
-    title: 'Booking',
+    titleKey: 'nav.booking',
     items: [
-      { title: 'Jadwal Saya', url: '/bookings', icon: CalendarClock },
-      { title: 'Buat Booking', url: '/bookings/new', icon: ClipboardList },
-      { title: 'Laporan', url: '/reports/customer', icon: BarChart3 },
+      { titleKey: 'nav.myBookings', url: '/bookings', icon: CalendarClock },
+      { titleKey: 'nav.newBooking', url: '/bookings/new', icon: ClipboardList },
+      { titleKey: 'nav.reports', url: '/reports/customer', icon: BarChart3 },
     ],
   },
 ]
 
-const gateNav: NavGroup[] = [
+const gateNav: NavGroupDefinition[] = [
   {
-    title: 'Gate',
+    titleKey: 'nav.gate',
     items: [
-      { title: 'Scan Gate', url: '/scan', icon: ScanLine },
-      { title: 'Riwayat Gate', url: '/history', icon: History },
+      { titleKey: 'nav.scanGate', url: '/scan', icon: ScanLine },
+      { titleKey: 'nav.gateHistory', url: '/history', icon: History },
     ],
   },
 ]
 
-const checkerNav: NavGroup[] = [
+const checkerNav: NavGroupDefinition[] = [
   {
-    title: 'Operasional',
+    titleKey: 'nav.operations',
     items: [
-      { title: 'Scan Checker', url: '/checker/scan', icon: QrCode },
-      { title: 'Antrean Hari Ini', url: '/queue', icon: ListChecks },
-      { title: 'Papan Dock', url: '/dock', icon: Truck },
-      { title: 'Riwayat Gate', url: '/history', icon: History },
+      { titleKey: 'nav.checkerScan', url: '/checker/scan', icon: QrCode },
+      { titleKey: 'nav.todayQueue', url: '/queue', icon: ListChecks },
+      { titleKey: 'nav.dockBoard', url: '/dock', icon: Truck },
+      { titleKey: 'nav.gateHistory', url: '/history', icon: History },
     ],
   },
   {
-    title: 'Lainnya',
-    items: [{ title: 'Laporan', url: '/reports', icon: BarChart3 }],
+    titleKey: 'nav.other',
+    items: [{ titleKey: 'nav.reports', url: '/reports', icon: BarChart3 }],
   },
 ]
 
-const adminNav: NavGroup[] = [
+const adminNav: NavGroupDefinition[] = [
   {
-    title: 'Operasional',
+    titleKey: 'nav.operations',
     items: [
-      { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-      { title: 'Antrean Hari Ini', url: '/queue', icon: ListChecks },
-      { title: 'Papan Dock', url: '/dock', icon: Truck },
-      { title: 'Scan Checker', url: '/checker/scan', icon: QrCode },
-      { title: 'Scan Gate', url: '/scan', icon: ScanLine },
-      { title: 'Riwayat Gate', url: '/history', icon: History },
+      { titleKey: 'nav.dashboard', url: '/dashboard', icon: LayoutDashboard },
+      { titleKey: 'nav.todayQueue', url: '/queue', icon: ListChecks },
+      { titleKey: 'nav.dockBoard', url: '/dock', icon: Truck },
+      { titleKey: 'nav.checkerScan', url: '/checker/scan', icon: QrCode },
+      { titleKey: 'nav.scanGate', url: '/scan', icon: ScanLine },
+      { titleKey: 'nav.gateHistory', url: '/history', icon: History },
     ],
   },
   {
-    title: 'Manajemen',
+    titleKey: 'nav.management',
     items: [
-      { title: 'Laporan', url: '/reports', icon: BarChart3 },
+      { titleKey: 'nav.reports', url: '/reports', icon: BarChart3 },
       // Akun staf dan akun customer sama-sama dikelola dari Master Data.
       // Rute /users masih hidup untuk tautan lama, tetapi bukan menu.
-      { title: 'Master Data', url: '/master', icon: Warehouse },
-      { title: 'Pengaturan', url: '/settings', icon: Settings },
+      { titleKey: 'nav.masterData', url: '/master', icon: Warehouse },
+      { titleKey: 'nav.settings', url: '/settings', icon: Settings },
     ],
   },
 ]
 
-export function navGroupsForRole(role: Role | null): NavGroup[] {
+function navDefinitionsForRole(role: Role | null): NavGroupDefinition[] {
   switch (role) {
     case 'CUSTOMER':
       return customerNav
@@ -91,12 +103,30 @@ export function navGroupsForRole(role: Role | null): NavGroup[] {
 }
 
 /**
+ * Daftar menu tanpa data pengguna. Dipakai lembar menu ponsel dan pengujian.
+ */
+export function navGroupsForRole(role: Role | null): NavGroup[] {
+  const locale = getLocale()
+  return navDefinitionsForRole(role).map((group) => ({
+    title: translate(locale, group.titleKey),
+    items: group.items.map((item) => ({
+      title: translate(locale, item.titleKey),
+      url: item.url,
+      icon: item.icon,
+    })),
+  }))
+}
+
+/**
  * Menu sidebar untuk satu peran.
  *
  * `pendingApprovals` menandai menu Antrean Hari Ini, karena antrean
  * persetujuan hidup sebagai tab di dalam layar itu — bukan menu tersendiri.
  * Penandanya sengaja hanya isyarat: tujuan menu tidak diubah, jadi Checker
  * tetap mendarat di tab Antrean seperti biasa.
+ *
+ * Judul diterjemahkan di sini agar seluruh pemakai `SidebarData` (sidebar
+ * desktop, lembar menu ponsel, menu perintah) memakai label yang sama.
  */
 export function buildSidebarData(
   role: Role | null,

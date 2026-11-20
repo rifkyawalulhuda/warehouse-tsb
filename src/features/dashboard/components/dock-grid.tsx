@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { MoreHorizontal, Truck } from 'lucide-react'
 import type { DockWithBooking } from '@/lib/api/types'
 import { bookingDurationMinutes, formatTime } from '@/lib/format'
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -29,17 +30,11 @@ const ring: Record<string, string> = {
   MAINTENANCE: 'border-border bg-muted/40',
 }
 
-const activityLabel = {
-  LOADING: 'Loading',
-  UNLOADING: 'Unloading',
-  BOTH: 'Loading & Unloading',
+const activityKey = {
+  LOADING: 'activity.LOADING',
+  UNLOADING: 'activity.UNLOADING',
+  BOTH: 'activity.BOTH',
 } as const
-
-const statusLabel: Record<DockWithBooking['currentStatus'], string> = {
-  AVAILABLE: 'Kosong',
-  OCCUPIED: 'Terpakai',
-  MAINTENANCE: 'Perawatan',
-}
 
 const statusClass: Record<DockWithBooking['currentStatus'], string> = {
   AVAILABLE: 'border-emerald-300 text-emerald-700 dark:text-emerald-300',
@@ -59,17 +54,28 @@ function progressOf(dock: DockWithBooking) {
 }
 
 export function DockGrid({ docks }: { docks: DockWithBooking[] }) {
+  const t = useT()
   const occupied = docks.filter((dock) => dock.currentStatus === 'OCCUPIED').length
   const available = docks.filter((dock) => dock.currentStatus === 'AVAILABLE').length
   const maintenance = docks.filter((dock) => dock.currentStatus === 'MAINTENANCE').length
 
+  const statusLabel: Record<DockWithBooking['currentStatus'], string> = {
+    AVAILABLE: t('dashboard.dockIdle'),
+    OCCUPIED: t('dashboard.dockOccupied'),
+    MAINTENANCE: t('dashboard.dockMaintenance'),
+  }
+
   return (
     <Card className='gap-4'>
       <CardHeader>
-        <CardTitle>Monitoring Dock</CardTitle>
+        <CardTitle>{t('dashboard.dockTitle')}</CardTitle>
         <CardDescription>
-          Status real-time · {docks.length} dock · {occupied} proses · {available} kosong
-          {maintenance > 0 ? ` · ${maintenance} perawatan` : ''}
+          {t('dashboard.dockDesc', {
+            total: docks.length,
+            occupied,
+            available,
+          })}
+          {maintenance > 0 ? t('dashboard.dockDescMaintenance', { count: maintenance }) : ''}
         </CardDescription>
       </CardHeader>
       <CardContent className='grid min-w-0 grid-cols-2 gap-3 xl:grid-cols-3'>
@@ -92,17 +98,19 @@ export function DockGrid({ docks }: { docks: DockWithBooking[] }) {
                   <DropdownMenuTrigger asChild>
                     <Button variant='ghost' size='icon' className='-me-1.5 size-6'>
                       <MoreHorizontal className='size-3.5' />
-                      <span className='sr-only'>Aksi {dock.dockCode}</span>
+                      <span className='sr-only'>
+                        {t('dashboard.dockActionsAria', { code: dock.dockCode })}
+                      </span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align='end'>
                     <DropdownMenuLabel>{dock.dockCode}</DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link to='/queue'>Buka antrean</Link>
+                      <Link to='/queue'>{t('dashboard.openQueueShort')}</Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link to='/dock'>Layar checker</Link>
+                      <Link to='/dock'>{t('dashboard.checkerScreen')}</Link>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -110,7 +118,7 @@ export function DockGrid({ docks }: { docks: DockWithBooking[] }) {
 
               <div className='flex flex-wrap items-center justify-between gap-x-1.5 gap-y-1'>
                 <span className='min-w-0 text-[11px] leading-tight text-muted-foreground'>
-                  {activityLabel[dock.allowedActivity]}
+                  {t(activityKey[dock.allowedActivity])}
                 </span>
                 <Badge
                   variant='outline'
@@ -124,21 +132,23 @@ export function DockGrid({ docks }: { docks: DockWithBooking[] }) {
                 <div className='flex h-[76px] flex-col items-center justify-center gap-1 rounded-md border border-dashed bg-background/60 px-2 text-center'>
                   <Truck className='size-3.5 text-muted-foreground' />
                   <span className='text-[11px] leading-snug text-muted-foreground'>
-                    {dock.currentStatus === 'MAINTENANCE' ? 'Perawatan' : 'Siap dipakai'}
+                    {dock.currentStatus === 'MAINTENANCE'
+                      ? t('dashboard.dockMaintenance')
+                      : t('dashboard.dockReady')}
                   </span>
                 </div>
               ) : (
                 <div className='min-w-0 space-y-1.5'>
                   <div className='flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-2'>
                     <span className='min-w-0 truncate font-mono text-sm font-semibold tabular-nums'>
-                      {booking.licensePlate ?? 'Plat belum diisi'}
+                      {booking.licensePlate ?? t('dashboard.plateEmpty')}
                     </span>
                     <span className='min-w-0 truncate text-xs text-muted-foreground'>
                       {booking.truckType.truckName}
                     </span>
                   </div>
                   <p className='truncate text-xs text-muted-foreground'>
-                    {booking.driverName ?? 'Supir belum diisi'} ·{' '}
+                    {booking.driverName ?? t('dashboard.driverEmpty')} ·{' '}
                     {booking.customer.name}
                   </p>
                   {booking.status === 'IN_PROGRESS' ? (
@@ -149,7 +159,7 @@ export function DockGrid({ docks }: { docks: DockWithBooking[] }) {
                         aria-valuenow={progress}
                         aria-valuemin={0}
                         aria-valuemax={100}
-                        aria-label={`Progres proses ${dock.dockCode}`}
+                        aria-label={t('dashboard.progressAria', { code: dock.dockCode })}
                       >
                         <div
                           className='h-full rounded-full bg-primary transition-[width] duration-300'
@@ -158,13 +168,17 @@ export function DockGrid({ docks }: { docks: DockWithBooking[] }) {
                       </div>
                       <div className='flex justify-between text-xs text-muted-foreground'>
                         <span>
-                          Mulai {formatTime(booking.timeLog?.processStartedAt ?? null)}
+                          {t('dashboard.startedAt', {
+                            time: formatTime(booking.timeLog?.processStartedAt ?? null),
+                          })}
                         </span>
                         <span className='tabular-nums'>{progress}%</span>
                       </div>
                     </div>
                   ) : (
-                    <p className='text-xs text-muted-foreground'>Menunggu proses dimulai</p>
+                    <p className='text-xs text-muted-foreground'>
+                      {t('dashboard.awaitProcess')}
+                    </p>
                   )}
                 </div>
               )}
@@ -173,7 +187,7 @@ export function DockGrid({ docks }: { docks: DockWithBooking[] }) {
         })}
         {docks.length === 0 ? (
           <p className='col-span-full py-6 text-center text-sm text-muted-foreground'>
-            Belum ada dock. Tambahkan lewat Master Data.
+            {t('dashboard.noDocks')}
           </p>
         ) : null}
       </CardContent>

@@ -4,6 +4,7 @@
  * Satu definisi untuk tiga tempat: menu sidebar, tombol menu di ponsel, dan
  * tab Persetujuan. Geraknya karena itu selalu sama di seluruh aplikasi.
  */
+import { useT } from '@/lib/i18n'
 
 /**
  * Titik merah berdenyut, tanpa angka.
@@ -32,13 +33,14 @@ export function ApprovalPulseDot({ className }: { className?: string }) {
  * berubah dari 9 ke 10.
  */
 export function PendingApprovalBadge({ count }: { count: number }) {
+  const t = useT()
   return (
     <span className='flex shrink-0 items-center gap-1.5'>
       <ApprovalPulseDot />
       <span className='text-xs font-semibold tabular-nums text-destructive'>
         {count}
       </span>
-      <span className='sr-only'>menunggu persetujuan</span>
+      <span className='sr-only'>{t('common.pendingApproval')}</span>
     </span>
   )
 }

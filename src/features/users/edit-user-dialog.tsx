@@ -6,6 +6,7 @@ import { apiErrorMessage } from '@/lib/api/client'
 import { updateUser } from '@/lib/api/endpoints'
 import type { ManagedUser, Role } from '@/lib/api/types'
 import { roleLabels } from '@/lib/format'
+import { useT } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -76,6 +77,7 @@ export function EditUserDialog({
    */
   withStatus?: boolean
 }) {
+  const t = useT()
   const queryClient = useQueryClient()
   const [form, setForm] = useState<Form>(() =>
     user
@@ -88,7 +90,7 @@ export function EditUserDialog({
     mutationFn: (payload: Parameters<typeof updateUser>[1]) =>
       updateUser(user!.id, payload),
     onSuccess: () => {
-      toast.success('Data pengguna diperbarui')
+      toast.success(t('users.saved'))
       void queryClient.invalidateQueries({ queryKey: ['master', 'users'] })
       void queryClient.invalidateQueries({ queryKey: ['users'] })
       onOpenChange(false)
@@ -134,17 +136,18 @@ export function EditUserDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='sm:max-w-lg'>
         <DialogHeader>
-          <DialogTitle>Ubah pengguna</DialogTitle>
+          <DialogTitle>{t('users.editTitle')}</DialogTitle>
           <DialogDescription>
-            Perbarui data akun {user.email}
-            {isSelf ? ' (akun Anda sendiri)' : ''}. Kosongkan password bila
-            tidak ingin menggantinya.
+            {t('users.editDesc', {
+              email: user.email,
+              self: isSelf ? t('users.editDescSelf') : '',
+            })}
           </DialogDescription>
         </DialogHeader>
 
         <div className='grid gap-3'>
           <div className='space-y-1'>
-            <Label htmlFor='edit-name'>Nama</Label>
+            <Label htmlFor='edit-name'>{t('users.label.name')}</Label>
             <Input
               id='edit-name'
               value={form.name}
@@ -155,7 +158,7 @@ export function EditUserDialog({
           </div>
           <div className='grid gap-3 sm:grid-cols-2'>
             <div className='space-y-1'>
-              <Label htmlFor='edit-email'>Email</Label>
+              <Label htmlFor='edit-email'>{t('users.label.email')}</Label>
               <Input
                 id='edit-email'
                 type='email'
@@ -165,11 +168,11 @@ export function EditUserDialog({
                 }
               />
               <p className='text-xs text-muted-foreground'>
-                Email adalah identitas login.
+                {t('users.emailIsLogin')}
               </p>
             </div>
             <div className='space-y-1'>
-              <Label htmlFor='edit-phone'>No. HP</Label>
+              <Label htmlFor='edit-phone'>{t('users.label.phone')}</Label>
               <Input
                 id='edit-phone'
                 value={form.phone}
@@ -180,7 +183,7 @@ export function EditUserDialog({
             </div>
           </div>
           <div className='space-y-1'>
-            <Label>Peran</Label>
+            <Label>{t('users.label.role')}</Label>
             <Select
               value={form.role}
               disabled={roleLocked}
@@ -202,13 +205,13 @@ export function EditUserDialog({
             {roleLocked && (
               <p className='text-xs text-muted-foreground'>
                 {isSelf
-                  ? 'Peran Anda sendiri tidak dapat diubah.'
-                  : 'Ini satu-satunya Admin aktif; perannya tidak dapat diturunkan.'}
+                  ? t('users.roleSelfLocked')
+                  : t('users.roleLastAdminLocked')}
               </p>
             )}
           </div>
           <div className='space-y-1'>
-            <Label htmlFor='edit-password'>Password baru (opsional)</Label>
+            <Label htmlFor='edit-password'>{t('users.label.newPassword')}</Label>
             <Input
               id='edit-password'
               type='password'
@@ -217,20 +220,20 @@ export function EditUserDialog({
               onChange={(event) =>
                 setForm({ ...form, password: event.target.value })
               }
-              placeholder='Kosongkan bila tidak diganti'
+              placeholder={t('users.passwordKeepPlaceholder')}
             />
             {form.password.length > 0 && form.password.length < 7 && (
-              <p className='text-xs text-destructive'>Minimal 7 karakter.</p>
+              <p className='text-xs text-destructive'>
+                {t('users.passwordTooShort')}
+              </p>
             )}
           </div>
           {withStatus && (
             <div className='flex items-center justify-between rounded-md border p-3'>
               <div>
-                <p className='text-sm font-medium'>Aktif</p>
+                <p className='text-sm font-medium'>{t('users.activeLabel')}</p>
                 <p className='text-xs text-muted-foreground'>
-                  {isActive
-                    ? 'Akun ini bisa masuk dan memakai aplikasi.'
-                    : 'Akun ini tidak bisa masuk.'}
+                  {isActive ? t('users.activeOn') : t('users.activeOff')}
                 </p>
               </div>
               <Switch
@@ -246,14 +249,14 @@ export function EditUserDialog({
 
         <DialogFooter>
           <Button variant='outline' onClick={() => onOpenChange(false)}>
-            Batal
+            {t('common.cancel')}
           </Button>
           <Button
             disabled={!dirty || !valid || save.isPending}
             onClick={submit}
           >
             {save.isPending && <Loader2 className='animate-spin' />}
-            Simpan
+            {t('common.save')}
           </Button>
         </DialogFooter>
       </DialogContent>

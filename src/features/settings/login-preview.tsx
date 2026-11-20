@@ -1,5 +1,5 @@
 import { BrandLogo } from '@/components/brand-logo'
-import { DEFAULT_LOGIN_DESCRIPTION } from '@/lib/branding'
+import { useT } from '@/lib/i18n'
 
 type Props = {
   appName: string
@@ -25,13 +25,14 @@ export function LoginPreview({
   appLogoUrl,
   description,
 }: Props) {
+  const t = useT()
   const name = appName.trim() || '—'
-  const text = description.trim() || DEFAULT_LOGIN_DESCRIPTION
+  const text = description.trim() || t('auth.defaultLoginDescription')
 
   return (
     <div className='mt-4'>
       <p className='mb-2 text-[11px] font-medium tracking-wide text-muted-foreground uppercase'>
-        Pratinjau di ponsel
+        {t('settings.login.previewMobile')}
       </p>
 
       <div className='mx-auto w-full max-w-[17rem] rounded-[1.75rem] border bg-background p-4 shadow-sm'>
@@ -51,9 +52,9 @@ export function LoginPreview({
           {text}
         </p>
 
-        <p className='mt-4 text-sm font-semibold'>Masuk</p>
+        <p className='mt-4 text-sm font-semibold'>{t('settings.login.previewSignIn')}</p>
         <p className='mt-1 text-[10px] text-muted-foreground'>
-          Gunakan email dan password yang diberikan Admin gudang.
+          {t('settings.login.previewHint')}
         </p>
 
         <div className='mt-3 space-y-2'>
@@ -64,7 +65,7 @@ export function LoginPreview({
       </div>
 
       <p className='mt-2 text-center text-[11px] text-muted-foreground'>
-        Di layar lebar, kalimat yang sama tampil di panel kanan bersama gambar.
+        {t('settings.login.previewWide')}
       </p>
     </div>
   )

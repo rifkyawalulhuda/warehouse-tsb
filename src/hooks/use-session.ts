@@ -24,7 +24,7 @@ export function useSessionBootstrap() {
         // Kegagalan jaringan saat bootstrap sesi tidak punya tempat lain untuk
         // muncul, dan tanpa jejak ini sulit didiagnosis.
         // eslint-disable-next-line no-console
-        if (!isUnauthorized(error)) console.warn('Gagal memuat sesi', error)
+        if (!isUnauthorized(error)) console.warn('Failed to load session', error)
         if (!cancelled) setUser(null)
       })
       .finally(() => {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Booking, DockWithBooking, QueueResponse } from '@/lib/api/types'
+import { translate } from '@/lib/i18n/translate'
 import {
   assignBlockReason,
   defaultLaneKey,
@@ -10,7 +11,11 @@ import {
   queueTotals,
   waitClock,
   waitLabel,
+  type Translate,
 } from './queue-model'
+
+/** Model murni tidak memakai hook, jadi tes menerjemahkan sendiri ke Indonesia. */
+const t: Translate = (key, vars) => translate('id', key, vars)
 
 const NOW = new Date('2026-11-12T10:00:00.000Z')
 
@@ -107,9 +112,9 @@ describe('waitClock', () => {
 
 describe('waitLabel', () => {
   it('writes minutes below an hour and pads the rest', () => {
-    expect(waitLabel(24)).toBe('24 mnt')
-    expect(waitLabel(60)).toBe('1 j')
-    expect(waitLabel(65)).toBe('1 j 05 mnt')
+    expect(waitLabel(24, t)).toBe('24 mnt')
+    expect(waitLabel(60, t)).toBe('1 j')
+    expect(waitLabel(65, t)).toBe('1 j 05 mnt')
   })
 })
 
@@ -274,7 +279,7 @@ describe('oldestWait', () => {
 
 describe('assignBlockReason', () => {
   it('blames the busy docks when none is free', () => {
-    expect(assignBlockReason(makeBooking(), [])).toBe(
+    expect(assignBlockReason(makeBooking(), [], t)).toBe(
       'Semua dock sedang terpakai'
     )
   })
@@ -296,13 +301,14 @@ describe('assignBlockReason', () => {
       allowedActivity: 'UNLOADING',
     }
 
-    expect(assignBlockReason(makeBooking(), [loadingOnly])).toBe(
+    expect(assignBlockReason(makeBooking(), [loadingOnly], t)).toBe(
       'Dock yang kosong tidak melayani bongkar'
     )
     expect(
       assignBlockReason(
         makeBooking({ activityType: 'LOADING' }),
-        [unloadingOnly]
+        [unloadingOnly],
+        t
       )
     ).toBe('Dock yang kosong tidak melayani muat')
   })

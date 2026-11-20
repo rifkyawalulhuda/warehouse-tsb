@@ -2,12 +2,14 @@ import { useMemo } from 'react'
 import { useLocation, useRouter } from '@tanstack/react-router'
 import { ArrowLeft, Menu } from 'lucide-react'
 import { useRole } from '@/stores/auth-store'
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { usePageTitle } from '@/context/page-title-provider'
 import { useCanGoBack } from '@/hooks/use-can-go-back'
 import { usePendingApprovals } from '@/hooks/use-pending-approvals'
 import { Button } from '@/components/ui/button'
 import { useSidebar } from '@/components/ui/sidebar'
+import { LocaleSwitch } from '@/components/locale-switch'
 import { ApprovalPulseDot } from '@/components/pending-approval-badge'
 import { navGroupsForRole } from './data/sidebar-data'
 
@@ -25,6 +27,7 @@ export function MobileNav() {
   const title = usePageTitle()
   const role = useRole()
   const pendingApprovals = usePendingApprovals()
+  const t = useT()
 
   // Halaman puncak diturunkan dari menu sidebar role ini, bukan dari daftar
   // terpisah: begitu ada tujuan menu baru, halaman itu otomatis ikut dianggap
@@ -69,8 +72,8 @@ export function MobileNav() {
         )}
         <span className='sr-only'>
           {pendingApprovals > 0
-            ? `Buka menu navigasi, ${pendingApprovals} menunggu persetujuan`
-            : 'Buka menu navigasi'}
+            ? t('nav.openMenuPending', { count: pendingApprovals })
+            : t('nav.openMenu')}
         </span>
       </Button>
 
@@ -82,7 +85,7 @@ export function MobileNav() {
           onClick={() => router.history.back()}
         >
           <ArrowLeft className='size-5' aria-hidden />
-          <span className='sr-only'>Kembali ke halaman sebelumnya</span>
+          <span className='sr-only'>{t('nav.back')}</span>
         </Button>
       )}
 
@@ -97,6 +100,8 @@ export function MobileNav() {
       >
         {title}
       </span>
+
+      <LocaleSwitch className='shrink-0' />
     </header>
   )
 }

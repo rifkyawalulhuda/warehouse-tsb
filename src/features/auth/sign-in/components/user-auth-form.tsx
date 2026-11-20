@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
@@ -7,6 +7,7 @@ import { Loader2, LogIn } from 'lucide-react'
 import { toast } from 'sonner'
 import { apiErrorMessage } from '@/lib/api/client'
 import { login } from '@/lib/api/endpoints'
+import { useT } from '@/lib/i18n'
 import { homeForRole, useAuthStore } from '@/stores/auth-store'
 import { Button } from '@/components/ui/button'
 import {
@@ -20,10 +21,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/password-input'
 
-const formSchema = z.object({
-  email: z.email('Masukkan email yang valid.'),
-  password: z.string().min(1, 'Masukkan password.'),
-})
+type FormValues = { email: string; password: string }
 
 interface UserAuthFormProps extends React.HTMLAttributes<HTMLFormElement> {
   redirectTo?: string
@@ -37,18 +35,30 @@ export function UserAuthForm({
   const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
   const setUser = useAuthStore((state) => state.setUser)
+  const t = useT()
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  // Skema disusun di dalam komponen karena pesan galatnya ikut bahasa aktif;
+  // skema tingkat modul akan terkunci pada bahasa saat halaman dimuat.
+  const formSchema = useMemo(
+    () =>
+      z.object({
+        email: z.email(t('auth.emailInvalid')),
+        password: z.string().min(1, t('auth.passwordRequired')),
+      }),
+    [t]
+  )
+
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: { email: '', password: '' },
   })
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: FormValues) {
     setIsLoading(true)
     try {
       const user = await login(values.email, values.password)
       setUser(user)
-      toast.success(`Selamat datang, ${user.name}`)
+      toast.success(t('auth.welcome', { name: user.name }))
       navigate({ to: redirectTo || homeForRole(user.role), replace: true })
     } catch (error) {
       toast.error(apiErrorMessage(error))
@@ -60,7 +70,7 @@ export function UserAuthForm({
   // Dimatikan setelah berhasil karena tombol "Masuk" sedang menunggu server:
   // mengganti labelnya di tengah isian akan terlihat seperti form yang
   // kehilangan fokus.
-  const submitLabel = isLoading ? 'Memeriksa…' : 'Masuk'
+  const submitLabel = isLoading ? t('auth.submitting') : t('auth.submit')
 
   return (
     <Form {...form}>
@@ -78,7 +88,7 @@ export function UserAuthForm({
           name='email'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              <FormLabel>{t('auth.email')}</FormLabel>
               <FormControl>
                 <Input
                   type='email'
@@ -87,7 +97,7 @@ export function UserAuthForm({
                   autoCapitalize='none'
                   autoFocus
                   spellCheck={false}
-                  placeholder='nama@perusahaan.com'
+                  placeholder={t('auth.emailPlaceholder')}
                   className='h-11'
                   {...field}
                 />
@@ -101,7 +111,7 @@ export function UserAuthForm({
           name='password'
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+              <FormLabel>{t('auth.password')}</FormLabel>
               <FormControl>
                 <PasswordInput
                   autoComplete='current-password'

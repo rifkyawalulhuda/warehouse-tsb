@@ -10,6 +10,7 @@ import {
 import { Button } from '../ui/button'
 import { BrandLogo } from '@/components/brand-logo'
 import { useBranding } from '@/lib/branding'
+import { useT } from '@/lib/i18n'
 
 export function AppTitle() {
   const { setOpenMobile } = useSidebar()
@@ -54,6 +55,7 @@ function ToggleSidebar({
   ...props
 }: React.ComponentProps<typeof Button>) {
   const { toggleSidebar } = useSidebar()
+  const t = useT()
 
   return (
     <Button
@@ -70,7 +72,7 @@ function ToggleSidebar({
     >
       <X className='md:hidden' />
       <Menu className='max-md:hidden' />
-      <span className='sr-only'>Toggle Sidebar</span>
+      <span className='sr-only'>{t('nav.toggleSidebar')}</span>
     </Button>
   )
 }

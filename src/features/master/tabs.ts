@@ -11,18 +11,3 @@ export const MASTER_TABS = [
 ] as const
 
 export type MasterTab = (typeof MASTER_TABS)[number]
-
-export function masterTabLabel(tab: MasterTab | undefined): string {
-  switch (tab) {
-    case 'warehouses':
-      return 'Gudang'
-    case 'truck-types':
-      return 'Jenis Truk'
-    case 'customers':
-      return 'Customer'
-    case 'users':
-      return 'Pengguna'
-    default:
-      return 'Dock'
-  }
-}

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import type { ActivityItem } from '@/lib/api/types'
 import { formatTime } from '@/lib/format'
+import { hasMessage, useT, type MessageKey, type Vars } from '@/lib/i18n'
 import {
   Card,
   CardContent,
@@ -64,23 +65,12 @@ const meta: Record<FeedKind, { icon: React.ElementType; className: string }> = {
   },
 }
 
-const actionLabel: Record<string, string> = {
-  CHECK_IN_ON_TIME: 'check-in on-time',
-  CHECK_IN_LATE: 'check-in terlambat',
-  DOCK_ASSIGNED: 'dock diberikan',
-  PROCESS_STARTED: 'mulai proses',
-  PROCESS_COMPLETED: 'selesai proses',
-  GATE_OUT: 'keluar gudang',
-  BOOKING_CANCELLED: 'booking dibatalkan',
-  MARKED_NO_SHOW: 'ditandai no-show',
-  VEHICLE_UPDATED: 'data kendaraan diperbarui',
-  BOOKING_CREATED: 'booking dibuat',
-  BOOKING_UPDATED: 'booking diperbarui',
-}
+type TFn = (key: MessageKey, vars?: Vars) => string
 
-function title(item: ActivityItem) {
-  const subject = item.licensePlate ?? item.bookingCode ?? 'Booking'
-  const action = actionLabel[item.action] ?? item.action.toLowerCase().replace(/_/g, ' ')
+function title(item: ActivityItem, t: TFn) {
+  const subject = item.licensePlate ?? item.bookingCode ?? t('dashboard.bookingFallback')
+  const key = `dashboard.action.${item.action}` as MessageKey
+  const action = hasMessage(key) ? t(key) : item.action.toLowerCase().replace(/_/g, ' ')
   return `${subject} ${action}`
 }
 
@@ -90,11 +80,13 @@ function detail(item: ActivityItem) {
 }
 
 export function ActivityFeed({ items }: { items: ActivityItem[] }) {
+  const t = useT()
+
   return (
     <Card className='gap-4'>
       <CardHeader>
-        <CardTitle>Aktivitas Terbaru</CardTitle>
-        <CardDescription>Jejak audit gerbang dan dock</CardDescription>
+        <CardTitle>{t('dashboard.activityTitle')}</CardTitle>
+        <CardDescription>{t('dashboard.activityDesc')}</CardDescription>
       </CardHeader>
       <CardContent className='px-0'>
         <ScrollArea className='h-[290px]'>
@@ -115,7 +107,7 @@ export function ActivityFeed({ items }: { items: ActivityItem[] }) {
                     <Icon className='size-3.5' />
                   </span>
                   <div className='min-w-0 space-y-0.5'>
-                    <p className='text-sm leading-snug font-medium'>{title(item)}</p>
+                    <p className='text-sm leading-snug font-medium'>{title(item, t)}</p>
                     <p className='text-xs text-muted-foreground'>{detail(item)}</p>
                     <p className='text-[11px] text-muted-foreground/80'>
                       {formatTime(item.createdAt)}
@@ -126,7 +118,7 @@ export function ActivityFeed({ items }: { items: ActivityItem[] }) {
             })}
             {items.length === 0 ? (
               <li className='px-6 py-10 text-center text-sm text-muted-foreground'>
-                Belum ada aktivitas tercatat.
+                {t('dashboard.activityEmpty')}
               </li>
             ) : null}
           </ol>

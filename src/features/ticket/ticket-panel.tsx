@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Download, MessageCircle, Printer } from 'lucide-react'
 import { toast } from 'sonner'
 import type { PublicTicket } from '@/lib/api/types'
+import { useBranding } from '@/lib/branding'
+import { useT } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 import { TicketCard } from './ticket-card'
 import { downloadTicket, renderTicketPng } from './ticket-image'
@@ -20,7 +22,14 @@ export function TicketPanel({
   ticket: PublicTicket
   finished: boolean
 }) {
-  const model = useMemo(() => buildTicketModel(ticket), [ticket])
+  const brand = useBranding()
+  const t = useT()
+  // `t` berubah saat bahasa diganti, jadi model (dan PNG yang digambar
+  // ulang dari model itu) ikut berganti bahasa.
+  const model = useMemo(
+    () => buildTicketModel(ticket, { appName: brand.appName, t }),
+    [ticket, brand.appName, t]
+  )
   const [ready, setReady] = useState<{
     model: typeof model
     url: string
@@ -61,24 +70,24 @@ export function TicketPanel({
 
   const onDownload = () => {
     void downloadTicket(model, png).catch(() => {
-      toast.error('Tiket gagal diunduh. Coba lagi.')
+      toast.error(t('ticket.downloadFailed'))
     })
   }
 
   return (
     <div className='space-y-3'>
-      <TicketCard model={model} />
+      <TicketCard model={model} label={t('ticket.cardLabel', { code: model.code })} />
 
       {ticket.lateMinutes > 0 && !finished && (
         <p className='text-center text-sm font-medium text-orange-600 dark:text-orange-400'>
-          Terlambat {ticket.lateMinutes} menit dari jadwal
+          {t('ticket.late', { count: ticket.lateMinutes })}
         </p>
       )}
 
       {!finished && (
         <div className='space-y-2'>
           <Button className='h-11 w-full' onClick={onDownload}>
-            <Download /> Unduh Tiket
+            <Download /> {t('ticket.download')}
           </Button>
           <div className='grid grid-cols-2 gap-2'>
             <Button
@@ -86,17 +95,21 @@ export function TicketPanel({
               variant='outline'
               onClick={() => window.print()}
             >
-              <Printer /> Cetak
+              <Printer /> {t('ticket.print')}
             </Button>
             <Button className='h-11' asChild variant='outline'>
               <a
                 href={`https://wa.me/?text=${encodeURIComponent(
-                  `Tiket truk ${ticket.bookingCode} - ${ticket.warehouseName}\n${window.location.href}`
+                  t('ticket.waTemplate', {
+                    code: ticket.bookingCode,
+                    warehouse: ticket.warehouseName,
+                    link: window.location.href,
+                  })
                 )}`}
                 target='_blank'
                 rel='noreferrer'
               >
-                <MessageCircle /> Kirim WhatsApp
+                <MessageCircle /> {t('ticket.sendWhatsapp')}
               </a>
             </Button>
           </div>

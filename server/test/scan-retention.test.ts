@@ -78,7 +78,7 @@ describe('retensi jejak pemindaian', () => {
       // Jejak adalah catatan tambahan; petugas tetap harus melihat alasan
       // penolakan yang sebenarnya, bukan galat 500 dari tabel riwayat.
       expect(response.status).toBe(404)
-      expect(response.body.error.code).toBe('NOT_FOUND')
+      expect(response.body.error.code).toBe('QR_NOT_FOUND')
     } finally {
       spy.mockRestore()
     }

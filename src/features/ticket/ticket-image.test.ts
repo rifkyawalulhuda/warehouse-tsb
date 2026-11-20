@@ -121,4 +121,10 @@ describe('gambar tiket', () => {
       'tiket-TSB-20261111-003.png'
     )
   })
+
+  it('menamai berkas dalam bahasa Inggris bila bahasanya Inggris', () => {
+    expect(ticketFileName('TSB-20261111-003', 'en')).toBe(
+      'ticket-TSB-20261111-003.png'
+    )
+  })
 })

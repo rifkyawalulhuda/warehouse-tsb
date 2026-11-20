@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Booking, DockWithBooking } from '@/lib/api/types'
+import { translate } from '@/lib/i18n'
 import {
   clockLabel,
   dockFilterCounts,
@@ -8,9 +9,11 @@ import {
   matchesDockQuery,
   processClock,
   waitingCount,
+  type Translate,
 } from './dock-model'
 
 const NOW = new Date('2026-11-11T10:00:00.000Z')
+const tId: Translate = (key, vars) => translate('id', key, vars)
 
 function makeBooking(overrides: Partial<Booking> = {}): Booking {
   return {
@@ -267,10 +270,10 @@ describe('processClock', () => {
 
 describe('clockLabel', () => {
   it('meringkas menit dan jam', () => {
-    expect(clockLabel(0)).toBe('0 mnt')
-    expect(clockLabel(42)).toBe('42 mnt')
-    expect(clockLabel(60)).toBe('1 j')
-    expect(clockLabel(125)).toBe('2 j 05 mnt')
+    expect(clockLabel(0, tId)).toBe('0 mnt')
+    expect(clockLabel(42, tId)).toBe('42 mnt')
+    expect(clockLabel(60, tId)).toBe('1 j')
+    expect(clockLabel(125, tId)).toBe('2 j 05 mnt')
   })
 })
 

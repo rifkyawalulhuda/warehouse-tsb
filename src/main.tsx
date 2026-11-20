@@ -8,12 +8,17 @@ import {
 import { RouterProvider, createRouter } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/auth-store'
+import { initLocale } from '@/lib/i18n'
 import { apiErrorMessage, apiErrorCode } from '@/lib/api/client'
 import { DirectionProvider } from './context/direction-provider'
 import { FontProvider } from './context/font-provider'
 import { ThemeProvider } from './context/theme-provider'
 import { routeTree } from './routeTree.gen'
 import './styles/index.css'
+
+// Bahasa tersimpan dibaca sebelum render pertama supaya tidak ada kedipan
+// teks Indonesia pada pengguna yang memilih English.
+initLocale()
 
 const queryClient = new QueryClient({
   defaultOptions: {

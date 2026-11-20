@@ -9,6 +9,7 @@ import { ApprovalBadge } from '@/components/approval-badge'
 import { DockPicker } from '@/components/dock-picker'
 import { dockOptionLabel } from '@/lib/dock-label'
 import { StatusBadge } from '@/components/status-badge'
+import { useT } from '@/lib/i18n'
 import {
   WAIT_LONG_MINUTES,
   assignBlockReason,
@@ -75,6 +76,7 @@ export function QueueCard({
   assignReset?: number
 }) {
   const clock = waitClock(booking, now)
+  const t = useT()
   const pendingApproval = booking.approvalStatus === 'PENDING'
   const free = eligibleDocks(booking, docks ?? [])
   const first = free[0] ?? null
@@ -102,7 +104,7 @@ export function QueueCard({
 
         <div className='min-w-0 space-y-0.5'>
           <p className='truncate text-base font-semibold'>
-            {booking.licensePlate ?? 'Plat belum diisi'}
+            {booking.licensePlate ?? t('queue.plateEmpty')}
           </p>
           <p className='truncate text-sm text-muted-foreground'>
             {booking.customer.name}
@@ -117,22 +119,28 @@ export function QueueCard({
         {laneKey === 'atDock' ? (
           <div className='rounded-lg border bg-muted/40 p-2.5'>
             <div className='flex items-baseline justify-between gap-2'>
-              <span className='text-xs text-muted-foreground'>Dock</span>
+              <span className='text-xs text-muted-foreground'>
+                {t('ops.field.dock')}
+              </span>
               <span className='text-sm font-semibold'>
                 {booking.assignedDock?.dockCode ?? '—'}
               </span>
             </div>
             <p className='mt-0.5 text-xs text-muted-foreground'>
               {booking.status === 'IN_PROGRESS'
-                ? 'Sedang diproses'
-                : 'Proses belum dimulai'}
-              {clock ? ` · masuk ${formatTime(clock.since)}` : ''}
+                ? t('queue.inProgress')
+                : t('queue.notStarted')}
+              {clock
+                ? t('queue.enteredAt', { time: formatTime(clock.since) })
+                : ''}
             </p>
           </div>
         ) : laneKey === 'upcoming' ? (
           <p className='flex items-center gap-1.5 text-xs text-muted-foreground'>
             <Clock3 className='size-3.5' aria-hidden />
-            Belum gate-in · jadwal {formatTime(booking.startTime)}
+            {t('queue.notGatedIn', {
+              time: formatTime(booking.startTime),
+            })}
           </p>
         ) : (
           <div className='space-y-0.5'>
@@ -144,14 +152,16 @@ export function QueueCard({
                 )}
               >
                 <Clock3 className='size-4' aria-hidden />
-                Menunggu {waitLabel(clock.minutes)}
+                {t('queue.waitingFor', { duration: waitLabel(clock.minutes, t) })}
               </p>
             ) : (
-              <p className='text-sm text-muted-foreground'>Menunggu dock</p>
+              <p className='text-sm text-muted-foreground'>
+                {t('queue.waitingDock')}
+              </p>
             )}
             {booking.lateMinutes > 0 && (
               <p className='text-xs font-medium text-rose-700 tabular-nums dark:text-rose-300'>
-                +{booking.lateMinutes} mnt dari jadwal
+                {t('queue.lateBy', { minutes: booking.lateMinutes })}
               </p>
             )}
           </div>
@@ -168,7 +178,7 @@ export function QueueCard({
         {laneKey === 'atDock' ? (
           <Button asChild variant='outline' className='mt-auto h-11 w-full'>
             <Link to='/dock'>
-              Buka Papan Dock
+              {t('queue.openBoardLabel')}
               <ArrowRight data-icon='inline-end' />
             </Link>
           </Button>
@@ -179,7 +189,10 @@ export function QueueCard({
                 <Button
                   className='h-11 w-full'
                   disabled={assigning}
-                  aria-label={`Tugaskan ${booking.bookingCode} ke ${dockOptionLabel(first)}`}
+                  aria-label={t('queue.assignAria', {
+                    code: booking.bookingCode,
+                    dock: dockOptionLabel(first),
+                  })}
                   onClick={() => onQuickAssign(booking, first)}
                 >
                   {assigning ? (
@@ -187,12 +200,12 @@ export function QueueCard({
                   ) : (
                     <TimerReset aria-hidden />
                   )}
-                  Tugaskan ke {first.dockCode}
+                  {t('queue.assignTo', { dock: first.dockCode })}
                 </Button>
               ) : (
                 <p className='flex items-start gap-1.5 rounded-lg bg-muted/60 px-2.5 py-2 text-xs text-muted-foreground'>
                   <Info className='mt-px size-3.5 shrink-0' aria-hidden />
-                  {assignBlockReason(booking, docks ?? [])}
+                  {assignBlockReason(booking, docks ?? [], t)}
                 </p>
               )}
             </div>
@@ -210,8 +223,10 @@ export function QueueCard({
                     variant='ghost'
                     size='sm'
                     disabled={assigning}
-                    placeholder='Dock lain'
-                    label={`Pilih dock lain untuk ${booking.bookingCode}`}
+                    placeholder={t('queue.otherDock')}
+                    label={t('queue.pickOtherDock', {
+                      code: booking.bookingCode,
+                    })}
                     className='-ml-2 font-medium'
                     onSelect={(dock) => onPickDock(booking, dock)}
                   />
@@ -223,7 +238,7 @@ export function QueueCard({
                     variant='ghost'
                     size='sm'
                     className='-mr-2 font-medium text-muted-foreground hover:text-destructive'
-                    aria-label={`Tandai ${booking.bookingCode} tidak datang`}
+                    aria-label={t('queue.markNoShow', { code: booking.bookingCode })}
                     onClick={() => onNoShow(booking)}
                   >
                     No-show

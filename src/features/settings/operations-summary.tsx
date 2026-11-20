@@ -1,4 +1,5 @@
 import { ArrowRight, Clock, ShieldCheck, ShieldAlert } from 'lucide-react'
+import { useT } from '@/lib/i18n'
 import { labelToMinute } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { Impact } from './form'
@@ -20,27 +21,45 @@ export function OperationsSummary({
   saved: Impact
   dirtyCount: number
 }) {
+  const t = useT()
+
   return (
     <section
-      aria-label='Ringkasan operasional'
+      aria-label={t('settings.summary.aria')}
       className='overflow-hidden rounded-xl border bg-card shadow-xs'
     >
       <div className='flex flex-wrap items-baseline justify-between gap-2 border-b px-5 py-3 sm:px-6'>
-        <h2 className='text-sm font-semibold'>Berlaku di mesin kuota</h2>
+        <h2 className='text-sm font-semibold'>{t('settings.summary.title')}</h2>
         <p className='text-xs text-muted-foreground'>
           {dirtyCount === 0
-            ? 'Sesuai pengaturan tersimpan'
-            : `${dirtyCount} seksi diubah, belum disimpan`}
+            ? t('settings.summary.saved')
+            : t('settings.summary.dirty', { count: dirtyCount })}
         </p>
       </div>
 
       <div className='grid grid-cols-2 divide-x divide-y sm:grid-cols-3 lg:grid-cols-5 lg:divide-y-0'>
-        <Stat label='Jam operasional' value={saved.hours} next={impact.hours} />
-        <Stat label='Blok per hari' value={saved.blocks} next={impact.blocks} />
-        <Stat label='Masa tenggang' value={saved.grace} next={impact.grace} />
-        <Stat label='Jendela pesan' value={saved.window} next={impact.window} />
         <Stat
-          label='Persetujuan'
+          label={t('settings.summary.hours')}
+          value={saved.hours}
+          next={impact.hours}
+        />
+        <Stat
+          label={t('settings.summary.blocks')}
+          value={saved.blocks}
+          next={impact.blocks}
+        />
+        <Stat
+          label={t('settings.summary.grace')}
+          value={saved.grace}
+          next={impact.grace}
+        />
+        <Stat
+          label={t('settings.summary.window')}
+          value={saved.window}
+          next={impact.window}
+        />
+        <Stat
+          label={t('settings.summary.approval')}
           value={saved.approval}
           next={impact.approval}
           className='col-span-2 sm:col-span-1'
@@ -67,6 +86,7 @@ function Stat({
   next: string
   className?: string
 }) {
+  const t = useT()
   const changed = next !== value
 
   return (
@@ -87,7 +107,7 @@ function Stat({
           <span className='flex items-baseline gap-1 text-xl leading-none font-semibold text-primary tabular-nums'>
             <ArrowRight className='size-3.5 shrink-0 self-center' aria-hidden />
             {next}
-            <span className='sr-only'>belum disimpan</span>
+            <span className='sr-only'>{t('settings.summary.unsavedOne')}</span>
           </span>
         )}
       </p>
@@ -113,6 +133,7 @@ function DayTimeline({
   const end = close ? labelToMinute(close) : Number.NaN
   const valid =
     Number.isFinite(start) && Number.isFinite(end) && end > start && end <= 1440
+  const t = useT()
   const count = Number.parseInt(blocks, 10) || 0
 
   return (
@@ -120,10 +141,14 @@ function DayTimeline({
       <div className='mb-2 flex items-baseline justify-between gap-2 text-xs text-muted-foreground'>
         <span className='flex items-center gap-1.5'>
           <Clock className='size-3.5' aria-hidden />
-          {valid ? `${open} sampai ${close}` : 'Rentang jam belum valid'}
+          {valid
+            ? t('settings.summary.range', { open, close })
+            : t('settings.summary.rangeInvalid')}
         </span>
         <span className='tabular-nums'>
-          {count > 0 ? `${count} blok terisi` : 'Tidak ada blok'}
+          {count > 0
+            ? t('settings.summary.blocksFilled', { count })
+            : t('settings.summary.noBlocks')}
         </span>
       </div>
 
@@ -132,8 +157,8 @@ function DayTimeline({
         role='img'
         aria-label={
           valid
-            ? `Jendela operasional ${open} sampai ${close}, ${count} blok`
-            : 'Jendela operasional belum valid'
+            ? t('settings.summary.timelineAria', { open, close, count })
+            : t('settings.summary.timelineAriaInvalid')
         }
       >
         {valid && (
@@ -176,18 +201,20 @@ function DayTimeline({
 
 /** Penanda kecil untuk seksi yang keputusannya berdampak luas. */
 export function PolicyFlag({ manual }: { manual: boolean }) {
+  const t = useT()
+
   if (!manual) {
     return (
       <span className='inline-flex items-center gap-1 text-xs font-medium text-emerald-700 dark:text-emerald-400'>
         <ShieldCheck className='size-3.5' aria-hidden />
-        Booking langsung sah
+        {t('settings.approval.autoFlag')}
       </span>
     )
   }
   return (
     <span className='inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400'>
       <ShieldAlert className='size-3.5' aria-hidden />
-      Sebagian booking menunggu admin
+      {t('settings.approval.manualFlag')}
     </span>
   )
 }

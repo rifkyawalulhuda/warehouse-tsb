@@ -5,10 +5,11 @@ import { cn } from '@/lib/utils'
 import { dockOptionLabel } from '@/lib/dock-label'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { useT } from '@/lib/i18n'
 import {
   eligibleDocks,
   laneDot,
-  laneShortTitle,
+  laneShortTitleKey,
   waitClock,
   waitLabel,
   type QueueRow,
@@ -35,6 +36,7 @@ export function QueueCompact({
   now,
   ...handlers
 }: QueueActionHandlers & { rows: QueueRow[]; now: Date }) {
+  const t = useT()
   return (
     <Card className='gap-0 overflow-hidden py-0'>
       <ul className='divide-y'>
@@ -58,7 +60,7 @@ export function QueueCompact({
 
               <div className='min-w-0 flex-1'>
                 <p className='truncate text-sm font-medium'>
-                  {booking.licensePlate ?? 'Plat belum diisi'}
+                  {booking.licensePlate ?? t('queue.plateEmpty')}
                   <span className='font-mono text-xs font-normal text-muted-foreground'>
                     {' · '}
                     {booking.bookingCode}
@@ -79,15 +81,15 @@ export function QueueCompact({
                   )}
                 >
                   {laneKey === 'upcoming'
-                    ? 'Belum datang'
+                    ? t('queue.notArrived')
                     : laneKey === 'atDock'
-                      ? (booking.assignedDock?.dockCode ?? 'Tanpa dock')
+                      ? (booking.assignedDock?.dockCode ?? t('queue.noDock'))
                       : clock
-                        ? waitLabel(clock.minutes)
+                        ? waitLabel(clock.minutes, t)
                         : '—'}
                 </p>
                 <p className='text-[11px] text-muted-foreground'>
-                  {laneShortTitle[laneKey]}
+                  {t(laneShortTitleKey[laneKey])}
                 </p>
               </div>
 
@@ -95,7 +97,7 @@ export function QueueCompact({
                 <Button asChild variant='ghost' size='icon' className='size-9'>
                   <Link
                     to='/dock'
-                    aria-label={`Buka Papan Dock untuk ${booking.bookingCode}`}
+                    aria-label={t('queue.openBoard', { code: booking.bookingCode })}
                   >
                     <ArrowRight aria-hidden />
                   </Link>
@@ -111,7 +113,10 @@ export function QueueCompact({
                   size='icon'
                   className='size-9'
                   disabled={handlers.assigning}
-                  aria-label={`Tugaskan ${booking.bookingCode} ke ${dockOptionLabel(first)}`}
+                  aria-label={t('queue.assignAria', {
+                    code: booking.bookingCode,
+                    dock: dockOptionLabel(first),
+                  })}
                   onClick={() => handlers.onQuickAssign?.(booking, first)}
                 >
                   {handlers.assigning ? (

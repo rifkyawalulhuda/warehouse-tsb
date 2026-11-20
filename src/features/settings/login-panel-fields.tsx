@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { apiErrorMessage } from '@/lib/api/client'
 import { uploadLoginCover } from '@/lib/api/endpoints'
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import type { FormState } from './form'
 import { FieldRow } from './section-panel'
@@ -26,6 +27,7 @@ type Props = {
  * menyimpan dan menemukan panelnya kosong.
  */
 export function LoginPanelFields({ coverUrl, brandColor, onChange }: Props) {
+  const t = useT()
   const inputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -50,9 +52,9 @@ export function LoginPanelFields({ coverUrl, brandColor, onChange }: Props) {
   return (
     <>
       <FieldRow
-        label='Gambar panel masuk'
+        label={t('settings.login.cover')}
         htmlFor='login-cover'
-        hint='PNG atau JPG, maksimal 2 MB. Hanya tampil di layar lebar — di ponsel formulir memakai seluruh layar.'
+        hint={t('settings.login.coverHint')}
       >
         <div className='flex flex-col gap-3'>
           <div
@@ -64,13 +66,13 @@ export function LoginPanelFields({ coverUrl, brandColor, onChange }: Props) {
             {coverUrl ? (
               <img
                 src={coverUrl}
-                alt='Pratinjau gambar panel masuk'
+                alt={t('settings.login.coverPreviewAlt')}
                 className='size-full object-cover'
               />
             ) : (
               <span className='flex items-center gap-2 text-xs'>
                 <ImageIcon className='size-4' aria-hidden='true' />
-                Belum ada gambar
+                {t('settings.login.noImage')}
               </span>
             )}
           </div>
@@ -96,7 +98,11 @@ export function LoginPanelFields({ coverUrl, brandColor, onChange }: Props) {
               ) : (
                 <Upload className='size-4' aria-hidden='true' />
               )}
-              {uploading ? 'Mengunggah…' : coverUrl ? 'Ganti gambar' : 'Unggah gambar'}
+              {uploading
+                ? t('settings.logo.uploading')
+                : coverUrl
+                  ? t('settings.login.replaceImage')
+                  : t('settings.login.uploadImage')}
             </Button>
             {coverUrl && (
               <Button
@@ -107,7 +113,7 @@ export function LoginPanelFields({ coverUrl, brandColor, onChange }: Props) {
                 onClick={() => onChange('loginCoverUrl', '')}
               >
                 <Trash2 className='size-4' aria-hidden='true' />
-                Hapus
+                {t('settings.logo.remove')}
               </Button>
             )}
           </div>
@@ -121,15 +127,15 @@ export function LoginPanelFields({ coverUrl, brandColor, onChange }: Props) {
       </FieldRow>
 
       <FieldRow
-        label='Warna aksen'
+        label={t('settings.login.brandColor')}
         htmlFor='login-color'
-        hint='Dipakai sebagai warna dasar panel dan lapisan gelap di atas gambar. Kosongkan untuk memakai warna tema.'
+        hint={t('settings.login.brandColorHint')}
       >
         <div className='flex flex-col gap-3'>
           <div className='flex items-center gap-2'>
             <input
               type='color'
-              aria-label='Pilih warna aksen'
+              aria-label={t('settings.login.pickColor')}
               value={brandColor || '#1D4ED8'}
               onChange={(event) => onChange('loginBrandColor', event.target.value.toUpperCase())}
               className='h-9 w-12 cursor-pointer rounded-md border bg-transparent p-1'
@@ -150,7 +156,7 @@ export function LoginPanelFields({ coverUrl, brandColor, onChange }: Props) {
                 size='sm'
                 onClick={() => onChange('loginBrandColor', '')}
               >
-                Kosongkan
+                {t('settings.login.clearColor')}
               </Button>
             )}
           </div>
@@ -162,7 +168,7 @@ export function LoginPanelFields({ coverUrl, brandColor, onChange }: Props) {
               <button
                 key={color}
                 type='button'
-                aria-label={`Pakai warna ${color}`}
+                aria-label={t('settings.login.useColor', { color })}
                 aria-pressed={brandColor.toUpperCase() === color}
                 onClick={() => onChange('loginBrandColor', color)}
                 className={cn(

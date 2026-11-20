@@ -9,6 +9,7 @@ import {
   formatTime,
 } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { useLocale, useT } from '@/lib/i18n'
 import { ApprovalBadge } from '@/components/approval-badge'
 import { StatusBadge } from '@/components/status-badge'
 import { Badge } from '@/components/ui/badge'
@@ -31,7 +32,9 @@ export function BookingRow({
   now: Date
   showDate: boolean
 }) {
-  const urgency = bookingUrgency(booking, now)
+  const locale = useLocale()
+  const t = useT()
+  const urgency = bookingUrgency(booking, now, locale)
   const isLive = urgency.key === 'in-progress'
   const isImminent = urgency.key === 'imminent'
 
@@ -78,7 +81,7 @@ export function BookingRow({
         <p className='mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground'>
           <span className='inline-flex items-center gap-1'>
             <Truck className='size-3' aria-hidden />
-            {booking.licensePlate ?? 'Belum diisi'}
+            {booking.licensePlate ?? t('bookings.notFilled')}
           </span>
           <span aria-hidden>·</span>
           <span>{booking.truckType.truckName}</span>
@@ -89,7 +92,7 @@ export function BookingRow({
           <span aria-hidden>·</span>
           <span className='inline-flex items-center gap-1'>
             <MapPin className='size-3' aria-hidden />
-            {dockLabel(booking)}
+            {dockLabel(booking, locale)}
           </span>
           <span aria-hidden>·</span>
           <span>{durationLabel(bookingDurationMinutes(booking))}</span>

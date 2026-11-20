@@ -2,6 +2,7 @@ import * as React from 'react'
 import { Command as CommandPrimitive } from 'cmdk'
 import { SearchIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useT } from '@/lib/i18n'
 import {
   Dialog,
   DialogContent,
@@ -27,8 +28,8 @@ function Command({
 }
 
 function CommandDialog({
-  title = 'Command Palette',
-  description = 'Search for a command to run...',
+  title,
+  description,
   children,
   className,
   showCloseButton = true,
@@ -39,11 +40,16 @@ function CommandDialog({
   className?: string
   showCloseButton?: boolean
 }) {
+  // Teks cadangan hanya dipakai bila pemanggil tidak mengirim judul sendiri.
+  const t = useT()
+  const heading = title ?? t('nav.searchTitle')
+  const caption = description ?? t('nav.searchDescription')
+
   return (
     <Dialog {...props}>
       <DialogHeader className='sr-only'>
-        <DialogTitle>{title}</DialogTitle>
-        <DialogDescription>{description}</DialogDescription>
+        <DialogTitle>{heading}</DialogTitle>
+        <DialogDescription>{caption}</DialogDescription>
       </DialogHeader>
       <DialogContent
         className={cn('overflow-hidden p-0', className)}

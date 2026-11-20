@@ -13,7 +13,9 @@ import {
 import type { Booking } from '@/lib/api/types'
 import { buildApprovalMessage } from '@/lib/approval-message'
 import { activityLabels, formatTime } from '@/lib/format'
+import { useT } from '@/lib/i18n'
 import { useRealtimeSync } from '@/hooks/use-realtime'
+import { useNow } from '@/hooks/use-now'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -43,6 +45,7 @@ import { ErrorBlock, LoadingBlock } from '@/components/query-state'
  */
 export function ApprovalsPanel() {
   useRealtimeSync()
+  const t = useT()
   const queryClient = useQueryClient()
   const [rejectTarget, setRejectTarget] = useState<Booking | null>(null)
   const [selected, setSelected] = useState<RowSelectionState>({})
@@ -55,7 +58,9 @@ export function ApprovalsPanel() {
   const approve = useMutation({
     mutationFn: (id: string) => approveBooking(id),
     onSuccess: (booking) => {
-      toast.success(`Booking ${booking.bookingCode} disetujui`)
+      toast.success(
+        t('approvals.approvedToast', { code: booking.bookingCode })
+      )
       void queryClient.invalidateQueries({ queryKey: ['approvals'] })
       void queryClient.invalidateQueries({ queryKey: ['ops'] })
     },
@@ -68,8 +73,11 @@ export function ApprovalsPanel() {
       const skipped = result.skipped.length
       toast.success(
         skipped === 0
-          ? `${result.approved.length} booking disetujui`
-          : `${result.approved.length} disetujui, ${skipped} dilewati (sudah diputuskan)`
+          ? t('approvals.batchApproved', { count: result.approved.length })
+          : t('approvals.batchApprovedSkipped', {
+              approved: result.approved.length,
+              skipped,
+            })
       )
       setSelected({})
       void queryClient.invalidateQueries({ queryKey: ['approvals'] })
@@ -85,7 +93,7 @@ export function ApprovalsPanel() {
       id: 'select',
       enableSorting: false,
       enableHiding: false,
-      meta: { label: 'Pilih', headerClassName: 'w-10' },
+      meta: { label: t('approvals.col.select'), headerClassName: 'w-10' },
       header: ({ table }) => (
         <Checkbox
           checked={
@@ -93,30 +101,41 @@ export function ApprovalsPanel() {
             (table.getIsSomePageRowsSelected() && 'indeterminate')
           }
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-          aria-label='Pilih semua'
+          aria-label={t('approvals.selectAll')}
         />
       ),
       cell: ({ row }) => (
         <Checkbox
           checked={row.getIsSelected()}
           onCheckedChange={(value) => row.toggleSelected(!!value)}
-          aria-label={`Pilih ${row.original.bookingCode}`}
+          aria-label={t('approvals.selectRow', {
+            code: row.original.bookingCode,
+          })}
         />
       ),
     },
     {
       accessorKey: 'bookingCode',
-      meta: { label: 'Kode', cellClassName: 'font-mono text-xs' },
+      meta: {
+        label: t('approvals.col.code'),
+        cellClassName: 'font-mono text-xs',
+      },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Kode' />
+        <DataTableColumnHeader
+          column={column}
+          title={t('approvals.col.code')}
+        />
       ),
     },
     {
       id: 'customer',
       accessorFn: (booking) => booking.customer.name,
-      meta: { label: 'Customer', cellClassName: 'text-sm' },
+      meta: { label: t('approvals.col.customer'), cellClassName: 'text-sm' },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Customer' />
+        <DataTableColumnHeader
+          column={column}
+          title={t('approvals.col.customer')}
+        />
       ),
       cell: ({ row }) => (
         <>
@@ -130,9 +149,12 @@ export function ApprovalsPanel() {
     },
     {
       accessorKey: 'startTime',
-      meta: { label: 'Jadwal', cellClassName: 'text-sm' },
+      meta: { label: t('approvals.col.schedule'), cellClassName: 'text-sm' },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Jadwal' />
+        <DataTableColumnHeader
+          column={column}
+          title={t('approvals.col.schedule')}
+        />
       ),
       cell: ({ row }) => (
         <>
@@ -146,9 +168,12 @@ export function ApprovalsPanel() {
     },
     {
       accessorKey: 'approvalDeadline',
-      meta: { label: 'Tenggat', cellClassName: 'text-sm' },
+      meta: { label: t('approvals.col.deadline'), cellClassName: 'text-sm' },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Tenggat' />
+        <DataTableColumnHeader
+          column={column}
+          title={t('approvals.col.deadline')}
+        />
       ),
       cell: ({ row }) => <DeadlineCell iso={row.original.approvalDeadline} />,
     },
@@ -156,16 +181,19 @@ export function ApprovalsPanel() {
       id: 'status',
       accessorFn: (booking) => booking.approvalStatus,
       enableGlobalFilter: false,
-      meta: { label: 'Status' },
+      meta: { label: t('approvals.col.status') },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Status' />
+        <DataTableColumnHeader
+          column={column}
+          title={t('approvals.col.status')}
+        />
       ),
       cell: ({ row }) => (
         <div className='flex flex-col items-start gap-1'>
           <ApprovalBadge status={row.original.approvalStatus} />
           {!(row.original.licensePlate && row.original.driverName) && (
             <span className='text-[11px] text-amber-600 dark:text-amber-400'>
-              Data kendaraan belum lengkap
+              {t('approvals.vehicleIncomplete')}
             </span>
           )}
         </div>
@@ -176,11 +204,11 @@ export function ApprovalsPanel() {
       enableSorting: false,
       enableHiding: false,
       meta: {
-        label: 'Aksi',
+        label: t('approvals.col.actions'),
         headerClassName: 'text-end',
         cellClassName: 'text-end',
       },
-      header: () => <span>Aksi</span>,
+      header: () => <span>{t('approvals.col.actions')}</span>,
       cell: ({ row }) => {
         const booking = row.original
         return (
@@ -188,8 +216,8 @@ export function ApprovalsPanel() {
             <Button
               variant='ghost'
               size='sm'
-              title='Salin pesan WhatsApp'
-              onClick={() => void copyApprovalMessage(booking)}
+              title={t('approvals.copyMessage')}
+              onClick={() => void copyApprovalMessage(booking, t)}
             >
               <Copy />
             </Button>
@@ -200,7 +228,7 @@ export function ApprovalsPanel() {
               onClick={() => setRejectTarget(booking)}
             >
               <X />
-              Tolak
+              {t('approvals.reject')}
             </Button>
             <Button
               size='sm'
@@ -208,7 +236,7 @@ export function ApprovalsPanel() {
               onClick={() => approve.mutate(booking.id)}
             >
               <Check />
-              Setujui
+              {t('approvals.approve')}
             </Button>
           </div>
         )
@@ -219,12 +247,11 @@ export function ApprovalsPanel() {
   return (
     <div className='flex flex-col gap-4'>
       <p className='text-sm text-muted-foreground'>
-        Booking yang menunggu keputusan Admin. Slot sudah tergenggam sampai
-        tenggat.
+        {t('approvals.note')}
       </p>
 
       {approvals.isPending ? (
-        <LoadingBlock label='Memuat antrean persetujuan...' />
+        <LoadingBlock label={t('approvals.loading')} />
       ) : approvals.isError ? (
         <ErrorBlock
           error={approvals.error}
@@ -234,7 +261,7 @@ export function ApprovalsPanel() {
         <Card>
           <CardHeader>
             <CardTitle className='text-base'>
-              Menunggu persetujuan{' '}
+              {t('approvals.cardTitle')}{' '}
               <Badge variant='outline' className='ms-1 align-middle'>
                 {bookings.length}
               </Badge>
@@ -248,8 +275,8 @@ export function ApprovalsPanel() {
               rowSelection={selected}
               onRowSelectionChange={setSelected}
               pageSize={20}
-              searchPlaceholder='Cari kode atau customer'
-              emptyMessage='Tidak ada booking yang menunggu persetujuan.'
+              searchPlaceholder={t('approvals.searchPlaceholder')}
+              emptyMessage={t('approvals.empty')}
               renderBulkActions={(ids) => (
                 <Button
                   size='sm'
@@ -261,7 +288,7 @@ export function ApprovalsPanel() {
                   ) : (
                     <Check />
                   )}
-                  Setujui {ids.length} terpilih
+                  {t('approvals.approveSelected', { count: ids.length })}
                 </Button>
               )}
             />
@@ -282,7 +309,10 @@ export function ApprovalsPanel() {
   )
 }
 
-async function copyApprovalMessage(booking: Booking) {
+async function copyApprovalMessage(
+  booking: Booking,
+  t: ReturnType<typeof useT>
+) {
   const text = buildApprovalMessage(
     {
       bookingCode: booking.bookingCode,
@@ -294,9 +324,9 @@ async function copyApprovalMessage(booking: Booking) {
   )
   try {
     await navigator.clipboard.writeText(text)
-    toast.success('Pesan disalin ke papan klip')
+    toast.success(t('approvals.copied'))
   } catch {
-    toast.error('Peramban menolak akses papan klip')
+    toast.error(t('approvals.copyDenied'))
   }
 }
 
@@ -305,6 +335,7 @@ async function copyApprovalMessage(booking: Booking) {
  * boleh dipanggil langsung dari fungsi sel.
  */
 function DeadlineCell({ iso }: { iso: string | null }) {
+  const t = useT()
   const deadline = useDeadlineLabel(iso)
   const urgent = deadline?.urgent ?? false
 
@@ -326,7 +357,7 @@ function DeadlineCell({ iso }: { iso: string | null }) {
       )}
       {urgent && (
         <Badge variant='outline' className='mt-1 text-[10px]'>
-          MENDESAK
+          {t('approvals.urgent')}
         </Badge>
       )}
     </>
@@ -337,25 +368,39 @@ function DeadlineCell({ iso }: { iso: string | null }) {
  * Label tenggat dalam bahasa manusia. `urgent` dipakai untuk badge, bukan untuk
  * keputusan: sesuai rencana §4.2, buffer hanya memengaruhi tampilan.
  */
-function useDeadlineLabel(iso: string | null) {
+function useDeadlineLabel(iso: string | null): {
+  label: string
+  urgent: boolean
+} | null {
+  const t = useT()
+  const now = useNow(30_000, iso !== null)
   return useMemo(() => {
     if (!iso) return null
     const target = new Date(iso)
-    const diffMinutes = Math.round((target.getTime() - Date.now()) / 60_000)
+    const diffMinutes = Math.round((target.getTime() - now.getTime()) / 60_000)
 
     if (diffMinutes < 0) {
-      return { label: 'Sudah lewat tenggat', urgent: true }
+      return { label: t('approvals.deadlineOverdue'), urgent: true }
     }
     if (diffMinutes < 60) {
-      return { label: `${diffMinutes} menit lagi`, urgent: true }
+      return {
+        label: t('approvals.deadlineMinutes', { count: diffMinutes }),
+        urgent: true,
+      }
     }
     if (diffMinutes < 24 * 60) {
       const hours = Math.round(diffMinutes / 60)
-      return { label: `${hours} jam lagi`, urgent: hours <= 3 }
+      return {
+        label: t('approvals.deadlineHours', { count: hours }),
+        urgent: hours <= 3,
+      }
     }
     const days = Math.round(diffMinutes / (24 * 60))
-    return { label: `${days} hari lagi`, urgent: false }
-  }, [iso])
+    return {
+      label: t('approvals.deadlineDays', { count: days }),
+      urgent: false,
+    }
+  }, [iso, t, now])
 }
 
 function RejectDialog({
@@ -367,12 +412,13 @@ function RejectDialog({
   onClose: () => void
   onDone: () => void
 }) {
+  const t = useT()
   const [reason, setReason] = useState('')
 
   const reject = useMutation({
     mutationFn: () => rejectBooking(booking!.id, reason.trim()),
     onSuccess: () => {
-      toast.success('Booking ditolak dan kuota dikembalikan')
+      toast.success(t('approvals.rejectedToast'))
       setReason('')
       onDone()
     },
@@ -393,25 +439,23 @@ function RejectDialog({
     >
       <DialogContent className='sm:max-w-md'>
         <DialogHeader>
-          <DialogTitle>Tolak booking {booking?.bookingCode}?</DialogTitle>
-          <DialogDescription>
-            Booking dibatalkan, kuota dikembalikan, dan customer melihat alasan
-            ini.
-          </DialogDescription>
+          <DialogTitle>
+            {t('approvals.rejectTitle', { code: booking?.bookingCode ?? '' })}
+          </DialogTitle>
+          <DialogDescription>{t('approvals.rejectDesc')}</DialogDescription>
         </DialogHeader>
 
         <div className='space-y-1'>
-          <Label htmlFor='reject-reason'>Alasan penolakan</Label>
+          <Label htmlFor='reject-reason'>{t('approvals.rejectReason')}</Label>
           <Textarea
             id='reject-reason'
             rows={3}
             value={reason}
             onChange={(event) => setReason(event.target.value)}
-            placeholder='Contoh: dokumen DO tidak sesuai dengan barang yang dikirim'
+            placeholder={t('approvals.rejectReasonPlaceholder')}
           />
           <p className='text-xs text-muted-foreground'>
-            Minimal 5 karakter. Alasan tampil di halaman customer dan tiket
-            supir.
+            {t('approvals.rejectReasonHint')}
           </p>
         </div>
 
@@ -423,7 +467,7 @@ function RejectDialog({
               onClose()
             }}
           >
-            Batal
+            {t('common.cancel')}
           </Button>
           <Button
             variant='destructive'
@@ -431,7 +475,7 @@ function RejectDialog({
             onClick={() => reject.mutate()}
           >
             {reject.isPending && <Loader2 className='animate-spin' />}
-            Tolak booking
+            {t('approvals.rejectConfirm')}
           </Button>
         </DialogFooter>
       </DialogContent>

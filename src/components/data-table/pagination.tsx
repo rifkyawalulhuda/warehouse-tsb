@@ -5,6 +5,7 @@ import {
   DoubleArrowRightIcon,
 } from '@radix-ui/react-icons'
 import { type Table } from '@tanstack/react-table'
+import { useT } from '@/lib/i18n'
 import { cn, getPageNumbers } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -24,6 +25,7 @@ export function DataTablePagination<TData>({
   table,
   className,
 }: DataTablePaginationProps<TData>) {
+  const t = useT()
   const currentPage = table.getState().pagination.pageIndex + 1
   const totalPages = table.getPageCount()
   const pageNumbers = getPageNumbers(currentPage, totalPages)
@@ -37,13 +39,13 @@ export function DataTablePagination<TData>({
     >
       <div className='flex items-center gap-2'>
         <span className='hidden text-sm text-muted-foreground sm:inline'>
-          Baris per halaman
+          {t('table.rowsPerPage')}
         </span>
         <Select
           value={`${table.getState().pagination.pageSize}`}
           onValueChange={(value) => table.setPageSize(Number(value))}
         >
-          <SelectTrigger className='h-8 w-17.5' aria-label='Baris per halaman'>
+          <SelectTrigger className='h-8 w-17.5' aria-label={t('table.rowsPerPage')}>
             <SelectValue placeholder={table.getState().pagination.pageSize} />
           </SelectTrigger>
           <SelectContent side='top'>
@@ -65,7 +67,7 @@ export function DataTablePagination<TData>({
           className='hidden size-8 p-0 sm:inline-flex'
           onClick={() => table.setPageIndex(0)}
           disabled={!table.getCanPreviousPage()}
-          aria-label='Halaman pertama'
+          aria-label={t('table.pageFirst')}
         >
           <DoubleArrowLeftIcon className='size-4' />
         </Button>
@@ -74,7 +76,7 @@ export function DataTablePagination<TData>({
           className='size-8 p-0'
           onClick={() => table.previousPage()}
           disabled={!table.getCanPreviousPage()}
-          aria-label='Halaman sebelumnya'
+          aria-label={t('table.pagePrevious')}
         >
           <ChevronLeftIcon className='size-4' />
         </Button>
@@ -93,7 +95,7 @@ export function DataTablePagination<TData>({
               variant={currentPage === pageNumber ? 'default' : 'outline'}
               className='hidden h-8 min-w-8 px-2 tabular-nums sm:inline-flex'
               onClick={() => table.setPageIndex((pageNumber as number) - 1)}
-              aria-label={`Halaman ${pageNumber}`}
+              aria-label={t('table.page', { page: pageNumber })}
               aria-current={currentPage === pageNumber ? 'page' : undefined}
             >
               {pageNumber}
@@ -106,7 +108,7 @@ export function DataTablePagination<TData>({
           className='size-8 p-0'
           onClick={() => table.nextPage()}
           disabled={!table.getCanNextPage()}
-          aria-label='Halaman berikutnya'
+          aria-label={t('table.pageNext')}
         >
           <ChevronRightIcon className='size-4' />
         </Button>
@@ -115,7 +117,7 @@ export function DataTablePagination<TData>({
           className='hidden size-8 p-0 sm:inline-flex'
           onClick={() => table.setPageIndex(table.getPageCount() - 1)}
           disabled={!table.getCanNextPage()}
-          aria-label='Halaman terakhir'
+          aria-label={t('table.pageLast')}
         >
           <DoubleArrowRightIcon className='size-4' />
         </Button>

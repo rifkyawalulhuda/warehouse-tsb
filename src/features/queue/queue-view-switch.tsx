@@ -1,9 +1,10 @@
 import { AlignJustify, LayoutDashboard, LayoutGrid, List } from 'lucide-react'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import {
   isQueueView,
-  queueViewLabels,
+  queueViewLabelKey,
   queueViews,
   type QueueView,
 } from './queue-view'
@@ -32,13 +33,14 @@ export function QueueViewSwitch({
   onChange: (view: QueueView) => void
   className?: string
 }) {
+  const t = useT()
   return (
     <ToggleGroup
       type='single'
       value={value}
       variant='outline'
       size='sm'
-      aria-label='Pilih tampilan antrean'
+      aria-label={t('queue.viewSwitch')}
       className={cn('bg-card', className)}
       onValueChange={(next) => {
         if (isQueueView(next)) onChange(next)
@@ -50,11 +52,13 @@ export function QueueViewSwitch({
           <ToggleGroupItem
             key={view}
             value={view}
-            aria-label={`Tampilan ${queueViewLabels[view]}`}
+            aria-label={t('queue.viewAria', {
+              view: t(queueViewLabelKey[view]),
+            })}
             className='h-9 gap-1.5 px-2.5 data-[state=on]:bg-secondary data-[state=on]:text-foreground data-[state=on]:shadow-sm sm:h-8'
           >
             <Icon aria-hidden />
-            <span className='max-sm:sr-only'>{queueViewLabels[view]}</span>
+            <span className='max-sm:sr-only'>{t(queueViewLabelKey[view])}</span>
           </ToggleGroupItem>
         )
       })}

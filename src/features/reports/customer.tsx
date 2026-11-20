@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import type { ColumnDef } from '@tanstack/react-table'
 import { Download, RefreshCwIcon } from 'lucide-react'
@@ -16,6 +16,7 @@ import { useCustomerName } from '@/stores/auth-store'
 import { fetchMyReport, myReportExportUrl } from '@/lib/api/endpoints'
 import type { CustomerReportRow } from '@/lib/api/types'
 import { addDaysISO, formatDate, formatDateShort, todayISO } from '@/lib/format'
+import { useLocale, useT, type MessageKey, type Vars } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { useRealtimeSync } from '@/hooks/use-realtime'
@@ -39,123 +40,126 @@ import { StatusBadge } from '@/components/status-badge'
  * Kolom angka memakai `accessorFn` numerik supaya "110" tidak terurut sebelum
  * "12", dan baris tanpa durasi jatuh ke bawah (`sortUndefined: 'last'`).
  */
-const columns: ColumnDef<CustomerReportRow>[] = [
-  {
-    accessorKey: 'bookingCode',
-    meta: { label: 'Kode', cellClassName: 'font-mono text-xs' },
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Kode' />
-    ),
-  },
-  {
-    id: 'bookingDate',
-    accessorFn: (row) => row.bookingDate,
-    meta: { label: 'Tanggal', cellClassName: 'text-sm' },
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Tanggal' />
-    ),
-    cell: ({ row }) => formatDate(`${row.original.bookingDate}T00:00:00.000Z`),
-  },
-  {
-    id: 'licensePlate',
-    accessorFn: (row) => row.licensePlate ?? '',
-    meta: { label: 'Plat', cellClassName: 'text-sm' },
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Plat' />
-    ),
-    cell: ({ row }) => row.original.licensePlate ?? '-',
-  },
-  {
-    id: 'dockCode',
-    accessorFn: (row) => row.dockCode ?? '',
-    meta: { label: 'Dock', cellClassName: 'text-sm' },
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Dock' />
-    ),
-    cell: ({ row }) => row.original.dockCode ?? '-',
-  },
-  {
-    id: 'status',
-    accessorFn: (row) => row.status,
-    enableGlobalFilter: false,
-    meta: { label: 'Status' },
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Status' />
-    ),
-    cell: ({ row }) => <StatusBadge status={row.original.status} />,
-  },
-  {
-    id: 'waitingMinutes',
-    accessorFn: (row) => row.waitingMinutes ?? undefined,
-    meta: {
-      label: 'Tunggu',
-      headerClassName: 'text-end',
-      cellClassName: 'text-end text-sm tabular-nums',
+function buildColumns(
+  t: (key: MessageKey, vars?: Vars) => string
+): ColumnDef<CustomerReportRow>[] {
+  return [
+    {
+      accessorKey: 'bookingCode',
+      meta: { label: t('report.col.code'), cellClassName: 'font-mono text-xs' },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t('report.col.code')} />
+      ),
     },
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Tunggu' />
-    ),
-    cell: ({ row }) => row.original.waitingMinutes ?? '-',
-  },
-  {
-    id: 'processingMinutes',
-    accessorFn: (row) => row.processingMinutes ?? undefined,
-    meta: {
-      label: 'Proses',
-      headerClassName: 'text-end',
-      cellClassName: 'text-end text-sm tabular-nums',
+    {
+      id: 'bookingDate',
+      accessorFn: (row) => row.bookingDate,
+      meta: { label: t('report.col.date'), cellClassName: 'text-sm' },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t('report.col.date')} />
+      ),
+      cell: ({ row }) => formatDate(`${row.original.bookingDate}T00:00:00.000Z`),
     },
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Proses' />
-    ),
-    cell: ({ row }) => row.original.processingMinutes ?? '-',
-  },
-  {
-    id: 'turnaroundMinutes',
-    accessorFn: (row) => row.turnaroundMinutes ?? undefined,
-    meta: {
-      label: 'Turnaround',
-      headerClassName: 'text-end',
-      cellClassName: 'text-end text-sm tabular-nums',
+    {
+      id: 'licensePlate',
+      accessorFn: (row) => row.licensePlate ?? '',
+      meta: { label: t('report.col.plate'), cellClassName: 'text-sm' },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t('report.col.plate')} />
+      ),
+      cell: ({ row }) => row.original.licensePlate ?? '-',
     },
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Turnaround' />
-    ),
-    cell: ({ row }) => row.original.turnaroundMinutes ?? '-',
-  },
-  {
-    id: 'lateMinutes',
-    accessorFn: (row) => (row.lateMinutes > 0 ? row.lateMinutes : undefined),
-    meta: {
-      label: 'Terlambat',
-      headerClassName: 'text-end',
-      cellClassName: 'text-end text-sm tabular-nums',
+    {
+      id: 'dockCode',
+      accessorFn: (row) => row.dockCode ?? '',
+      meta: { label: t('report.col.dock'), cellClassName: 'text-sm' },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t('report.col.dock')} />
+      ),
+      cell: ({ row }) => row.original.dockCode ?? '-',
     },
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Terlambat' />
-    ),
-    cell: ({ row }) =>
-      row.original.lateMinutes > 0 ? row.original.lateMinutes : '-',
-  },
-  {
-    id: 'slotUsedPercent',
-    accessorFn: (row) => row.slotUsedPercent ?? undefined,
-    meta: {
-      label: 'Slot',
-      headerClassName: 'text-end',
-      cellClassName: 'text-end text-sm tabular-nums',
+    {
+      id: 'status',
+      accessorFn: (row) => row.status,
+      enableGlobalFilter: false,
+      meta: { label: t('report.col.status') },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t('report.col.status')} />
+      ),
+      cell: ({ row }) => <StatusBadge status={row.original.status} />,
     },
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Slot' />
-    ),
-    cell: ({ row }) => <SlotUsage row={row.original} />,
-  },
-]
-
-const rangePresets = [
-  { label: 'Hari ini', days: 0 },
-  { label: '7 hari', days: 6 },
-  { label: '30 hari', days: 29 },
+    {
+      id: 'waitingMinutes',
+      accessorFn: (row) => row.waitingMinutes ?? undefined,
+      meta: {
+        label: t('report.col.waiting'),
+        headerClassName: 'text-end',
+        cellClassName: 'text-end text-sm tabular-nums',
+      },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t('report.col.waiting')} />
+      ),
+      cell: ({ row }) => row.original.waitingMinutes ?? '-',
+    },
+    {
+      id: 'processingMinutes',
+      accessorFn: (row) => row.processingMinutes ?? undefined,
+      meta: {
+        label: t('report.col.processing'),
+        headerClassName: 'text-end',
+        cellClassName: 'text-end text-sm tabular-nums',
+      },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t('report.col.processing')} />
+      ),
+      cell: ({ row }) => row.original.processingMinutes ?? '-',
+    },
+    {
+      id: 'turnaroundMinutes',
+      accessorFn: (row) => row.turnaroundMinutes ?? undefined,
+      meta: {
+        label: t('report.col.turnaround'),
+        headerClassName: 'text-end',
+        cellClassName: 'text-end text-sm tabular-nums',
+      },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t('report.col.turnaround')} />
+      ),
+      cell: ({ row }) => row.original.turnaroundMinutes ?? '-',
+    },
+    {
+      id: 'lateMinutes',
+      accessorFn: (row) => (row.lateMinutes > 0 ? row.lateMinutes : undefined),
+      meta: {
+        label: t('report.col.late'),
+        headerClassName: 'text-end',
+        cellClassName: 'text-end text-sm tabular-nums',
+      },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t('report.col.late')} />
+      ),
+      cell: ({ row }) =>
+        row.original.lateMinutes > 0 ? row.original.lateMinutes : '-',
+    },
+    {
+      id: 'slotUsedPercent',
+      accessorFn: (row) => row.slotUsedPercent ?? undefined,
+      meta: {
+        label: t('report.col.slot'),
+        headerClassName: 'text-end',
+        cellClassName: 'text-end text-sm tabular-nums',
+      },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t('report.col.slot')} />
+      ),
+      cell: ({ row }) => <SlotUsage row={row.original} />,
+    },
+  ]
+}
+const RANGE_PRESETS = [
+  { key: 'report.presetToday', days: 0 },
+  { key: 'report.preset7', days: 6 },
+  { key: 'report.preset30', days: 29 },
 ] as const
 
 const DEFAULT_RANGE_DAYS = 6
@@ -164,6 +168,9 @@ export function CustomerReportsPage() {
   useRealtimeSync()
   const isMobile = useIsMobile()
   const company = useCustomerName()
+  const t = useT()
+  const locale = useLocale()
+  const columns = useMemo(() => buildColumns(t), [t])
   const today = todayISO()
   const defaultFrom = addDaysISO(today, -DEFAULT_RANGE_DAYS)
   const [from, setFrom] = useState(defaultFrom)
@@ -195,8 +202,8 @@ export function CustomerReportsPage() {
     <Main className='flex flex-1 flex-col gap-6'>
       <PageHeader
         eyebrow={company ?? undefined}
-        title='Laporan'
-        description='Rekap booking perusahaan Anda: ketepatan waktu, durasi layanan, dan pemakaian slot.'
+        title={t('report.title')}
+        description={t('report.description')}
       />
 
       <Card>
@@ -207,7 +214,7 @@ export function CustomerReportsPage() {
                 htmlFor='my-report-from'
                 className='text-xs font-medium text-muted-foreground'
               >
-                Dari tanggal
+                {t('report.from')}
               </Label>
               <DatePicker
                 id='my-report-from'
@@ -222,7 +229,7 @@ export function CustomerReportsPage() {
                 htmlFor='my-report-to'
                 className='text-xs font-medium text-muted-foreground'
               >
-                Sampai tanggal
+                {t('report.to')}
               </Label>
               <DatePicker
                 id='my-report-to'
@@ -241,7 +248,7 @@ export function CustomerReportsPage() {
                 className='size-11 shrink-0 sm:size-9'
                 onClick={() => void report.refetch()}
                 disabled={report.isFetching || rangeInvalid}
-                aria-label='Muat ulang laporan'
+                aria-label={t('report.reload')}
               >
                 <RefreshCwIcon
                   className={report.isFetching ? 'animate-spin' : undefined}
@@ -255,13 +262,13 @@ export function CustomerReportsPage() {
               */}
               {report.data && !report.isPlaceholderData ? (
                 <Button asChild variant='outline'>
-                  <a href={myReportExportUrl(from, to)} download>
-                    <Download /> Ekspor Excel
+                  <a href={myReportExportUrl(from, to, locale)} download>
+                    <Download /> {t('report.export')}
                   </a>
                 </Button>
               ) : (
                 <Button variant='outline' disabled>
-                  <Download /> Ekspor Excel
+                  <Download /> {t('report.export')}
                 </Button>
               )}
             </div>
@@ -270,20 +277,20 @@ export function CustomerReportsPage() {
           <div className='flex flex-wrap items-center gap-2'>
             <div
               role='group'
-              aria-label='Rentang tanggal cepat'
+              aria-label={t('report.presets')}
               className='flex flex-wrap items-center gap-2'
             >
-              {rangePresets.map((preset) => {
+              {RANGE_PRESETS.map((preset) => {
                 const presetFrom = addDaysISO(today, -preset.days)
                 const active = from === presetFrom && to === today
                 return (
                   <Button
-                    key={preset.label}
+                    key={preset.key}
                     variant={active ? 'secondary' : 'outline'}
                     aria-pressed={active}
                     onClick={() => applyPreset(preset.days)}
                   >
-                    {preset.label}
+                    {t(preset.key)}
                   </Button>
                 )
               })}
@@ -293,25 +300,23 @@ export function CustomerReportsPage() {
               onClick={resetFilters}
               disabled={isDefaultRange}
             >
-              Atur ulang
+              {t('report.reset')}
             </Button>
             <span
               role='status'
               aria-live='polite'
               className='text-xs text-muted-foreground'
             >
-              {report.isPlaceholderData ? 'Memperbarui laporan...' : ''}
+              {report.isPlaceholderData ? t('report.updating') : ''}
             </span>
           </div>
         </CardContent>
       </Card>
 
       {rangeInvalid ? (
-        <p className='text-sm text-destructive'>
-          Tanggal awal tidak boleh melewati tanggal akhir.
-        </p>
+        <p className='text-sm text-destructive'>{t('report.rangeInvalid')}</p>
       ) : report.isPending ? (
-        <LoadingBlock label='Menghitung laporan...' />
+        <LoadingBlock label={t('report.calculating')} />
       ) : report.isError ? (
         <ErrorBlock
           error={report.error}
@@ -331,54 +336,68 @@ export function CustomerReportsPage() {
             </p>
             <div className='grid grid-cols-2 gap-4 lg:grid-cols-4'>
               <Kpi
-                label='Total booking'
+                label={t('report.kpi.total')}
                 value={report.data.kpi.totalBookings}
               />
               <Kpi
-                label='Tingkat on-time'
+                label={t('report.kpi.onTime')}
                 value={`${report.data.kpi.onTimeRate}%`}
-                hint='Dari yang sudah gate-in'
+                hint={t('report.kpi.onTimeHint')}
               />
               <Kpi
-                label='Rata-rata turnaround'
-                value={`${report.data.kpi.averageTurnaroundMinutes} mnt`}
-                hint='Gate-in sampai gate-out'
+                label={t('report.kpi.turnaround')}
+                value={t('report.minutes', {
+                  count: report.data.kpi.averageTurnaroundMinutes,
+                })}
+                hint={t('report.kpi.turnaroundHint')}
               />
               <Kpi
-                label='Pemakaian slot'
+                label={t('report.kpi.slot')}
                 value={`${report.data.kpi.averageSlotUsedPercent}%`}
-                hint='Dibanding blok yang Anda booking'
+                hint={t('report.kpi.slotHint')}
               />
             </div>
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle className='text-base'>Rincian</CardTitle>
+              <CardTitle className='text-base'>
+                {t('report.section.detail')}
+              </CardTitle>
               <CardDescription>
-                Status booking dan durasi rata-rata pada rentang ini.
+                {t('report.section.detailDesc')}
               </CardDescription>
             </CardHeader>
             <CardContent className='grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4 lg:grid-cols-7'>
-              <Stat label='Selesai' value={report.data.kpi.completed} />
-              <Stat label='Dibatalkan' value={report.data.kpi.cancelled} />
-              <Stat label='No-show' value={report.data.kpi.noShow} />
               <Stat
-                label='Kedaluwarsa'
+                label={t('report.completed')}
+                value={report.data.kpi.completed}
+              />
+              <Stat
+                label={t('report.cancelled')}
+                value={report.data.kpi.cancelled}
+              />
+              <Stat label={t('report.noShow')} value={report.data.kpi.noShow} />
+              <Stat
+                label={t('report.expired')}
                 value={report.data.kpi.expiredPending}
               />
               <Stat
-                label='Rata-rata tunggu'
-                value={`${report.data.kpi.averageWaitingMinutes} mnt`}
+                label={t('report.avgWaiting')}
+                value={t('report.minutes', {
+                  count: report.data.kpi.averageWaitingMinutes,
+                })}
               />
               <Stat
-                label='Rata-rata proses'
-                value={`${report.data.kpi.averageProcessingMinutes} mnt`}
+                label={t('report.avgProcessing')}
+                value={t('report.minutes', {
+                  count: report.data.kpi.averageProcessingMinutes,
+                })}
               />
               <Stat
-                label='Melewati blok'
+                label={t('report.overrun')}
                 value={report.data.kpi.overrunCount}
-                hint='Booking yang prosesnya melampaui blok'
+                hint={t('report.overrunHint')}
               />
             </CardContent>
           </Card>
@@ -386,10 +405,8 @@ export function CustomerReportsPage() {
           <div className='grid gap-4 xl:grid-cols-2'>
             <Card>
               <CardHeader>
-                <CardTitle className='text-base'>Booking per hari</CardTitle>
-                <CardDescription>
-                  Total, selesai, dan terlambat tiap hari dalam rentang.
-                </CardDescription>
+                <CardTitle className='text-base'>{t('report.byDay')}</CardTitle>
+                <CardDescription>{t('report.byDayDesc')}</CardDescription>
               </CardHeader>
               <CardContent className='h-72'>
                 <ResponsiveContainer width='100%' height='100%'>
@@ -416,21 +433,21 @@ export function CustomerReportsPage() {
                     <Legend />
                     <Bar
                       dataKey='total'
-                      name='Total'
+                      name={t('report.legend.total')}
                       fill='var(--chart-1)'
                       radius={[4, 4, 0, 0]}
                       maxBarSize={28}
                     />
                     <Bar
                       dataKey='completed'
-                      name='Selesai'
+                      name={t('report.legend.completed')}
                       fill='var(--chart-2)'
                       radius={[4, 4, 0, 0]}
                       maxBarSize={28}
                     />
                     <Bar
                       dataKey='late'
-                      name='Terlambat'
+                      name={t('report.legend.late')}
                       fill='var(--chart-4)'
                       radius={[4, 4, 0, 0]}
                       maxBarSize={28}
@@ -443,11 +460,9 @@ export function CustomerReportsPage() {
             <Card>
               <CardHeader>
                 <CardTitle className='text-base'>
-                  Kedatangan truk per jam
+                  {t('report.byHour')}
                 </CardTitle>
-                <CardDescription>
-                  Jumlah truk Anda yang gate-in pada tiap jam operasional.
-                </CardDescription>
+                <CardDescription>{t('report.byHourDesc')}</CardDescription>
               </CardHeader>
               <CardContent className='h-72'>
                 <ResponsiveContainer width='100%' height='100%'>
@@ -468,7 +483,7 @@ export function CustomerReportsPage() {
                     <Tooltip />
                     <Bar
                       dataKey='arrivals'
-                      name='Kedatangan'
+                      name={t('report.legend.arrivals')}
                       fill='var(--chart-1)'
                       radius={[4, 4, 0, 0]}
                       maxBarSize={28}
@@ -481,9 +496,9 @@ export function CustomerReportsPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className='text-base'>Detail booking</CardTitle>
+              <CardTitle className='text-base'>{t('report.table')}</CardTitle>
               <CardDescription>
-                {report.data.rows.length} baris. Unduh Excel untuk data lengkap.
+                {t('report.tableDesc', { count: report.data.rows.length })}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -494,7 +509,7 @@ export function CustomerReportsPage() {
                   columns={columns}
                   data={report.data.rows}
                   getRowId={(row) => row.bookingCode}
-                  emptyMessage='Tidak ada booking pada rentang tanggal ini.'
+                  emptyMessage={t('report.empty')}
                 />
               )}
             </CardContent>
@@ -544,6 +559,7 @@ function Stat({
 }
 
 function SlotUsage({ row }: { row: CustomerReportRow }) {
+  const t = useT()
   if (row.slotUsedPercent === null) return <>-</>
 
   const overrun = row.slotOverrunMinutes ?? 0
@@ -557,7 +573,9 @@ function SlotUsage({ row }: { row: CustomerReportRow }) {
     >
       {row.slotUsedPercent}%
       {overrun > 0 && (
-        <span className='ms-1 text-xs font-normal'>(+{overrun} mnt)</span>
+        <span className='ms-1 text-xs font-normal'>
+          {t('report.overrunBy', { count: overrun })}
+        </span>
       )}
     </span>
   )
@@ -565,10 +583,12 @@ function SlotUsage({ row }: { row: CustomerReportRow }) {
 
 /** Daftar ringkas untuk layar ponsel; tabel selebar ini tidak terbaca di 393 px. */
 function BookingList({ rows }: { rows: CustomerReportRow[] }) {
+  const t = useT()
+
   if (rows.length === 0) {
     return (
       <p className='py-8 text-center text-sm text-muted-foreground'>
-        Tidak ada booking pada rentang tanggal ini.
+        {t('report.empty')}
       </p>
     )
   }
@@ -589,11 +609,22 @@ function BookingList({ rows }: { rows: CustomerReportRow[] }) {
           </div>
 
           <div className='grid grid-cols-4 gap-2'>
-            <MobileMetric label='Tunggu' value={row.waitingMinutes} />
-            <MobileMetric label='Proses' value={row.processingMinutes} />
-            <MobileMetric label='Total' value={row.turnaroundMinutes} />
+            <MobileMetric
+              label={t('report.col.waiting')}
+              value={row.waitingMinutes}
+            />
+            <MobileMetric
+              label={t('report.col.processing')}
+              value={row.processingMinutes}
+            />
+            <MobileMetric
+              label={t('report.total')}
+              value={row.turnaroundMinutes}
+            />
             <div className='space-y-0.5'>
-              <p className='text-[11px] text-muted-foreground'>Slot</p>
+              <p className='text-[11px] text-muted-foreground'>
+                {t('report.col.slot')}
+              </p>
               <p className='text-sm font-medium tabular-nums'>
                 {row.slotUsedPercent === null ? '-' : `${row.slotUsedPercent}%`}
               </p>
@@ -602,7 +633,7 @@ function BookingList({ rows }: { rows: CustomerReportRow[] }) {
 
           {row.lateMinutes > 0 && (
             <p className='text-xs text-amber-600 dark:text-amber-400'>
-              Terlambat {row.lateMinutes} menit
+              {t('report.lateNotice', { count: row.lateMinutes })}
             </p>
           )}
         </li>

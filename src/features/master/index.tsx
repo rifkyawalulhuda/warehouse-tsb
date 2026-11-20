@@ -47,6 +47,7 @@ import type {
 } from '@/lib/api/types'
 import { durationLabel, roleLabels } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { useT } from '@/lib/i18n'
 import { useRealtimeSync } from '@/hooks/use-realtime'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -95,6 +96,7 @@ import { MASTER_TABS, type MasterTab } from './tabs'
  * saling bertentangan.
  */
 export function MasterData({ initialTab }: { initialTab?: MasterTab }) {
+  const t = useT()
   useRealtimeSync()
   const queryClient = useQueryClient()
   const currentUser = useAuthStore((state) => state.user)
@@ -175,7 +177,7 @@ export function MasterData({ initialTab }: { initialTab?: MasterTab }) {
       status: Dock['currentStatus']
     }) => updateDock(dock.id, { currentStatus: status }),
     onSuccess: () => {
-      toast.success('Status dock diperbarui')
+      toast.success(t('master.docks.statusUpdated'))
       refreshMaster()
     },
     onError: (error) => toast.error(apiErrorMessage(error)),
@@ -205,48 +207,52 @@ export function MasterData({ initialTab }: { initialTab?: MasterTab }) {
   return (
     <Main className='flex flex-1 flex-col gap-6'>
       <PageHeader
-        title='Master Data'
-        description='Dock menentukan kapasitas per slot. Jenis truk menentukan durasi blok.'
+        title={t('master.title')}
+        description={t('master.docks.summaryNote')}
       />
 
       <div className='grid gap-3 sm:grid-cols-2 xl:grid-cols-4'>
         <SummaryCard
           icon={Building2}
-          label='Dock siap pakai'
+          label={t('master.summary.ready')}
           value={`${summary.docksActive}`}
-          unit={`dari ${summary.docksTotal}`}
+          unit={t('master.summary.of', { count: summary.docksTotal })}
           hint={
             summary.docksTotal - summary.docksActive > 0
-              ? `${summary.docksTotal - summary.docksActive} sedang perawatan`
-              : 'Semua dock siap menerima truk'
+              ? t('master.summary.maintenance', {
+                  count: summary.docksTotal - summary.docksActive,
+                })
+              : t('master.summary.readyHint')
           }
           tone='sky'
         />
         <SummaryCard
           icon={WarehouseIcon}
-          label='Kapasitas loading'
+          label={t('master.summary.loadingCap')}
           value={`${summary.loading}`}
-          unit='truk / slot'
-          hint='Jumlah dock aktif yang melayani loading'
+          unit={t('master.field.perSlot')}
+          hint={t('master.summary.loadingCapHint')}
           tone='indigo'
         />
         <SummaryCard
           icon={WarehouseIcon}
-          label='Kapasitas unloading'
+          label={t('master.summary.unloadingCap')}
           value={`${summary.unloading}`}
-          unit='truk / slot'
-          hint='Jumlah dock aktif yang melayani unloading'
+          unit={t('master.field.perSlot')}
+          hint={t('master.summary.unloadingCapHint')}
           tone='violet'
         />
         <SummaryCard
           icon={Truck}
-          label='Jenis truk aktif'
+          label={t('master.summary.truckTypes')}
           value={`${summary.truckTypesActive}`}
-          unit={`dari ${summary.truckTypesTotal}`}
+          unit={t('master.summary.readyOf', {
+            count: summary.truckTypesTotal,
+          })}
           hint={
             summary.truckTypesActive === 0
-              ? 'Customer tidak bisa booking sampai satu jenis diaktifkan'
-              : 'Tersedia di form booking customer'
+              ? t('master.summary.noTruckType')
+              : t('master.summary.truckTypesHint')
           }
           tone={summary.truckTypesActive === 0 ? 'amber' : 'emerald'}
         />
@@ -260,28 +266,28 @@ export function MasterData({ initialTab }: { initialTab?: MasterTab }) {
         <TabsList>
           <TabsTrigger value='docks'>
             <ClipboardList />
-            Dock
+            {t('master.tabDocks')}
             <Badge variant='secondary' className='ml-1 h-5 px-1.5 tabular-nums'>
               {summary.docksTotal}
             </Badge>
           </TabsTrigger>
           <TabsTrigger value='warehouses'>
             <WarehouseIcon />
-            Gudang
+            {t('master.tabWarehouses')}
             <Badge variant='secondary' className='ml-1 h-5 px-1.5 tabular-nums'>
               {summary.warehouseCount}
             </Badge>
           </TabsTrigger>
           <TabsTrigger value='truck-types'>
             <Truck />
-            Jenis Truk
+            {t('master.tabTrucks')}
             <Badge variant='secondary' className='ml-1 h-5 px-1.5 tabular-nums'>
               {summary.truckTypesTotal}
             </Badge>
           </TabsTrigger>
           <TabsTrigger value='customers'>
             <Factory />
-            Customer
+            {t('master.tabCustomers')}
             <Badge variant='secondary' className='ml-1 h-5 px-1.5 tabular-nums'>
               {summary.customersTotal}
             </Badge>
@@ -292,7 +298,7 @@ export function MasterData({ initialTab }: { initialTab?: MasterTab }) {
           {isAdmin && (
             <TabsTrigger value='users'>
               <UsersIcon />
-              Pengguna
+              {t('master.tabUsers')}
             </TabsTrigger>
           )}
         </TabsList>
@@ -427,6 +433,7 @@ function UsersSection({
   onEdit: (user: ManagedUser) => void
   query: UseQueryResult<ManagedUser[]>
 }) {
+  const t = useT()
   const currentUser = useAuthStore((state) => state.user)
   const [search, setSearch] = useState('')
   const [role, setRole] = useState<Role | 'ALL'>('ALL')
@@ -449,9 +456,9 @@ function UsersSection({
   const userColumns: ColumnDef<ManagedUser>[] = [
     {
       accessorKey: 'name',
-      meta: { label: 'Nama', cellClassName: 'font-medium' },
+      meta: { label: t('master.field.name'), cellClassName: 'font-medium' },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Nama' />
+        <DataTableColumnHeader column={column} title={t('master.field.name')} />
       ),
       cell: ({ row }) => (
         <>
@@ -466,28 +473,28 @@ function UsersSection({
     },
     {
       accessorKey: 'email',
-      meta: { label: 'Email', cellClassName: 'text-sm text-muted-foreground' },
+      meta: { label: t('master.field.email'), cellClassName: 'text-sm text-muted-foreground' },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Email' />
+        <DataTableColumnHeader column={column} title={t('master.field.email')} />
       ),
     },
     {
       accessorKey: 'phone',
-      meta: { label: 'No. HP', cellClassName: 'text-sm text-muted-foreground' },
+      meta: { label: t('master.field.phone'), cellClassName: 'text-sm text-muted-foreground' },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='No. HP' />
+        <DataTableColumnHeader column={column} title={t('master.field.phone')} />
       ),
       cell: ({ row }) =>
         row.original.phone || (
-          <span className='text-muted-foreground'>Belum diisi</span>
+          <span className='text-muted-foreground'>{t('master.notFilled')}</span>
         ),
     },
     {
       id: 'role',
       accessorFn: (user) => roleLabels[user.role],
-      meta: { label: 'Peran' },
+      meta: { label: t('master.field.role') },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Peran' />
+        <DataTableColumnHeader column={column} title={t('master.field.role')} />
       ),
       cell: ({ row }) => (
         <Badge variant='outline'>{roleLabels[row.original.role]}</Badge>
@@ -497,24 +504,24 @@ function UsersSection({
       id: 'approve',
       accessorFn: (user) => user.canApproveBooking,
       enableGlobalFilter: false,
-      meta: { label: 'Boleh menyetujui' },
+      meta: { label: t('master.field.canApprove') },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Boleh menyetujui' />
+        <DataTableColumnHeader column={column} title={t('master.field.canApprove')} />
       ),
       cell: ({ row }) =>
         row.original.role === 'ADMIN'
-          ? 'Otomatis'
+          ? t('master.users.roleAll')
           : row.original.canApproveBooking
-            ? 'Ya'
-            : 'Tidak',
+            ? t('master.field.yes')
+            : t('master.field.noValue'),
     },
     {
       id: 'active',
       accessorFn: (user) => user.isActive,
       enableGlobalFilter: false,
-      meta: { label: 'Status' },
+      meta: { label: t('master.field.status') },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Status' />
+        <DataTableColumnHeader column={column} title={t('master.field.status')} />
       ),
       cell: ({ row }) => (
         <Badge
@@ -525,7 +532,7 @@ function UsersSection({
               : 'border-border text-muted-foreground'
           }
         >
-          {row.original.isActive ? 'Aktif' : 'Nonaktif'}
+          {row.original.isActive ? t('master.field.active') : t('master.field.inactive')}
         </Badge>
       ),
     },
@@ -534,11 +541,11 @@ function UsersSection({
       enableSorting: false,
       enableHiding: false,
       meta: {
-        label: 'Aksi',
+        label: t('master.field.action'),
         headerClassName: 'text-end',
         cellClassName: 'text-end',
       },
-      header: () => <span>Aksi</span>,
+      header: () => <span>{t('master.field.action')}</span>,
       cell: ({ row }) => (
         <Button
           size='sm'
@@ -546,7 +553,7 @@ function UsersSection({
           onClick={() => onEdit(row.original)}
         >
           <PencilLine />
-          Ubah
+          {t('common.edit')}
         </Button>
       ),
     },
@@ -555,11 +562,8 @@ function UsersSection({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className='text-base'>Pengguna</CardTitle>
-        <CardDescription>
-          Akun staf (Admin, Security, Checker). Akun Customer dikelola di tab
-          Customer karena selalu menempel ke satu perusahaan.
-        </CardDescription>
+        <CardTitle className='text-base'>{t('master.users.title')}</CardTitle>
+        <CardDescription>{t('master.users.description')}</CardDescription>
       </CardHeader>
       <CardContent className='space-y-4'>
         <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
@@ -569,9 +573,9 @@ function UsersSection({
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder='Cari nama atau email'
+                placeholder={t('master.users.search')}
                 className='pl-8'
-                aria-label='Cari nama atau email'
+                aria-label={t('master.users.search')}
               />
             </div>
             <Select
@@ -580,12 +584,12 @@ function UsersSection({
             >
               <SelectTrigger
                 className='w-full sm:w-44'
-                aria-label='Filter peran'
+                aria-label={t('master.users.filterRole')}
               >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value='ALL'>Semua peran</SelectItem>
+                <SelectItem value='ALL'>{t('master.users.allRoles')}</SelectItem>
                 {STAFF_ROLES.map((item) => (
                   <SelectItem key={item} value={item}>
                     {roleLabels[item]}
@@ -597,19 +601,19 @@ function UsersSection({
           <div className='flex gap-2 sm:shrink-0'>
             <Button size='sm' variant='outline' onClick={onCreate}>
               <Plus />
-              Tambah pengguna
+              {t('master.users.add')}
             </Button>
           </div>
         </div>
 
         <p className='text-xs text-muted-foreground'>
           {users.data
-            ? `${rows.length} akun ditampilkan, ${activeCount} aktif. Kolom Aktif dan Boleh menyetujui diubah lewat tombol Ubah.`
-            : 'Memuat akun...'}
+            ? `${t('master.users.count', { rows: rows.length, active: activeCount })} ${t('master.users.hint')}`
+            : t('master.users.loadingAccounts')}
         </p>
 
         {users.isPending ? (
-          <LoadingBlock label='Memuat pengguna...' />
+          <LoadingBlock label={t('master.users.loadingUsers')} />
         ) : users.isError ? (
           <ErrorBlock
             error={users.error}
@@ -620,7 +624,7 @@ function UsersSection({
             columns={userColumns}
             data={rows}
             getRowId={(user) => user.id}
-            emptyMessage='Belum ada akun staf.'
+            emptyMessage={t('master.users.emptyStaff')}
           />
         )}
       </CardContent>
@@ -738,6 +742,7 @@ function DockSection({
   onEdit: (dock: Dock) => void
   onCreate: () => void
 }) {
+  const t = useT()
   const [search, setSearch] = useState('')
   const [activity, setActivity] = useState<'ALL' | Dock['allowedActivity']>(
     'ALL'
@@ -768,7 +773,7 @@ function DockSection({
     if (warehouses.length <= 1) return null
     const map = new Map<string, Dock[]>()
     for (const dock of filtered) {
-      const key = dock.warehouse?.name ?? 'Tanpa gudang'
+      const key = dock.warehouse?.name ?? t('master.docks.withoutWarehouse')
       const bucket = map.get(key)
       if (bucket) bucket.push(dock)
       else map.set(key, [dock])
@@ -779,29 +784,29 @@ function DockSection({
   const dockColumns: ColumnDef<Dock>[] = [
     {
       accessorKey: 'dockCode',
-      meta: { label: 'Kode', cellClassName: 'font-medium' },
+      meta: { label: t('master.field.code'), cellClassName: 'font-medium' },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Kode' />
+        <DataTableColumnHeader column={column} title={t('master.field.code')} />
       ),
     },
     {
       id: 'areaName',
       accessorFn: (dock) => dock.areaName ?? '',
-      meta: { label: 'Nama Area', cellClassName: 'text-sm' },
+      meta: { label: t('master.field.area'), cellClassName: 'text-sm' },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Nama Area' />
+        <DataTableColumnHeader column={column} title={t('master.field.area')} />
       ),
       cell: ({ row }) =>
         row.original.areaName || (
-          <span className='text-muted-foreground'>Belum diisi</span>
+          <span className='text-muted-foreground'>{t('master.notFilled')}</span>
         ),
     },
     {
       id: 'warehouse',
       accessorFn: (dock) => dock.warehouse?.name ?? '',
-      meta: { label: 'Warehouse', cellClassName: 'text-sm' },
+      meta: { label: t('master.docks.warehouse'), cellClassName: 'text-sm' },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Warehouse' />
+        <DataTableColumnHeader column={column} title={t('master.docks.warehouse')} />
       ),
       cell: ({ row }) => row.original.warehouse?.name ?? '—',
     },
@@ -809,9 +814,9 @@ function DockSection({
       id: 'activity',
       accessorFn: (dock) => dock.allowedActivity,
       enableGlobalFilter: false,
-      meta: { label: 'Melayani' },
+      meta: { label: t('master.docks.serves') },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Melayani' />
+        <DataTableColumnHeader column={column} title={t('master.docks.serves')} />
       ),
       cell: ({ row }) => (
         <div className='flex flex-wrap gap-1'>
@@ -820,7 +825,7 @@ function DockSection({
             : [row.original.allowedActivity]
           ).map((item) => (
             <Badge key={item} variant='outline' className='font-normal'>
-              {item === 'LOADING' ? 'Loading' : 'Unloading'}
+              {t(item === 'LOADING' ? 'activity.LOADING' : 'activity.UNLOADING')}
             </Badge>
           ))}
         </div>
@@ -830,9 +835,9 @@ function DockSection({
       id: 'status',
       accessorFn: (dock) => dock.currentStatus,
       enableGlobalFilter: false,
-      meta: { label: 'Status' },
+      meta: { label: t('master.field.status') },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Status' />
+        <DataTableColumnHeader column={column} title={t('master.field.status')} />
       ),
       cell: ({ row }) =>
         row.original.currentStatus === 'OCCUPIED' ? (
@@ -841,10 +846,10 @@ function DockSection({
               variant='outline'
               className='border-blue-300 text-blue-700 dark:border-blue-800 dark:text-blue-300'
             >
-              Terpakai
+              {t('dashboard.dockOccupied')}
             </Badge>
             <span className='text-xs text-muted-foreground'>
-              dikunci booking aktif
+              {t('master.docks.lockedByBooking')}
             </span>
           </div>
         ) : (
@@ -858,12 +863,18 @@ function DockSection({
                   status: checked ? 'AVAILABLE' : 'MAINTENANCE',
                 })
               }
-              aria-label={`Status ${row.original.dockCode}, ${row.original.currentStatus === 'AVAILABLE' ? 'tersedia' : 'perawatan'}`}
+              aria-label={t('master.docks.statusAria', {
+                code: row.original.dockCode,
+                status:
+                  row.original.currentStatus === 'AVAILABLE'
+                    ? t('master.docks.available')
+                    : t('master.docks.maintenance'),
+              })}
             />
             <span className='text-sm'>
               {row.original.currentStatus === 'AVAILABLE'
-                ? 'Tersedia'
-                : 'Perawatan'}
+                ? t('master.docks.statusAvailable')
+                : t('master.docks.statusMaintenance')}
             </span>
           </label>
         ),
@@ -873,11 +884,11 @@ function DockSection({
       enableSorting: false,
       enableHiding: false,
       meta: {
-        label: 'Aksi',
+        label: t('master.field.action'),
         headerClassName: 'text-right',
         cellClassName: 'text-right',
       },
-      header: () => <span>Aksi</span>,
+      header: () => <span>{t('master.field.action')}</span>,
       cell: ({ row }) => (
         <Button
           size='sm'
@@ -885,7 +896,7 @@ function DockSection({
           onClick={() => onEdit(row.original)}
         >
           <PencilLine />
-          Ubah
+          {t('common.edit')}
         </Button>
       ),
     },
@@ -894,19 +905,22 @@ function DockSection({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className='text-base'>Dock</CardTitle>
+        <CardTitle className='text-base'>{t('master.docks.title')}</CardTitle>
         <CardDescription>
           {capacities
-            ? `Kapasitas per slot: ${capacities.LOADING} loading, ${capacities.UNLOADING} unloading.`
-            : 'Memuat kapasitas...'}
+            ? t('master.docks.capacity', {
+                loading: capacities.LOADING,
+                unloading: capacities.UNLOADING,
+              })
+            : t('master.docks.capacityLoading')}
         </CardDescription>
       </CardHeader>
       <CardContent className='space-y-4'>
         <SectionToolbar
           search={search}
           onSearch={setSearch}
-          placeholder='Cari kode, area, atau gudang'
-          actionLabel='Tambah dock'
+          placeholder={t('master.docks.search')}
+          actionLabel={t('master.addDock')}
           onAction={onCreate}
         >
           <Select
@@ -915,22 +929,22 @@ function DockSection({
           >
             <SelectTrigger
               className='w-full sm:w-44'
-              aria-label='Filter aktivitas'
+              aria-label={t('master.docks.filterActivity')}
             >
               <ArrowDownUp className='size-4 text-muted-foreground' />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value='ALL'>Semua aktivitas</SelectItem>
-              <SelectItem value='LOADING'>Loading</SelectItem>
-              <SelectItem value='UNLOADING'>Unloading</SelectItem>
-              <SelectItem value='BOTH'>Loading & Unloading</SelectItem>
+              <SelectItem value='ALL'>{t('master.docks.allActivities')}</SelectItem>
+              <SelectItem value='LOADING'>{t('activity.LOADING')}</SelectItem>
+              <SelectItem value='UNLOADING'>{t('activity.UNLOADING')}</SelectItem>
+              <SelectItem value='BOTH'>{t('activity.BOTH')}</SelectItem>
             </SelectContent>
           </Select>
         </SectionToolbar>
 
         {query.isPending ? (
-          <LoadingBlock label='Memuat dock...' />
+          <LoadingBlock label={t('master.docks.loading')} />
         ) : query.isError ? (
           <ErrorBlock
             error={query.error}
@@ -946,7 +960,7 @@ function DockSection({
                 getRowId={(dock) => String(dock.id)}
                 groupBy={
                   grouped
-                    ? (dock) => dock.warehouse?.name ?? 'Tanpa gudang'
+                    ? (dock) => dock.warehouse?.name ?? t('master.docks.withoutWarehouse')
                     : undefined
                 }
                 groupLabel={(name, count) => (
@@ -958,8 +972,8 @@ function DockSection({
                 )}
                 emptyMessage={
                   (docks?.length ?? 0) === 0
-                    ? 'Belum ada dock. Tambahkan satu supaya booking bisa diparkir.'
-                    : 'Tidak ada dock yang cocok dengan pencarian.'
+                    ? t('master.docks.empty')
+                    : t('master.docks.noMatch')
                 }
               />
             </div>
@@ -971,7 +985,7 @@ function DockSection({
                     <div className='min-w-0'>
                       <p className='font-medium'>{dock.dockCode}</p>
                       <p className='truncate text-xs text-muted-foreground'>
-                        {dock.areaName || 'Area belum diisi'} ·{' '}
+                        {dock.areaName || t('master.docks.areaEmpty')} ·{' '}
                         {dock.warehouse?.name ?? '—'}
                       </p>
                     </div>
@@ -981,7 +995,7 @@ function DockSection({
                       onClick={() => onEdit(dock)}
                     >
                       <PencilLine />
-                      Ubah
+                      {t('common.edit')}
                     </Button>
                   </div>
                   <div className='mt-2 flex flex-wrap items-center gap-2'>
@@ -994,7 +1008,7 @@ function DockSection({
                         variant='outline'
                         className='font-normal'
                       >
-                        {item === 'LOADING' ? 'Loading' : 'Unloading'}
+                        {t(item === 'LOADING' ? 'activity.LOADING' : 'activity.UNLOADING')}
                       </Badge>
                     ))}
                     {dock.currentStatus === 'OCCUPIED' ? (
@@ -1002,7 +1016,7 @@ function DockSection({
                         variant='outline'
                         className='border-blue-300 text-blue-700 dark:border-blue-800 dark:text-blue-300'
                       >
-                        Terpakai
+                        {t('dashboard.dockOccupied')}
                       </Badge>
                     ) : (
                       <label className='flex cursor-pointer items-center gap-1.5'>
@@ -1015,12 +1029,12 @@ function DockSection({
                               status: checked ? 'AVAILABLE' : 'MAINTENANCE',
                             })
                           }
-                          aria-label={`Status ${dock.dockCode}`}
+                          aria-label={t('master.docks.statusAriaShort', { code: dock.dockCode })}
                         />
                         <span className='text-xs'>
                           {dock.currentStatus === 'AVAILABLE'
-                            ? 'Tersedia'
-                            : 'Perawatan'}
+                            ? t('master.docks.statusAvailable')
+                            : t('master.docks.statusMaintenance')}
                         </span>
                       </label>
                     )}
@@ -1030,8 +1044,8 @@ function DockSection({
               {filtered.length === 0 && (
                 <p className='rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground'>
                   {(docks?.length ?? 0) === 0
-                    ? 'Belum ada dock.'
-                    : 'Tidak ada dock yang cocok dengan pencarian.'}
+                    ? t('master.docks.emptyShort')
+                    : t('master.docks.noMatch')}
                 </p>
               )}
             </div>
@@ -1057,6 +1071,7 @@ function TruckTypeSection({
   onEdit: (type: TruckType) => void
   onCreate: () => void
 }) {
+  const t = useT()
   const [search, setSearch] = useState('')
   const [onlyActive, setOnlyActive] = useState(false)
 
@@ -1076,22 +1091,22 @@ function TruckTypeSection({
   const truckTypeColumns: ColumnDef<TruckType>[] = [
     {
       accessorKey: 'truckName',
-      meta: { label: 'Jenis', cellClassName: 'font-medium' },
+      meta: { label: t('master.trucks.type'), cellClassName: 'font-medium' },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Jenis' />
+        <DataTableColumnHeader column={column} title={t('master.trucks.type')} />
       ),
     },
     {
       accessorKey: 'durationMinutes',
-      meta: { label: 'Durasi' },
+      meta: { label: t('master.trucks.duration') },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Durasi' />
+        <DataTableColumnHeader column={column} title={t('master.trucks.duration')} />
       ),
       cell: ({ row }) => (
         <div className='flex flex-wrap items-center gap-1.5 text-sm'>
           {durationLabel(row.original.durationMinutes)}
           <Badge variant='secondary' className='font-normal tabular-nums'>
-            {row.original.blocksRequired} blok
+            {t('master.trucks.blocks', { count: row.original.blocksRequired })}
           </Badge>
         </div>
       ),
@@ -1099,20 +1114,20 @@ function TruckTypeSection({
     {
       accessorKey: 'sortOrder',
       meta: {
-        label: 'Urutan',
+        label: t('master.field.sortOrder'),
         cellClassName: 'text-sm tabular-nums text-muted-foreground',
       },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Urutan' />
+        <DataTableColumnHeader column={column} title={t('master.field.sortOrder')} />
       ),
     },
     {
       id: 'status',
       accessorFn: (type) => type.isActive,
       enableGlobalFilter: false,
-      meta: { label: 'Status' },
+      meta: { label: t('master.field.status') },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Status' />
+        <DataTableColumnHeader column={column} title={t('master.field.status')} />
       ),
       cell: ({ row }) => (
         <Badge
@@ -1123,7 +1138,7 @@ function TruckTypeSection({
               : 'border-border text-muted-foreground'
           }
         >
-          {row.original.isActive ? 'Aktif' : 'Nonaktif'}
+          {row.original.isActive ? t('master.field.active') : t('master.field.inactive')}
         </Badge>
       ),
     },
@@ -1132,11 +1147,11 @@ function TruckTypeSection({
       enableSorting: false,
       enableHiding: false,
       meta: {
-        label: 'Aksi',
+        label: t('master.field.action'),
         headerClassName: 'text-right',
         cellClassName: 'text-right',
       },
-      header: () => <span>Aksi</span>,
+      header: () => <span>{t('master.field.action')}</span>,
       cell: ({ row }) => (
         <Button
           size='sm'
@@ -1144,7 +1159,7 @@ function TruckTypeSection({
           onClick={() => onEdit(row.original)}
         >
           <PencilLine />
-          Ubah
+          {t('common.edit')}
         </Button>
       ),
     },
@@ -1153,40 +1168,35 @@ function TruckTypeSection({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className='text-base'>Jenis truk</CardTitle>
-        <CardDescription>
-          Durasi menentukan berapa blok yang dikunci satu booking. Jumlah blok
-          dihitung server dari durasi, sehingga angkanya tidak bisa berbeda dari
-          yang dipakai mesin kuota.
-        </CardDescription>
+        <CardTitle className='text-base'>{t('master.trucks.title')}</CardTitle>
+        <CardDescription>{t('master.trucks.description')}</CardDescription>
       </CardHeader>
       <CardContent className='space-y-4'>
         <SectionToolbar
           search={search}
           onSearch={setSearch}
-          placeholder='Cari jenis truk'
-          actionLabel='Tambah jenis truk'
+          placeholder={t('master.trucks.search')}
+          actionLabel={t('master.addTruck')}
           onAction={onCreate}
         >
           <label className='flex cursor-pointer items-center gap-2 text-sm'>
             <Switch
               checked={onlyActive}
               onCheckedChange={setOnlyActive}
-              aria-label='Hanya tampilkan yang aktif'
+              aria-label={t('master.trucks.onlyActive')}
             />
-            Hanya aktif
+            {t('master.trucks.onlyActive')}
           </label>
         </SectionToolbar>
 
         {query.data && activeCount === 0 && (
           <p className='rounded-lg border border-amber-300/70 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-300'>
-            Tidak ada jenis truk aktif. Customer tidak bisa membuat booking
-            sampai minimal satu jenis diaktifkan kembali.
+            {t('master.trucks.noneActive')}
           </p>
         )}
 
         {query.isPending ? (
-          <LoadingBlock label='Memuat jenis truk...' />
+          <LoadingBlock label={t('master.trucks.loading')} />
         ) : query.isError ? (
           <ErrorBlock
             error={query.error}
@@ -1199,8 +1209,8 @@ function TruckTypeSection({
             getRowId={(type) => String(type.id)}
             emptyMessage={
               (types?.length ?? 0) === 0
-                ? 'Belum ada jenis truk.'
-                : 'Tidak ada jenis truk yang cocok dengan pencarian.'
+                ? t('master.trucks.empty')
+                : t('master.trucks.noMatch')
             }
           />
         )}
@@ -1225,6 +1235,7 @@ function TruckTypeDialog({
   onDone: () => void
   onChanged: () => void
 }) {
+  const t = useT()
   const creating = type === null
   const [truckName, setTruckName] = useState(type?.truckName ?? '')
   const [duration, setDuration] = useState(String(type?.durationMinutes ?? 60))
@@ -1261,7 +1272,7 @@ function TruckTypeDialog({
     },
     onSuccess: () => {
       toast.success(
-        creating ? 'Jenis truk ditambahkan' : 'Jenis truk diperbarui'
+        creating ? t('master.trucks.created') : t('master.trucks.updated')
       )
       onChanged()
       onDone()
@@ -1279,18 +1290,18 @@ function TruckTypeDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {creating ? 'Tambah jenis truk' : 'Ubah jenis truk'}
+            {creating ? t('master.addTruck') : t('master.trucks.editTitle')}
           </DialogTitle>
           <DialogDescription>
             {creating
-              ? 'Jenis truk baru langsung tersedia di form booking customer.'
-              : 'Perubahan hanya berlaku untuk booking berikutnya. Booking yang sudah ada tetap memakai jumlah blok yang dikunci saat dibuat.'}
+              ? t('master.trucks.newDescription')
+              : t('master.trucks.editHint')}
           </DialogDescription>
         </DialogHeader>
 
         <div className='space-y-4'>
           <div className='space-y-2'>
-            <Label htmlFor='truck-type-name'>Nama jenis truk</Label>
+            <Label htmlFor='truck-type-name'>{t('master.trucks.nameLabel')}</Label>
             <Input
               id='truck-type-name'
               value={truckName}
@@ -1302,7 +1313,7 @@ function TruckTypeDialog({
 
           <div className='grid gap-4 sm:grid-cols-2'>
             <div className='space-y-2'>
-              <Label htmlFor='truck-type-duration'>Durasi (menit)</Label>
+              <Label htmlFor='truck-type-duration'>{t('master.trucks.durationLabel')}</Label>
               <Input
                 id='truck-type-duration'
                 type='number'
@@ -1313,7 +1324,7 @@ function TruckTypeDialog({
               />
             </div>
             <div className='space-y-2'>
-              <Label htmlFor='truck-type-sort'>Urutan tampil</Label>
+              <Label htmlFor='truck-type-sort'>{t('master.trucks.sortLabel')}</Label>
               <Input
                 id='truck-type-sort'
                 type='number'
@@ -1327,16 +1338,18 @@ function TruckTypeDialog({
 
           <p className='text-sm text-muted-foreground'>
             {blocks > 0
-              ? `Durasi ${durationLabel(minutes)} = ${blocks} blok.`
-              : 'Isi durasi minimal 30 menit.'}
+              ? t('master.trucks.durationSummary', {
+                  duration: durationLabel(minutes),
+                  blocks,
+                })
+              : t('master.trucks.minDurationHint')}
           </p>
 
           <div className='flex items-center justify-between gap-4 rounded-lg border p-3'>
             <div className='space-y-0.5'>
-              <Label htmlFor='truck-type-active'>Aktif</Label>
+              <Label htmlFor='truck-type-active'>{t('master.field.active')}</Label>
               <p className='text-xs text-muted-foreground'>
-                Jenis nonaktif tidak muncul di form booking baru, tetapi booking
-                lama tetap berjalan normal.
+                {t('master.trucks.inactiveHint')}
               </p>
             </div>
             <Switch
@@ -1350,14 +1363,14 @@ function TruckTypeDialog({
 
         <DialogFooter>
           <Button variant='outline' onClick={onDone} disabled={save.isPending}>
-            Batal
+            {t('master.cancel')}
           </Button>
           <Button
             onClick={() => save.mutate()}
             disabled={save.isPending || !valid || !dirty}
           >
             {save.isPending && <Loader2 className='animate-spin' />}
-            {creating ? 'Tambah' : 'Simpan'}
+            {creating ? t('master.action.add') : t('master.action.save')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1382,6 +1395,7 @@ function WarehouseSection({
   onEdit: (warehouse: Warehouse) => void
   onCreate: () => void
 }) {
+  const t = useT()
   const [search, setSearch] = useState('')
   const list = query.data
 
@@ -1395,18 +1409,18 @@ function WarehouseSection({
   const warehouseColumns: ColumnDef<Warehouse>[] = [
     {
       accessorKey: 'name',
-      meta: { label: 'Nama', cellClassName: 'font-medium' },
+      meta: { label: t('master.field.name'), cellClassName: 'font-medium' },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Nama' />
+        <DataTableColumnHeader column={column} title={t('master.field.name')} />
       ),
     },
     {
       id: 'docks',
       accessorFn: (warehouse) => warehouse._count?.docks ?? 0,
       enableGlobalFilter: false,
-      meta: { label: 'Dock', cellClassName: 'text-sm tabular-nums' },
+      meta: { label: t('master.field.dock'), cellClassName: 'text-sm tabular-nums' },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Dock' />
+        <DataTableColumnHeader column={column} title={t('master.field.dock')} />
       ),
       cell: ({ row }) => row.original._count?.docks ?? 0,
     },
@@ -1414,9 +1428,9 @@ function WarehouseSection({
       id: 'status',
       accessorFn: (warehouse) => warehouse.isActive,
       enableGlobalFilter: false,
-      meta: { label: 'Status' },
+      meta: { label: t('master.field.status') },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Status' />
+        <DataTableColumnHeader column={column} title={t('master.field.status')} />
       ),
       cell: ({ row }) => (
         <Badge
@@ -1427,7 +1441,7 @@ function WarehouseSection({
               : 'border-border text-muted-foreground'
           }
         >
-          {row.original.isActive ? 'Aktif' : 'Nonaktif'}
+          {row.original.isActive ? t('master.field.active') : t('master.field.inactive')}
         </Badge>
       ),
     },
@@ -1436,11 +1450,11 @@ function WarehouseSection({
       enableSorting: false,
       enableHiding: false,
       meta: {
-        label: 'Aksi',
+        label: t('master.field.action'),
         headerClassName: 'text-right',
         cellClassName: 'text-right',
       },
-      header: () => <span>Aksi</span>,
+      header: () => <span>{t('master.field.action')}</span>,
       cell: ({ row }) => (
         <Button
           size='sm'
@@ -1448,7 +1462,7 @@ function WarehouseSection({
           onClick={() => onEdit(row.original)}
         >
           <PencilLine />
-          Ubah
+          {t('common.edit')}
         </Button>
       ),
     },
@@ -1457,24 +1471,22 @@ function WarehouseSection({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className='text-base'>Gudang</CardTitle>
+        <CardTitle className='text-base'>{t('master.warehouses.title')}</CardTitle>
         <CardDescription>
-          Setiap dock berada di satu gudang. Daftar ini hanya menjadi sumber
-          pilihan di tab Dock — kuota dan laporan tetap dihitung untuk satu
-          gudang.
+          {t('master.warehouses.description')}
         </CardDescription>
       </CardHeader>
       <CardContent className='space-y-4'>
         <SectionToolbar
           search={search}
           onSearch={setSearch}
-          placeholder='Cari gudang'
-          actionLabel='Tambah gudang'
+          placeholder={t('master.warehouses.search')}
+          actionLabel={t('master.addWarehouse')}
           onAction={onCreate}
         />
 
         {query.isPending ? (
-          <LoadingBlock label='Memuat gudang...' />
+          <LoadingBlock label={t('master.warehouses.loading')} />
         ) : query.isError ? (
           <ErrorBlock
             error={query.error}
@@ -1487,8 +1499,8 @@ function WarehouseSection({
             getRowId={(warehouse) => String(warehouse.id)}
             emptyMessage={
               (list?.length ?? 0) === 0
-                ? 'Belum ada gudang. Tambahkan satu supaya setiap dock punya tujuan.'
-                : 'Tidak ada gudang yang cocok dengan pencarian.'
+                ? t('master.warehouses.empty')
+                : t('master.warehouses.noMatch')
             }
           />
         )}
@@ -1506,6 +1518,7 @@ function WarehouseDialog({
   onDone: () => void
   onChanged: () => void
 }) {
+  const t = useT()
   const creating = warehouse === null
   const [name, setName] = useState(warehouse?.name ?? '')
   const [isActive, setIsActive] = useState(warehouse?.isActive ?? true)
@@ -1525,7 +1538,7 @@ function WarehouseDialog({
         : updateWarehouse(warehouse.id, payload)
     },
     onSuccess: () => {
-      toast.success(creating ? 'Gudang ditambahkan' : 'Gudang diperbarui')
+      toast.success(creating ? t('master.warehouses.created') : t('master.warehouses.updated'))
       onChanged()
       onDone()
     },
@@ -1542,17 +1555,16 @@ function WarehouseDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {creating ? 'Tambah gudang' : 'Ubah gudang'}
+            {creating ? t('master.addWarehouse') : t('master.warehouses.editTitle')}
           </DialogTitle>
           <DialogDescription>
-            Nama gudang pertama juga tercetak di tiket supir, jadi mengubahnya
-            di sini ikut mengubah nama di Pengaturan.
+            {t('master.warehouses.dialogDesc')}
           </DialogDescription>
         </DialogHeader>
 
         <div className='space-y-4'>
           <div className='space-y-2'>
-            <Label htmlFor='warehouse-name'>Nama gudang</Label>
+            <Label htmlFor='warehouse-name'>{t('master.warehouses.nameLabel')}</Label>
             <Input
               id='warehouse-name'
               value={name}
@@ -1565,11 +1577,11 @@ function WarehouseDialog({
           {!creating && (
             <div className='flex items-center justify-between gap-4 rounded-lg border p-3'>
               <div className='space-y-0.5'>
-                <Label htmlFor='warehouse-active'>Aktif</Label>
+                <Label htmlFor='warehouse-active'>{t('master.field.active')}</Label>
                 <p className='text-xs text-muted-foreground'>
                   {dockCount > 0
-                    ? `Masih ada ${dockCount} dock di gudang ini, jadi belum bisa dimatikan.`
-                    : 'Gudang nonaktif tidak muncul di pilihan dock.'}
+                    ? t('master.warehouses.hasDocks', { count: dockCount })
+                    : t('master.warehouses.activeHint')}
                 </p>
               </div>
               <Switch
@@ -1584,14 +1596,14 @@ function WarehouseDialog({
 
         <DialogFooter>
           <Button variant='outline' onClick={onDone} disabled={save.isPending}>
-            Batal
+            {t('master.cancel')}
           </Button>
           <Button
             onClick={() => save.mutate()}
             disabled={save.isPending || !valid || !dirty}
           >
             {save.isPending && <Loader2 className='animate-spin' />}
-            {creating ? 'Tambah' : 'Simpan'}
+            {creating ? t('master.action.add') : t('master.action.save')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1614,6 +1626,7 @@ function DockDialog({
   onDone: () => void
   onChanged: () => void
 }) {
+  const t = useT()
   const creating = dock === null
   const [dockCode, setDockCode] = useState(dock?.dockCode ?? '')
   const [allowedActivity, setAllowedActivity] = useState<
@@ -1654,7 +1667,7 @@ function DockDialog({
       return creating ? createDock(payload) : updateDock(dock.id, payload)
     },
     onSuccess: () => {
-      toast.success(creating ? 'Dock ditambahkan' : 'Dock diperbarui')
+      toast.success(creating ? t('master.docks.created') : t('master.docks.updated'))
       onChanged()
       onDone()
     },
@@ -1671,17 +1684,18 @@ function DockDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {creating ? 'Tambah dock' : `Ubah dock ${dock.dockCode}`}
+            {creating
+              ? t('master.addDock')
+              : t('master.docks.editTitle', { code: dock.dockCode })}
           </DialogTitle>
           <DialogDescription>
-            Nama Area dan Warehouse hanya untuk pengelompokan — tidak
-            mempengaruhi kapasitas per slot.
+            {t('master.docks.dialogDesc')}
           </DialogDescription>
         </DialogHeader>
 
         <div className='space-y-4'>
           <div className='space-y-2'>
-            <Label htmlFor='dock-code'>Kode dock</Label>
+            <Label htmlFor='dock-code'>{t('master.docks.codeLabel')}</Label>
             <Input
               id='dock-code'
               value={dockCode}
@@ -1693,18 +1707,17 @@ function DockDialog({
           </div>
 
           <div className='space-y-2'>
-            <Label htmlFor='dock-area'>Nama Area</Label>
+            <Label htmlFor='dock-area'>{t('master.docks.areaLabel')}</Label>
             <Input
               id='dock-area'
-              placeholder='mis. Area B — kosongkan untuk menghapus'
+              placeholder={t('master.docks.areaPlaceholderEmpty')}
               value={areaName}
               onChange={(event) => setAreaName(event.target.value)}
               maxLength={80}
               disabled={save.isPending}
             />
             <p className='text-xs text-muted-foreground'>
-              Teks bebas, maksimal 80 karakter. Boleh dikosongkan bila pemetaan
-              area belum ada.
+              {t('master.docks.areaHint')}
             </p>
           </div>
 
@@ -1716,27 +1729,26 @@ function DockDialog({
               onValueChange={setWarehouseId}
             >
               <SelectTrigger id='dock-warehouse'>
-                <SelectValue placeholder='Pilih gudang' />
+                <SelectValue placeholder={t('master.docks.pickWarehouse')} />
               </SelectTrigger>
               <SelectContent>
                 {choices.map((warehouse) => (
                   <SelectItem key={warehouse.id} value={String(warehouse.id)}>
                     {warehouse.name}
-                    {!warehouse.isActive && ' (nonaktif)'}
+                    {!warehouse.isActive && t('master.docks.inactiveSuffix')}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             {choices.length === 0 && (
               <p className='text-xs text-amber-700 dark:text-amber-400'>
-                Belum ada gudang aktif. Tambahkan satu di tab Gudang terlebih
-                dahulu.
+                {t('master.docks.noWarehouseActive')}
               </p>
             )}
           </div>
 
           <div className='space-y-2'>
-            <Label htmlFor='dock-activity'>Melayani</Label>
+            <Label htmlFor='dock-activity'>{t('master.docks.servesLabel')}</Label>
             <Select
               value={allowedActivity}
               disabled={save.isPending}
@@ -1748,28 +1760,27 @@ function DockDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value='LOADING'>Loading</SelectItem>
-                <SelectItem value='UNLOADING'>Unloading</SelectItem>
-                <SelectItem value='BOTH'>Loading & Unloading</SelectItem>
+                <SelectItem value='LOADING'>{t('activity.LOADING')}</SelectItem>
+                <SelectItem value='UNLOADING'>{t('activity.UNLOADING')}</SelectItem>
+                <SelectItem value='BOTH'>{t('activity.BOTH')}</SelectItem>
               </SelectContent>
             </Select>
             <p className='text-xs text-muted-foreground'>
-              Mengubah aktivitas mengubah kapasitas per slot; booking yang sudah
-              ada tetap berjalan seperti semula.
+              {t('master.docks.activityHint')}
             </p>
           </div>
         </div>
 
         <DialogFooter>
           <Button variant='outline' onClick={onDone} disabled={save.isPending}>
-            Batal
+            {t('master.cancel')}
           </Button>
           <Button
             onClick={() => save.mutate()}
             disabled={save.isPending || !valid || !dirty}
           >
             {save.isPending && <Loader2 className='animate-spin' />}
-            {creating ? 'Tambah' : 'Simpan'}
+            {creating ? t('master.action.add') : t('master.action.save')}
           </Button>
         </DialogFooter>
       </DialogContent>

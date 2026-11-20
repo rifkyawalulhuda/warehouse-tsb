@@ -1,6 +1,7 @@
 import { CheckCircle2, PlayCircle } from 'lucide-react'
 import type { Booking, DockWithBooking } from '@/lib/api/types'
 import { Button } from '@/components/ui/button'
+import { useT } from '@/lib/i18n'
 
 export type DockActionHandlers = {
   actionPending: boolean
@@ -25,16 +26,20 @@ export function DockActionButton({
   /** Tabel: label disembunyikan di ponsel agar kolom aksi tidak melebar. */
   hideLabelOnMobile?: boolean
 }) {
+  const t = useT()
   const booking = dock.currentBooking
   if (!booking) {
     return <span className='text-xs text-muted-foreground'>—</span>
   }
 
   const serving = booking.status === 'IN_PROGRESS'
-  const label = serving ? 'Selesaikan' : 'Mulai'
-  const ariaLabel = `${serving ? 'Selesaikan' : 'Mulai'} proses ${
-    booking.bookingCode
-  } di ${dock.dockCode}`
+  const label = serving ? t('dock.finish') : t('dock.start')
+  const ariaLabel = serving
+    ? t('dock.finishAria', {
+        code: booking.bookingCode,
+        dock: dock.dockCode,
+      })
+    : t('dock.startAria', { code: booking.bookingCode, dock: dock.dockCode })
   const handleClick = () =>
     serving ? onFinish(booking, dock) : onStart(booking, dock)
 

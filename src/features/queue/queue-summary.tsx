@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils'
+import { useT } from '@/lib/i18n'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import {
   laneDot,
@@ -28,6 +29,7 @@ export function QueueSummary({
   onChange: (value: QueueFilter) => void
   className?: string
 }) {
+  const t = useT()
   return (
     <ToggleGroup
       type='single'
@@ -36,15 +38,20 @@ export function QueueSummary({
       // Radix mengirim string kosong saat item aktif diklik lagi; papan tidak
       // punya keadaan "tanpa saringan", jadi klik ulang diabaikan.
       onValueChange={(next) => next && onChange(next as QueueFilter)}
-      aria-label='Saring papan menurut tahap'
+      aria-label={t('queue.summaryAria')}
       className={cn('flex w-full flex-wrap gap-2', className)}
     >
-      <Chip value='all' label='Semua' count={total} active={value === 'all'} />
+      <Chip
+        value='all'
+        label={t('queue.allBookings')}
+        count={total}
+        active={value === 'all'}
+      />
       {lanes.map((lane) => (
         <Chip
           key={lane.key}
           value={lane.key}
-          label={lane.title}
+          label={t(lane.titleKey)}
           count={lane.bookings.length}
           dot={laneDot[lane.key]}
           active={value === lane.key}
@@ -67,10 +74,12 @@ function Chip({
   dot?: string
   active: boolean
 }) {
+  const t = useT()
+
   return (
     <ToggleGroupItem
       value={value}
-      aria-label={`${label}, ${count} truk`}
+      aria-label={t('queue.summaryAria', { label, count })}
       className={cn(
         'h-11 shrink-0 gap-2 rounded-full border border-input bg-card px-4 text-sm font-medium',
         'data-[state=on]:border-primary/50 data-[state=on]:bg-primary/10 data-[state=on]:text-primary',

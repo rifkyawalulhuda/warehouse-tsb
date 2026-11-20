@@ -33,15 +33,16 @@ import { QueueGrid } from './queue-grid'
 import { QueueCardList, QueueLane } from './queue-lane'
 import {
   defaultLaneKey,
-  laneTitle,
   queueLanes,
   queueRows,
   queueTotals,
   type QueueLaneKey,
+  laneTitleKey,
 } from './queue-model'
 import { QueueSummary, type QueueFilter } from './queue-summary'
 import { QueueTable } from './queue-table'
 import { useQueueView } from './use-queue-view'
+import { useT } from '@/lib/i18n'
 import { QueueViewSwitch } from './queue-view-switch'
 
 type AssignVars = { bookingId: string; dockId: number; dockCode: string }
@@ -104,6 +105,7 @@ export function QueuePage({ tab, onTabChange }: QueuePageProps) {
     queryFn: () => fetchQueue(date),
   })
   const docks = useQuery({ queryKey: ['ops', 'docks'], queryFn: fetchOpsDocks })
+  const t = useT()
 
   /** Tampilan disimpan per akun; papan lane tetap jadi bawaan. */
   const { view, setView } = useQueueView()
@@ -138,7 +140,7 @@ export function QueuePage({ tab, onTabChange }: QueuePageProps) {
     mutationFn: (bookingId: string) => unassignDock(bookingId),
     onSuccess: (booking) => {
       void queryClient.invalidateQueries({ queryKey: ['ops'] })
-      toast.success(`Penugasan ${booking.bookingCode} dibatalkan`)
+      toast.success(t('queue.unassignDone', { code: booking.bookingCode }))
     },
     onError: (error) => toast.error(apiErrorMessage(error)),
   })
@@ -150,13 +152,16 @@ export function QueuePage({ tab, onTabChange }: QueuePageProps) {
       setAssignReset((n) => n + 1)
       setPendingAssign(null)
       void queryClient.invalidateQueries({ queryKey: ['ops'] })
-      toast.success(`${booking.bookingCode} ke ${variables.dockCode}`, {
+      toast.success(t('queue.assignDone', {
+        code: booking.bookingCode,
+        dock: variables.dockCode,
+      }), {
         description:
-          'Truk menempati dock. Proses bisa dimulai dari Papan Dock.',
+          t('queue.assignDoneDesc'),
         // Pembatalan salah pilih butuh waktu membaca; 4 detik bawaan terlalu cepat.
         duration: 8_000,
         action: {
-          label: 'Urungkan',
+          label: t('queue.assignUndo'),
           onClick: () => unassign.mutate(booking.id),
         },
       })
@@ -196,8 +201,8 @@ export function QueuePage({ tab, onTabChange }: QueuePageProps) {
   return (
     <Main className='flex flex-1 flex-col gap-6'>
       <PageHeader
-        title='Antrean Hari Ini'
-        description='Truk hari ini menurut tahap: terlambat, menunggu dock, di dock, dan belum datang.'
+        title={t('queue.title')}
+        description={t('queue.description')}
         actions={
           tab === 'queue' ? (
             <>
@@ -215,10 +220,10 @@ export function QueuePage({ tab, onTabChange }: QueuePageProps) {
         }
       >
         <TabsList>
-          <TabsTrigger value='queue'>Antrean</TabsTrigger>
+          <TabsTrigger value='queue'>{t('queue.tabQueue')}</TabsTrigger>
           {canApprove && (
             <TabsTrigger value='approvals'>
-              Persetujuan
+              {t('queue.tabApprovals')}
               {pendingApprovals > 0 && (
                 <PendingApprovalBadge count={pendingApprovals} />
               )}
@@ -230,7 +235,7 @@ export function QueuePage({ tab, onTabChange }: QueuePageProps) {
       {tab === 'approvals' ? (
         <ApprovalsPanel />
       ) : queue.isPending ? (
-        <LoadingBlock label='Memuat antrean...' />
+        <LoadingBlock label={t('queue.loading')} />
       ) : queue.isError ? (
         <ErrorBlock error={queue.error} onRetry={() => void queue.refetch()} />
       ) : totals && totals.total === 0 ? (
@@ -257,8 +262,14 @@ export function QueuePage({ tab, onTabChange }: QueuePageProps) {
 
           <p aria-live='polite' className='sr-only'>
             {view === 'board' && filteredLane
-              ? `${filteredLane.bookings.length} truk di tahap ${filteredLane.title}`
-              : `${rows.length} truk ditampilkan dari ${totals?.total ?? 0} hari ini`}
+              ? t('queue.srInLane', {
+                  count: filteredLane.bookings.length,
+                  lane: t(filteredLane.titleKey),
+                })
+              : t('queue.srFiltered', {
+                  shown: rows.length,
+                  total: totals?.total ?? 0,
+                })}
           </p>
 
           {view !== 'board' && rows.length === 0 ? (
@@ -308,7 +319,7 @@ export function QueuePage({ tab, onTabChange }: QueuePageProps) {
                     value={lane.key}
                     className='shrink-0 gap-1.5'
                   >
-                    {lane.shortTitle}
+                    {t(lane.shortTitleKey)}
                     <span className='text-xs text-muted-foreground tabular-nums'>
                       {lane.bookings.length}
                     </span>
@@ -335,16 +346,22 @@ export function QueuePage({ tab, onTabChange }: QueuePageProps) {
         }}
         title={
           pendingAssign
-            ? `Tugaskan ke ${dockOptionLabel(pendingAssign.dock)}?`
+            ? t('queue.confirmAssignTitle', {
+                dock: dockOptionLabel(pendingAssign.dock),
+              })
             : ''
         }
         desc={
           pendingAssign
-            ? `${pendingAssign.booking.bookingCode} · ${pendingAssign.booking.customer.name} · ${pendingAssign.booking.licensePlate ?? 'tanpa plat'} akan menempati dock ini.`
+            ? t('queue.confirmAssignDesc', {
+                code: pendingAssign.booking.bookingCode,
+                customer: pendingAssign.booking.customer.name,
+                plate: pendingAssign.booking.licensePlate ?? t('queue.noPlate'),
+              })
             : ''
         }
-        confirmText='Ya, tugaskan'
-        cancelBtnText='Batal'
+        confirmText={t('queue.confirmAssign')}
+        cancelBtnText={t('queue.cancel')}
         isLoading={assign.isPending}
         handleConfirm={() =>
           pendingAssign &&
@@ -359,14 +376,14 @@ export function QueuePage({ tab, onTabChange }: QueuePageProps) {
       <ConfirmDialog
         open={noShowTarget !== null}
         onOpenChange={(open) => !open && setNoShowTarget(null)}
-        title='Tandai no-show?'
+        title={t('queue.confirmNoShowTitle')}
         desc={
           noShowTarget
-            ? `Booking ${noShowTarget.bookingCode} akan ditandai tidak datang dan slotnya dikembalikan.`
+            ? t('queue.confirmNoShowDesc', { code: noShowTarget.bookingCode })
             : ''
         }
-        confirmText='Ya, tandai no-show'
-        cancelBtnText='Batal'
+        confirmText={t('queue.confirmNoShow')}
+        cancelBtnText={t('common.cancel')}
         destructive
         isLoading={noShow.isPending}
         handleConfirm={() => noShowTarget && noShow.mutate(noShowTarget.id)}
@@ -386,20 +403,21 @@ function NoRows({
   filter: QueueFilter
   onReset: () => void
 }) {
+  const t = useT()
   return (
     <div className='flex flex-col items-center gap-3 rounded-xl border border-dashed px-6 py-10 text-center'>
       <SearchX className='size-8 text-muted-foreground/70' aria-hidden />
       <div className='space-y-1'>
-        <p className='font-medium'>Tidak ada truk di tahap ini</p>
+        <p className='font-medium'>{t('queue.laneEmptyTitle')}</p>
         <p className='max-w-sm text-sm text-muted-foreground'>
           {filter === 'all'
-            ? 'Belum ada truk yang cocok pada tanggal ini.'
-            : `Tidak satu pun truk berada di tahap ${laneTitle[filter]} pada tanggal ini.`}
+            ? t('queue.noRowsAll')
+            : t('queue.noRowsLane', { lane: t(laneTitleKey[filter]) })}
         </p>
       </div>
       {filter !== 'all' && (
         <Button variant='outline' onClick={onReset}>
-          Tampilkan semua tahap
+          {t('queue.showAllLanes')}
         </Button>
       )}
     </div>
@@ -409,25 +427,25 @@ function NoRows({
 /** Hari tanpa satu pun booking: jelaskan, jangan tampilkan empat kotak kosong. */
 function EmptyDay({ date, onToday }: { date: string; onToday: () => void }) {
   const isToday = date === todayISO()
+  const t = useT()
 
   return (
     <div className='flex flex-col items-center gap-3 rounded-xl border border-dashed px-6 py-12 text-center'>
       <CalendarCheck2 className='size-8 text-muted-foreground/70' aria-hidden />
       <div className='space-y-1'>
-        <p className='font-medium'>Tidak ada antrean untuk tanggal ini</p>
+        <p className='font-medium'>{t('queue.emptyDayTitle')}</p>
         <p className='max-w-sm text-sm text-muted-foreground'>
-          Belum ada booking yang dijadwalkan pada {date}. Pilih tanggal lain,
-          atau lihat booking yang menunggu persetujuan.
+          {t('queue.emptyDayBody', { date })}
         </p>
       </div>
       <div className='flex flex-wrap items-center justify-center gap-2'>
         {!isToday && (
           <Button variant='outline' onClick={onToday}>
-            Hari ini
+            {t('queue.today')}
           </Button>
         )}
         <Button asChild variant='ghost'>
-          <Link to='/bookings'>Lihat semua booking</Link>
+          <Link to='/bookings'>{t('queue.viewAllBookings')}</Link>
         </Button>
       </div>
     </div>

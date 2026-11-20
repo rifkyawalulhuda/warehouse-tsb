@@ -342,9 +342,15 @@ export function fetchKpi(from: string, to: string, customerId?: string) {
   })
 }
 
-export function reportExportUrl(from: string, to: string, customerId?: string) {
+export function reportExportUrl(
+  from: string,
+  to: string,
+  customerId?: string,
+  lang?: string
+) {
   const params = new URLSearchParams({ from, to })
   if (customerId) params.set('customerId', customerId)
+  if (lang) params.set('lang', lang)
   return `${api.defaults.baseURL}/reports/export.xlsx?${params.toString()}`
 }
 
@@ -361,8 +367,9 @@ export function fetchMyReport(from: string, to: string) {
   })
 }
 
-export function myReportExportUrl(from: string, to: string) {
+export function myReportExportUrl(from: string, to: string, lang?: string) {
   const params = new URLSearchParams({ from, to })
+  if (lang) params.set('lang', lang)
   return `${api.defaults.baseURL}/reports/my/export.xlsx?${params.toString()}`
 }
 

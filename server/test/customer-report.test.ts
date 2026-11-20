@@ -325,10 +325,10 @@ describe('laporan customer: hitungan KPI', () => {
 })
 
 describe('ekspor Excel laporan customer', () => {
-  function download(cookie: string) {
+  function download(cookie: string, lang?: string) {
     return request(app)
       .get('/api/reports/my/export.xlsx')
-      .query({ from: DAY, to: DAY })
+      .query({ from: DAY, to: DAY, ...(lang ? { lang } : {}) })
       .set('Cookie', cookie)
       .buffer(true)
       .parse((response, callback) => {
@@ -375,5 +375,33 @@ describe('ekspor Excel laporan customer', () => {
     expect(detail.getCell('K2').value).toMatch(
       /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/
     )
+  })
+
+  it('menerjemahkan nama sheet dan label status saat diminta Inggris', async () => {
+    const mine = await createBooking(customerCookie, {
+      referenceDocNo: 'DO-ALPHA',
+    })
+    await finishBooking(mine.id)
+
+    const response = await download(customerCookie, 'en')
+    expect(response.status).toBe(200)
+    expect(response.headers['content-disposition']).toContain(
+      'report-CUST-001'
+    )
+
+    const workbook = new ExcelJS.Workbook()
+    await workbook.xlsx.load(response.body as Buffer)
+
+    expect(workbook.worksheets.map((sheet) => sheet.name)).toEqual([
+      'Summary',
+      'Detail',
+      'Per Day',
+    ])
+
+    const summary = workbook.getWorksheet('Summary')!
+    expect(summary.getCell('A2').value).toBe('Company')
+
+    const detail = workbook.getWorksheet('Detail')!
+    expect(detail.getCell('I2').value).toBe('Checked out')
   })
 })

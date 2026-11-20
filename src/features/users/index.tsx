@@ -9,6 +9,7 @@ import { apiErrorMessage } from '@/lib/api/client'
 import { fetchUsers, updateUser } from '@/lib/api/endpoints'
 import type { ManagedUser, Role } from '@/lib/api/types'
 import { formatDate, roleLabels } from '@/lib/format'
+import { useT } from '@/lib/i18n'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -46,6 +47,7 @@ import { EditUserDialog } from './edit-user-dialog'
 const ROLES: Role[] = ['ADMIN', 'GATE_OFFICER', 'CHECKER']
 
 export function UsersPage() {
+  const t = useT()
   const currentUser = useAuthStore((state) => state.user)
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -94,16 +96,16 @@ export function UsersPage() {
   const columns: ColumnDef<ManagedUser>[] = [
     {
       accessorKey: 'name',
-      meta: { label: 'Nama', cellClassName: 'font-medium' },
+      meta: { label: t('users.col.name'), cellClassName: 'font-medium' },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Nama' />
+        <DataTableColumnHeader column={column} title={t('users.col.name')} />
       ),
       cell: ({ row }) => (
         <>
           {row.original.name}
           {row.original.id === currentUser?.id && (
             <Badge variant='secondary' className='ms-2'>
-              Anda
+              {t('users.you')}
             </Badge>
           )}
         </>
@@ -111,28 +113,34 @@ export function UsersPage() {
     },
     {
       accessorKey: 'email',
-      meta: { label: 'Email', cellClassName: 'text-sm text-muted-foreground' },
+      meta: {
+        label: t('users.col.email'),
+        cellClassName: 'text-sm text-muted-foreground',
+      },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Email' />
+        <DataTableColumnHeader column={column} title={t('users.col.email')} />
       ),
     },
     {
       accessorKey: 'phone',
-      meta: { label: 'No. HP', cellClassName: 'text-sm text-muted-foreground' },
+      meta: {
+        label: t('users.col.phone'),
+        cellClassName: 'text-sm text-muted-foreground',
+      },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='No. HP' />
+        <DataTableColumnHeader column={column} title={t('users.col.phone')} />
       ),
       cell: ({ row }) =>
         row.original.phone || (
-          <span className='text-muted-foreground'>Belum diisi</span>
+          <span className='text-muted-foreground'>{t('users.notFilled')}</span>
         ),
     },
     {
       id: 'role',
       accessorFn: (user) => roleLabels[user.role],
-      meta: { label: 'Peran' },
+      meta: { label: t('users.col.role') },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Peran' />
+        <DataTableColumnHeader column={column} title={t('users.col.role')} />
       ),
       cell: ({ row }) => (
         <Badge variant='outline'>{roleLabels[row.original.role]}</Badge>
@@ -143,23 +151,28 @@ export function UsersPage() {
       accessorFn: (user) => user.canApproveBooking,
       enableGlobalFilter: false,
       meta: {
-        label: 'Boleh menyetujui',
+        label: t('users.col.approve'),
         headerClassName: 'text-center',
         cellClassName: 'text-center',
       },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Boleh menyetujui' />
+        <DataTableColumnHeader
+          column={column}
+          title={t('users.col.approve')}
+        />
       ),
       cell: ({ row }) =>
         row.original.role === 'ADMIN' ? (
           // Admin selalu berhak; switch dimatikan agar tidak terlihat seolah
           // masih bisa dicabut.
-          <span className='text-xs text-muted-foreground'>Otomatis</span>
+          <span className='text-xs text-muted-foreground'>
+            {t('users.auto')}
+          </span>
         ) : (
           <Switch
             checked={row.original.canApproveBooking}
             disabled={toggleApprove.isPending}
-            title='Izinkan pengguna ini menyetujui booking'
+            title={t('users.approveTitle')}
             onCheckedChange={(checked) =>
               toggleApprove.mutate({
                 id: row.original.id,
@@ -172,11 +185,11 @@ export function UsersPage() {
     {
       accessorKey: 'createdAt',
       meta: {
-        label: 'Dibuat',
+        label: t('users.col.created'),
         cellClassName: 'text-sm text-muted-foreground',
       },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Dibuat' />
+        <DataTableColumnHeader column={column} title={t('users.col.created')} />
       ),
       cell: ({ row }) => formatDate(row.original.createdAt),
     },
@@ -185,19 +198,19 @@ export function UsersPage() {
       enableSorting: false,
       enableHiding: false,
       meta: {
-        label: 'Aksi',
+        label: t('users.col.actions'),
         headerClassName: 'text-right',
         cellClassName: 'text-right',
       },
-      header: () => <span>Aksi</span>,
+      header: () => <span>{t('users.col.actions')}</span>,
       cell: ({ row }) => (
         <Button
           size='sm'
           variant='outline'
           title={
             row.original.role === 'CUSTOMER'
-              ? 'Akun customer diubah dari Master Data Customer'
-              : 'Ubah data pengguna'
+              ? t('users.editBlocked')
+              : t('users.edit')
           }
           // Nama, email, HP, peran, dan password akun customer dikelola di tab
           // Customer. Satu-satunya "Ubah" yang bermakna di sini adalah status
@@ -206,7 +219,7 @@ export function UsersPage() {
           onClick={() => setEditing(row.original)}
         >
           <PencilLine />
-          Ubah
+          {t('users.action')}
         </Button>
       ),
     },
@@ -215,12 +228,12 @@ export function UsersPage() {
       accessorFn: (user) => user.isActive,
       enableGlobalFilter: false,
       meta: {
-        label: 'Aktif',
+        label: t('users.col.active'),
         headerClassName: 'text-end',
         cellClassName: 'text-end',
       },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Aktif' />
+        <DataTableColumnHeader column={column} title={t('users.col.active')} />
       ),
       cell: ({ row }) => (
         <Switch
@@ -230,7 +243,7 @@ export function UsersPage() {
           }
           title={
             row.original.id === currentUser?.id
-              ? 'Akun Anda sendiri tidak bisa dinonaktifkan'
+              ? t('users.deactivateSelf')
               : undefined
           }
           onCheckedChange={(checked) =>
@@ -244,8 +257,8 @@ export function UsersPage() {
   return (
     <Main className='flex flex-1 flex-col gap-6'>
       <PageHeader
-        title='Manajemen Pengguna'
-        description='Akun Admin, Security, dan Checker. Akun Customer dikelola di Master Data Customer.'
+        title={t('users.title')}
+        description={t('users.description')}
         actions={
           <div className='flex flex-wrap gap-2'>
             <Button
@@ -255,10 +268,10 @@ export function UsersPage() {
                 navigate({ to: '/master', search: { tab: 'customers' } })
               }
             >
-              <Factory /> Master Data Customer
+              <Factory /> {t('users.openMasterData')}
             </Button>
             <Button size='sm' onClick={() => setCreateOpen(true)}>
-              <Plus /> Tambah pengguna
+              <Plus /> {t('users.create')}
             </Button>
           </div>
         }
@@ -266,9 +279,11 @@ export function UsersPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className='text-base'>Daftar akun staf</CardTitle>
+          <CardTitle className='text-base'>{t('users.listTitle')}</CardTitle>
           <CardDescription>
-            {users.data ? `${users.data.length} akun terdaftar.` : 'Memuat...'}
+            {users.data
+              ? t('users.count', { count: users.data.length })
+              : t('common.loading')}
           </CardDescription>
         </CardHeader>
         <CardContent className='space-y-4'>
@@ -278,7 +293,7 @@ export function UsersPage() {
               <Input
                 value={q}
                 onChange={(event) => setQ(event.target.value)}
-                placeholder='Cari nama atau email'
+                placeholder={t('users.searchPlaceholder')}
                 className='ps-8'
               />
             </div>
@@ -290,7 +305,7 @@ export function UsersPage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value='ALL'>Semua peran</SelectItem>
+                <SelectItem value='ALL'>{t('users.allRoles')}</SelectItem>
                 {ROLES.map((item) => (
                   <SelectItem key={item} value={item}>
                     {roleLabels[item]}
@@ -301,7 +316,7 @@ export function UsersPage() {
           </div>
 
           {users.isPending ? (
-            <LoadingBlock label='Memuat pengguna...' />
+            <LoadingBlock label={t('users.loading')} />
           ) : users.isError ? (
             <ErrorBlock
               error={users.error}
@@ -312,7 +327,7 @@ export function UsersPage() {
               columns={columns}
               data={users.data}
               getRowId={(user) => user.id}
-              emptyMessage='Tidak ada akun staf. Tambah pengguna untuk memulai.'
+              emptyMessage={t('users.empty')}
             />
           )}
         </CardContent>

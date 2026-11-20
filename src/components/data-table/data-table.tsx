@@ -13,6 +13,7 @@ import {
   type SortingState,
   type VisibilityState,
 } from '@tanstack/react-table'
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import {
   Table,
@@ -66,7 +67,7 @@ export type DataTableProps<TData> = {
 export function DataTable<TData>({
   columns,
   data,
-  emptyMessage = 'Tidak ada data.',
+  emptyMessage,
   searchPlaceholder,
   filters = [],
   pageSize = 10,
@@ -79,6 +80,7 @@ export function DataTable<TData>({
   groupLabel,
   className,
 }: DataTableProps<TData>) {
+  const t = useT()
   const [sorting, setSorting] = useState<SortingState>(initialSorting)
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [globalFilter, setGlobalFilter] = useState('')
@@ -178,7 +180,7 @@ export function DataTable<TData>({
                 colSpan={totalColumns}
                 className='py-8 text-center text-sm text-muted-foreground'
               >
-                {emptyMessage}
+                {emptyMessage ?? t('table.empty')}
               </TableCell>
             </TableRow>
           ) : groups ? (
@@ -215,7 +217,7 @@ export function DataTable<TData>({
         <DataTableBulkActions
           count={selectedIds.length}
           onClear={() => setSelection({})}
-          entityName='baris'
+          entityName={t('table.entityRows')}
         >
           {renderBulkActions(selectedIds, () => setSelection({}))}
         </DataTableBulkActions>

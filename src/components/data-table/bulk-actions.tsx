@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { X } from 'lucide-react'
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -29,6 +30,7 @@ export function DataTableBulkActions({
   entityName,
   children,
 }: DataTableBulkActionsProps): React.ReactNode | null {
+  const t = useT()
   const toolbarRef = useRef<HTMLDivElement>(null)
   const [announcement, setAnnouncement] = useState('')
 
@@ -36,12 +38,12 @@ export function DataTableBulkActions({
     if (count === 0) return
     queueMicrotask(() => {
       setAnnouncement(
-        `${count} ${entityName} dipilih. Bilah aksi massal tersedia.`
+        t('table.bulkAnnounce', { count, entity: entityName })
       )
     })
     const timer = setTimeout(() => setAnnouncement(''), 3000)
     return () => clearTimeout(timer)
-  }, [count, entityName])
+  }, [count, entityName, t])
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
     const buttons = toolbarRef.current?.querySelectorAll('button')
@@ -97,7 +99,7 @@ export function DataTableBulkActions({
       <div
         ref={toolbarRef}
         role='toolbar'
-        aria-label={`Aksi massal untuk ${count} ${entityName} terpilih`}
+        aria-label={t('table.bulkAria', { count, entity: entityName })}
         aria-describedby='bulk-actions-description'
         tabIndex={-1}
         onKeyDown={handleKeyDown}
@@ -121,14 +123,14 @@ export function DataTableBulkActions({
                 size='icon'
                 onClick={onClear}
                 className='size-6 rounded-full'
-                aria-label='Kosongkan pilihan'
-                title='Kosongkan pilihan (Escape)'
+                aria-label={t('table.clearSelection')}
+                title={t('table.clearSelectionHint')}
               >
                 <X />
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Kosongkan pilihan (Escape)</p>
+              <p>{t('table.clearSelectionHint')}</p>
             </TooltipContent>
           </Tooltip>
 
@@ -145,11 +147,11 @@ export function DataTableBulkActions({
             <Badge
               variant='default'
               className='min-w-8 rounded-lg tabular-nums'
-              aria-label={`${count} dipilih`}
+              aria-label={t('table.selectedCount', { count })}
             >
               {count}
             </Badge>{' '}
-            <span className='text-muted-foreground'>dipilih</span>
+            <span className='text-muted-foreground'>{t('table.selected')}</span>
           </div>
 
           <Separator

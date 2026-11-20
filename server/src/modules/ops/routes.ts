@@ -3,7 +3,7 @@ import { z } from 'zod'
 import type { BookingStatus, Prisma } from '@prisma/client'
 import { prisma, type Tx } from '../../lib/prisma'
 import { parse } from '../../lib/validate'
-import { badRequest, conflict, notFound } from '../../lib/http-error'
+import { HttpError, badRequest, conflict, notFound } from '../../lib/http-error'
 import { pathParam } from '../../lib/params'
 import { requireAuth, requireRole } from '../../middleware/auth'
 import { getSettings, toWindow } from '../../lib/settings'
@@ -43,6 +43,19 @@ function ticketNotFoundMessage(input: string): string {
 }
 
 /**
+ * Galat 404 untuk masukan gate yang tidak menemukan booking.
+ *
+ * Kodenya dibedakan dari `NOT_FOUND` umum supaya klien bisa menerjemahkan
+ * sendiri — pesan di sini hanya cadangan yang ikut tercatat di riwayat
+ * pemindaian. Kode booking yang salah ketik dan QR asing adalah dua kesalahan
+ * berbeda bagi petugas, jadi jangan disamakan.
+ */
+function ticketNotFound(input: string): HttpError {
+  const code = isBookingCode(input) ? 'BOOKING_NOT_FOUND' : 'QR_NOT_FOUND'
+  return new HttpError(404, code, ticketNotFoundMessage(input))
+}
+
+/**
  * Ambil booking untuk aksi gate dari isi layar gate.
  *
  * Menerima dua bentuk: token QR hasil pindai kamera, dan kode booking
@@ -57,7 +70,7 @@ async function loadBookingForGate(input: string) {
     where: scanInputWhere(input),
     include: { timeLog: true, truckType: true, assignedDock: true },
   })
-  if (!booking) throw notFound(ticketNotFoundMessage(input))
+  if (!booking) throw ticketNotFound(input)
   return booking
 }
 
@@ -191,7 +204,7 @@ opsRouter.get('/scan/:qrToken', requireRole('GATE_OFFICER', 'CHECKER'), async (r
     if (!booking) {
       const message = ticketNotFoundMessage(qrToken)
       await recordRejectedScan({ req, qrToken, reason: 'NOT_FOUND', message })
-      throw notFound(message)
+      throw ticketNotFound(qrToken)
     }
 
     const settings = await getSettings()
@@ -278,7 +291,7 @@ opsRouter.get(
 
       const booking = await getBookingByScanInput(qrToken)
       if (!booking) {
-        throw notFound(ticketNotFoundMessage(qrToken))
+        throw ticketNotFound(qrToken)
       }
 
       const waiting = ['CHECKED_IN_ON_TIME', 'LATE_WAITING_LIST'].includes(

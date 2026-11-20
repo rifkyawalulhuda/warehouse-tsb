@@ -1,3 +1,5 @@
+import type { MessageKey } from '@/lib/i18n'
+
 /**
  * Tampilan papan dock. Ketiganya menampilkan data yang sama — yang berbeda
  * hanya kerapatan dan seberapa banyak detail per dock. Pilihan disimpan per
@@ -9,10 +11,11 @@ export type DockView = (typeof dockViews)[number]
 
 export const defaultDockView: DockView = 'cards'
 
-export const dockViewLabels: Record<DockView, string> = {
-  cards: 'Kartu',
-  table: 'Tabel',
-  grid: 'Grid',
+/** Kunci kamus, bukan teks: dipakai juga untuk aria-label. */
+export const dockViewLabels: Record<DockView, MessageKey> = {
+  cards: 'dock.view.cards',
+  table: 'dock.view.table',
+  grid: 'dock.view.grid',
 }
 
 const storagePrefix = 'tsb.dock.view'

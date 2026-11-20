@@ -3,6 +3,7 @@ import { CalendarClock, Download, Plus } from 'lucide-react'
 import type { Booking } from '@/lib/api/types'
 import { activityLabels, formatDate, formatTime } from '@/lib/format'
 import { reportExportUrl } from '@/lib/api/endpoints'
+import { useT } from '@/lib/i18n'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -39,29 +40,34 @@ export function ScheduleTable({
   rows: Booking[]
   onAssign?: (booking: Booking) => void
 }) {
+  const t = useT()
+
   return (
     <Card className='gap-4'>
       <CardHeader className='flex-row items-start justify-between gap-3 space-y-0'>
         <div className='min-w-0 space-y-1.5'>
           <CardTitle className='flex items-center gap-2'>
             <CalendarClock className='size-4 shrink-0 text-muted-foreground' />
-            Jadwal Hari Ini
+            {t('dashboard.scheduleTitle')}
           </CardTitle>
           <CardDescription>
-            {rows.length} booking aktif · {formatDate(`${date}T00:00:00.000Z`)}
+            {t('dashboard.scheduleDesc', {
+              count: rows.length,
+              date: formatDate(`${date}T00:00:00.000Z`),
+            })}
           </CardDescription>
         </div>
         <div className='flex shrink-0 items-center gap-2'>
           <Button variant='outline' size='sm' asChild>
-            <a href={reportExportUrl(date, date)} aria-label='Ekspor jadwal hari ini'>
+            <a href={reportExportUrl(date, date)} aria-label={t('dashboard.exportAria')}>
               <Download className='size-3.5' />
-              <span className='hidden sm:inline'>Export</span>
+              <span className='hidden sm:inline'>{t('dashboard.export')}</span>
             </a>
           </Button>
           <Button size='sm' asChild>
-            <Link to='/queue' aria-label='Buka antrean'>
+            <Link to='/queue' aria-label={t('dashboard.openQueue')}>
               <Plus className='size-3.5' />
-              <span className='hidden sm:inline'>Buka antrean</span>
+              <span className='hidden sm:inline'>{t('dashboard.openQueue')}</span>
             </Link>
           </Button>
         </div>
@@ -71,13 +77,23 @@ export function ScheduleTable({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className='hidden ps-6 sm:table-cell'>Slot</TableHead>
-                <TableHead className='ps-4 sm:ps-2'>Truk</TableHead>
-                <TableHead className='hidden 2xl:table-cell'>Customer</TableHead>
-                <TableHead className='hidden xl:table-cell'>Aktivitas</TableHead>
-                <TableHead className='hidden md:table-cell'>Status</TableHead>
-                <TableHead className='hidden md:table-cell'>Dock</TableHead>
-                <TableHead className='pe-4 text-right sm:pe-6'>Aksi</TableHead>
+                <TableHead className='hidden ps-6 sm:table-cell'>
+                  {t('dashboard.colSlot')}
+                </TableHead>
+                <TableHead className='ps-4 sm:ps-2'>{t('dashboard.colTruck')}</TableHead>
+                <TableHead className='hidden 2xl:table-cell'>
+                  {t('dashboard.colCustomer')}
+                </TableHead>
+                <TableHead className='hidden xl:table-cell'>
+                  {t('dashboard.colActivity')}
+                </TableHead>
+                <TableHead className='hidden md:table-cell'>
+                  {t('dashboard.colStatus')}
+                </TableHead>
+                <TableHead className='hidden md:table-cell'>{t('dashboard.colDock')}</TableHead>
+                <TableHead className='pe-4 text-right sm:pe-6'>
+                  {t('dashboard.colAction')}
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -95,7 +111,7 @@ export function ScheduleTable({
                         {booking.licensePlate ?? booking.bookingCode}
                       </div>
                       <div className='text-xs text-muted-foreground'>
-                        {booking.driverName ?? 'Supir belum diisi'}
+                        {booking.driverName ?? t('dashboard.driverEmpty')}
                       </div>
                       <div className='text-xs tabular-nums text-muted-foreground sm:hidden'>
                         {formatTime(booking.startTime)} – {formatTime(booking.endTime)}
@@ -133,11 +149,11 @@ export function ScheduleTable({
                             variant='outline'
                             onClick={() => onAssign(booking)}
                           >
-                            Assign
+                            {t('dashboard.assign')}
                           </Button>
                         ) : (
                           <Button size='sm' variant='outline' asChild>
-                            <Link to='/queue'>Assign</Link>
+                            <Link to='/queue'>{t('dashboard.assign')}</Link>
                           </Button>
                         )
                       ) : (
@@ -151,7 +167,7 @@ export function ScheduleTable({
                               ulang dokumen, dan riwayat SPA ikut hilang sehingga
                               tombol kembali di bilah atas mobile tidak muncul. */}
                           <Link to='/bookings/$bookingId' params={{ bookingId: booking.id }}>
-                            Detail
+                            {t('dashboard.detail')}
                           </Link>
                         </Button>
                       )}
@@ -165,7 +181,7 @@ export function ScheduleTable({
                     colSpan={7}
                     className='h-24 text-center text-sm text-muted-foreground'
                   >
-                    Belum ada booking aktif untuk tanggal ini.
+                    {t('dashboard.scheduleEmpty')}
                   </TableCell>
                 </TableRow>
               ) : null}

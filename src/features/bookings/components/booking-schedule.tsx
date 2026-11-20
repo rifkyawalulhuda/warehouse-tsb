@@ -3,6 +3,7 @@ import { MapPin } from 'lucide-react'
 import type { Booking } from '@/lib/api/types'
 import { activityLabels, formatTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { useLocale, useT } from '@/lib/i18n'
 import { ApprovalBadge } from '@/components/approval-badge'
 import { StatusBadge } from '@/components/status-badge'
 import { bookingUrgency, dockLabel, type BookingDay } from '../booking-view'
@@ -15,6 +16,8 @@ import { bookingUrgency, dockLabel, type BookingDay } from '../booking-view'
  * jam ke tanggalnya sehingga jarak antar-booking terbaca sebagai waktu.
  */
 export function BookingSchedule({ days, now }: { days: BookingDay[]; now: Date }) {
+  const t = useT()
+
   return (
     <div className='space-y-6'>
       {days.map((day) => (
@@ -25,15 +28,12 @@ export function BookingSchedule({ days, now }: { days: BookingDay[]; now: Date }
             </h2>
             <span className='h-px flex-1 bg-border' aria-hidden />
             <span className='text-xs text-muted-foreground tabular-nums'>
-              {day.items.length} booking
+              {t('bookings.count', { count: day.items.length })}
             </span>
           </div>
 
           <ol className='relative space-y-2 ps-4'>
-            <span
-              aria-hidden
-              className='absolute inset-y-2 start-[3px] w-px bg-border'
-            />
+            <span aria-hidden className='absolute inset-y-2 start-[3px] w-px bg-border' />
             {day.items.map((booking) => (
               <ScheduleEntry key={booking.id} booking={booking} now={now} />
             ))}
@@ -45,7 +45,9 @@ export function BookingSchedule({ days, now }: { days: BookingDay[]; now: Date }
 }
 
 function ScheduleEntry({ booking, now }: { booking: Booking; now: Date }) {
-  const urgency = bookingUrgency(booking, now)
+  const locale = useLocale()
+  const t = useT()
+  const urgency = bookingUrgency(booking, now, locale)
   const isLive = urgency.key === 'in-progress'
   const isImminent = urgency.key === 'imminent'
 
@@ -79,10 +81,10 @@ function ScheduleEntry({ booking, now }: { booking: Booking; now: Date }) {
           <span className='mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground'>
             <span className='inline-flex items-center gap-1 whitespace-nowrap'>
               <MapPin className='size-3' aria-hidden />
-              {dockLabel(booking)}
+              {dockLabel(booking, locale)}
             </span>
             <span aria-hidden>·</span>
-            <span className='truncate'>{booking.licensePlate ?? 'Plat belum diisi'}</span>
+            <span className='truncate'>{booking.licensePlate ?? t('bookings.notFilled')}</span>
           </span>
           <span className='mt-1 flex flex-wrap items-center gap-1 sm:hidden'>
             <StatusBadge status={booking.status} />

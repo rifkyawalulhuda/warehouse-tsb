@@ -1,6 +1,7 @@
 import { Check, Monitor, Moon, Sun } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/context/theme-provider'
+import { useT } from '@/lib/i18n'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,9 +18,9 @@ import {
 } from '@/components/ui/sidebar'
 
 const THEME_OPTIONS = [
-  { value: 'light', label: 'Terang', icon: Sun },
-  { value: 'dark', label: 'Gelap', icon: Moon },
-  { value: 'system', label: 'Ikuti sistem', icon: Monitor },
+  { value: 'light', labelKey: 'theme.light', icon: Sun },
+  { value: 'dark', labelKey: 'theme.dark', icon: Moon },
+  { value: 'system', labelKey: 'theme.system', icon: Monitor },
 ] as const
 
 /**
@@ -30,6 +31,7 @@ const THEME_OPTIONS = [
 export function ThemeMenu() {
   const { theme, setTheme } = useTheme()
   const { isMobile } = useSidebar()
+  const t = useT()
   const current =
     THEME_OPTIONS.find((option) => option.value === theme) ?? THEME_OPTIONS[2]
   const CurrentIcon = current.icon
@@ -41,11 +43,13 @@ export function ThemeMenu() {
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
               size='sm'
-              tooltip='Tema tampilan'
+              tooltip={t('theme.label')}
               className='data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
             >
               <CurrentIcon />
-              <span className='truncate'>Tema: {current.label}</span>
+              <span className='truncate'>
+                {t('theme.current', { theme: t(current.labelKey) })}
+              </span>
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -55,13 +59,13 @@ export function ThemeMenu() {
             sideOffset={4}
           >
             <DropdownMenuLabel className='text-xs font-normal text-muted-foreground'>
-              Tampilan
+              {t('theme.appearance')}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            {THEME_OPTIONS.map(({ value, label, icon: Icon }) => (
+            {THEME_OPTIONS.map(({ value, labelKey, icon: Icon }) => (
               <DropdownMenuItem key={value} onClick={() => setTheme(value)}>
                 <Icon />
-                {label}
+                {t(labelKey)}
                 <Check
                   size={14}
                   className={cn('ms-auto', theme !== value && 'hidden')}

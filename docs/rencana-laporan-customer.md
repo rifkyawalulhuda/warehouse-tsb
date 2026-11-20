@@ -154,7 +154,13 @@ Nama berkas: `laporan-<kode-customer>-<from>-<to>.xlsx`.
 | `per Hari` | Tanggal, total, selesai, terlambat, rata-rata tunggu/proses/turnaround, rata-rata pemakaian slot |
 
 Header tebal, baris pertama dibekukan, `autoFilter` pada sheet `Detail`. Status dan aktivitas
-ditulis dalam bahasa Indonesia, bukan enum mentah.
+ditulis sebagai label, bukan enum mentah.
+
+Bahasa isi berkas mengikuti parameter `lang` (`id` | `en`) yang dikirim halaman pemanggil dari
+bahasa antarmuka yang sedang aktif; tanpa parameter, Indonesia. Nama sheet, nama kolom, nama
+berkas (`laporan-…` / `report-…`), dan label status ikut berganti — berkas yang diunduh tidak
+pernah bercampur bahasa dengan layar yang membuatnya. Labelnya tinggal di
+`server/src/modules/reports/labels.ts`.
 
 ---
 

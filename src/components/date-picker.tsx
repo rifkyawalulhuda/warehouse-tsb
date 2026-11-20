@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { addYears, format, startOfMonth } from 'date-fns'
-import { id as localeId } from 'date-fns/locale'
+import { id as localeId, enGB as localeEn } from 'date-fns/locale'
 import { Calendar as CalendarIcon } from 'lucide-react'
+import { useLocale, useT } from '@/lib/i18n'
 import { dateToISO, formatDate, isoToDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -43,7 +44,7 @@ export function DatePicker({
   onChange,
   min,
   max,
-  placeholder = 'Pilih tanggal',
+  placeholder,
   className,
   id,
   name,
@@ -54,6 +55,9 @@ export function DatePicker({
   'aria-describedby': describedBy,
   ref,
 }: DatePickerProps) {
+  const t = useT()
+  const locale = useLocale()
+  const dateLocale = locale === 'en' ? localeEn : localeId
   const [open, setOpen] = useState(false)
 
   const selected = value ? isoToDate(value) : undefined
@@ -89,13 +93,17 @@ export function DatePicker({
           )}
         >
           <CalendarIcon data-icon='inline-start' />
-          {value ? formatDate(value) : <span>{placeholder}</span>}
+          {value ? (
+            formatDate(value)
+          ) : (
+            <span>{placeholder ?? t('picker.selectDate')}</span>
+          )}
         </Button>
       </PopoverTrigger>
       <PopoverContent className='w-auto p-0' align='start'>
         <Calendar
           mode='single'
-          locale={localeId}
+          locale={dateLocale}
           captionLayout='dropdown'
           startMonth={startMonth}
           endMonth={endMonth}
@@ -109,20 +117,22 @@ export function DatePicker({
           // Calendar memakai locale peramban, bukan `locale` yang diberikan.
           formatters={{
             formatMonthDropdown: (date) =>
-              format(date, 'MMM', { locale: localeId }),
+              format(date, 'MMM', { locale: dateLocale }),
           }}
-          // Label ARIA bawaan DayPicker berbahasa Inggris. Aplikasi ini
-          // berbahasa Indonesia, jadi pembaca layar ikut diterjemahkan.
+          // Label ARIA bawaan DayPicker berbahasa Inggris. Aplikasi ini punya
+          // dua bahasa, jadi pembaca layar ikut bahasa yang sedang dipilih.
           labels={{
-            labelPrevious: () => 'Bulan sebelumnya',
-            labelNext: () => 'Bulan berikutnya',
-            labelMonthDropdown: () => 'Pilih bulan',
-            labelYearDropdown: () => 'Pilih tahun',
-            labelWeekday: (date) => format(date, 'EEEE', { locale: localeId }),
-            labelDayButton: (date, modifiers) =>
-              `${modifiers.today ? 'Hari ini, ' : ''}${format(date, 'PPPP', {
-                locale: localeId,
-              })}`,
+            labelPrevious: () => t('picker.previousMonth'),
+            labelNext: () => t('picker.nextMonth'),
+            labelMonthDropdown: () => t('picker.selectMonth'),
+            labelYearDropdown: () => t('picker.selectYear'),
+            labelWeekday: (date) => format(date, 'EEEE', { locale: dateLocale }),
+            labelDayButton: (date, modifiers) => {
+              const label = format(date, 'PPPP', { locale: dateLocale })
+              return modifiers.today
+                ? t('picker.today', { date: label })
+                : label
+            },
           }}
           autoFocus
           onSelect={(date) => {

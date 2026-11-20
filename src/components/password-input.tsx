@@ -2,6 +2,7 @@ import * as React from 'react'
 import { Eye, EyeOff, TriangleAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useCapsLock } from '@/lib/use-caps-lock'
+import { useT } from '@/lib/i18n'
 import { Button } from './ui/button'
 
 type PasswordInputProps = Omit<
@@ -26,6 +27,7 @@ export function PasswordInput({
 }: PasswordInputProps) {
   const [showPassword, setShowPassword] = React.useState(false)
   const { capsLock, inputRef } = useCapsLock(!disabled)
+  const t = useT()
 
   // ref dari pemanggil (react-hook-form) dan ref milik hook dipakai bersamaan:
   // yang pertama untuk validasi, yang kedua untuk mendengar papan ketik.
@@ -59,7 +61,7 @@ export function PasswordInput({
         >
           {showPassword ? <Eye size={18} /> : <EyeOff size={18} />}
           <span className='sr-only'>
-            {showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+            {showPassword ? t('password.hide') : t('password.show')}
           </span>
         </Button>
       </div>
@@ -70,7 +72,7 @@ export function PasswordInput({
           className='flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-500'
         >
           <TriangleAlert className='mt-0.5 size-3.5 shrink-0' aria-hidden='true' />
-          Caps Lock menyala — password jadi huruf besar.
+          {t('password.capsLock')}
         </p>
       )}
     </div>

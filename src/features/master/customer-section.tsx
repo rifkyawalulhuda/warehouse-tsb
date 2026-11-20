@@ -15,6 +15,7 @@ import {
 } from '@/lib/api/endpoints'
 import type { Customer, CustomerAccount } from '@/lib/api/types'
 import { formatDate } from '@/lib/format'
+import { useT } from '@/lib/i18n'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -53,6 +54,7 @@ export function CustomerSection({
   onEdit: (customer: Customer) => void
   onCreate: () => void
 }) {
+  const t = useT()
   const [search, setSearch] = useState('')
 
   const customers = useQuery({
@@ -76,24 +78,24 @@ export function CustomerSection({
   const customerColumns: ColumnDef<Customer>[] = [
     {
       accessorKey: 'code',
-      meta: { label: 'Kode', cellClassName: 'font-mono text-xs' },
+      meta: { label: t('master.field.code'), cellClassName: 'font-mono text-xs' },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Kode' />
+        <DataTableColumnHeader column={column} title={t('master.field.code')} />
       ),
     },
     {
       id: 'name',
       accessorFn: (customer) => customer.name,
-      meta: { label: 'Perusahaan', cellClassName: 'font-medium' },
+      meta: { label: t('master.field.company'), cellClassName: 'font-medium' },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Perusahaan' />
+        <DataTableColumnHeader column={column} title={t('master.field.company')} />
       ),
       cell: ({ row }) => (
         <>
           {row.original.name}
           {row.original.autoApproveBooking && (
             <Badge variant='outline' className='ms-2 text-[10px]'>
-              Booking otomatis
+              {t('master.autoBooking')}
             </Badge>
           )}
         </>
@@ -102,9 +104,9 @@ export function CustomerSection({
     {
       id: 'pic',
       accessorFn: (customer) => customer.picName ?? '',
-      meta: { label: 'PIC', cellClassName: 'text-sm' },
+      meta: { label: t('master.field.pic'), cellClassName: 'text-sm' },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='PIC' />
+        <DataTableColumnHeader column={column} title={t('master.field.pic')} />
       ),
       cell: ({ row }) => (
         <>
@@ -122,12 +124,12 @@ export function CustomerSection({
       accessorFn: (customer) => customer._count?.users ?? 0,
       enableGlobalFilter: false,
       meta: {
-        label: 'Akun',
+        label: t('master.field.accounts'),
         headerClassName: 'text-center',
         cellClassName: 'text-center text-sm tabular-nums',
       },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Akun' />
+        <DataTableColumnHeader column={column} title={t('master.field.accounts')} />
       ),
       cell: ({ row }) => row.original._count?.users ?? 0,
     },
@@ -136,12 +138,12 @@ export function CustomerSection({
       accessorFn: (customer) => customer._count?.bookings ?? 0,
       enableGlobalFilter: false,
       meta: {
-        label: 'Booking',
+        label: t('master.customers.bookings'),
         headerClassName: 'text-center',
         cellClassName: 'text-center text-sm tabular-nums',
       },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Booking' />
+        <DataTableColumnHeader column={column} title={t('master.customers.bookings')} />
       ),
       cell: ({ row }) => row.original._count?.bookings ?? 0,
     },
@@ -149,9 +151,9 @@ export function CustomerSection({
       id: 'status',
       accessorFn: (customer) => customer.isActive,
       enableGlobalFilter: false,
-      meta: { label: 'Status' },
+      meta: { label: t('master.field.status') },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Status' />
+        <DataTableColumnHeader column={column} title={t('master.field.status')} />
       ),
       cell: ({ row }) => (
         <Badge
@@ -162,7 +164,7 @@ export function CustomerSection({
               : 'border-border text-muted-foreground'
           }
         >
-          {row.original.isActive ? 'Aktif' : 'Nonaktif'}
+          {row.original.isActive ? t('master.field.active') : t('master.field.inactive')}
         </Badge>
       ),
     },
@@ -171,11 +173,11 @@ export function CustomerSection({
       enableSorting: false,
       enableHiding: false,
       meta: {
-        label: 'Aksi',
+        label: t('master.field.action'),
         headerClassName: 'text-right',
         cellClassName: 'text-right',
       },
-      header: () => <span>Aksi</span>,
+      header: () => <span>{t('master.field.action')}</span>,
       cell: ({ row }) => (
         <Button
           size='sm'
@@ -183,7 +185,7 @@ export function CustomerSection({
           onClick={() => onEdit(row.original)}
         >
           <PencilLine />
-          Ubah
+          {t('master.edit')}
         </Button>
       ),
     },
@@ -192,10 +194,9 @@ export function CustomerSection({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className='text-base'>Customer</CardTitle>
+        <CardTitle className='text-base'>{t('master.tabCustomers')}</CardTitle>
         <CardDescription>
-          Perusahaan pemilik booking. Akun login customer dibuat di sini, bukan
-          di halaman Pengguna.
+          {t('master.customers.description')}
         </CardDescription>
       </CardHeader>
       <CardContent className='space-y-4'>
@@ -205,17 +206,17 @@ export function CustomerSection({
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder='Cari nama, kode, PIC, atau telepon'
+              placeholder={t('master.customers.search')}
               className='ps-8'
             />
           </div>
           <Button size='sm' onClick={onCreate}>
-            <Plus /> Tambah customer
+            <Plus /> {t('master.customers.add')}
           </Button>
         </div>
 
         {customers.isPending ? (
-          <LoadingBlock label='Memuat customer...' />
+          <LoadingBlock label={t('master.customers.loading')} />
         ) : customers.isError ? (
           <ErrorBlock
             error={customers.error}
@@ -228,8 +229,8 @@ export function CustomerSection({
             getRowId={(customer) => String(customer.id)}
             emptyMessage={
               (customers.data?.length ?? 0) === 0
-                ? 'Belum ada customer. Tambahkan satu supaya akun bisa booking.'
-                : 'Tidak ada customer yang cocok dengan pencarian.'
+                ? t('master.customers.empty')
+                : t('master.customers.emptySearch')
             }
           />
         )}
@@ -278,6 +279,7 @@ export function CustomerDialog({
   customer: Customer | null
   onDone: () => void
 }) {
+  const t = useT()
   const queryClient = useQueryClient()
   const creating = customer === null
 
@@ -346,7 +348,7 @@ export function CustomerDialog({
           })
     },
     onSuccess: () => {
-      toast.success(creating ? 'Customer dibuat' : 'Customer disimpan')
+      toast.success(creating ? t('master.customers.created') : t('master.customers.updated'))
       refresh()
       onDone()
     },
@@ -361,7 +363,7 @@ export function CustomerDialog({
         password: accountForm.password,
       }),
     onSuccess: () => {
-      toast.success('Akun customer dibuat')
+      toast.success(t('master.customers.accountCreated'))
       setAccountForm({ name: '', email: '', password: '' })
       refresh()
     },
@@ -372,7 +374,7 @@ export function CustomerDialog({
     mutationFn: ({ userId, isActive }: { userId: string; isActive: boolean }) =>
       updateCustomerAccount(customer!.id, userId, { isActive }),
     onSuccess: () => {
-      toast.success('Status akun diperbarui')
+      toast.success(t('master.customers.accountUpdated'))
       refresh()
     },
     onError: (error) => toast.error(apiErrorMessage(error)),
@@ -381,7 +383,7 @@ export function CustomerDialog({
   const removeCustomer = useMutation({
     mutationFn: () => deleteCustomer(customer!.id),
     onSuccess: () => {
-      toast.success('Customer dihapus')
+      toast.success(t('master.customers.deleted'))
       setDeleteOpen(false)
       refresh()
       onDone()
@@ -398,16 +400,16 @@ export function CustomerDialog({
   const accountColumns: ColumnDef<CustomerAccount>[] = [
     {
       accessorKey: 'name',
-      meta: { label: 'Nama', cellClassName: 'text-sm font-medium' },
+      meta: { label: t('master.field.name'), cellClassName: 'text-sm font-medium' },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Nama' />
+        <DataTableColumnHeader column={column} title={t('master.field.name')} />
       ),
     },
     {
       accessorKey: 'email',
-      meta: { label: 'Email', cellClassName: 'text-sm text-muted-foreground' },
+      meta: { label: t('master.field.email'), cellClassName: 'text-sm text-muted-foreground' },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Email' />
+        <DataTableColumnHeader column={column} title={t('master.field.email')} />
       ),
       cell: ({ row }) => (
         <>
@@ -423,12 +425,12 @@ export function CustomerDialog({
       accessorFn: (account) => account.isActive,
       enableGlobalFilter: false,
       meta: {
-        label: 'Aktif',
+        label: t('master.field.active'),
         headerClassName: 'text-end',
         cellClassName: 'text-end',
       },
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title='Aktif' />
+        <DataTableColumnHeader column={column} title={t('master.field.active')} />
       ),
       cell: ({ row }) => (
         <Switch
@@ -448,11 +450,11 @@ export function CustomerDialog({
       enableSorting: false,
       enableHiding: false,
       meta: {
-        label: 'Aksi',
+        label: t('master.field.action'),
         headerClassName: 'text-end',
         cellClassName: 'text-end',
       },
-      header: () => <span>Aksi</span>,
+      header: () => <span>{t('master.field.action')}</span>,
       cell: ({ row }) => (
         <Button
           size='sm'
@@ -460,7 +462,7 @@ export function CustomerDialog({
           onClick={() => setEditingAccount(row.original)}
         >
           <PencilLine />
-          Ubah
+          {t('master.edit')}
         </Button>
       ),
     },
@@ -471,31 +473,34 @@ export function CustomerDialog({
       <DialogContent className='max-h-[90vh] overflow-y-auto sm:max-w-2xl'>
         <DialogHeader>
           <DialogTitle>
-            {creating ? 'Tambah customer' : form.name || 'Customer'}
+            {creating ? t('master.addCustomer') : form.name || t('master.tabCustomers')}
           </DialogTitle>
           <DialogDescription>
             {creating
-              ? 'Kode customer dibuat otomatis. Akun login bisa ditambahkan setelah tersimpan.'
-              : `Kode ${customer.code} · ${detail.data?._count.bookings ?? 0} booking`}
+              ? t('master.customers.newDescription')
+              : t('master.customers.codeAndCount', {
+                  code: customer.code,
+                  count: detail.data?._count.bookings ?? 0,
+                })}
           </DialogDescription>
         </DialogHeader>
 
         <div className='grid gap-3'>
           <div className='space-y-1'>
-            <Label htmlFor='cust-name'>Nama perusahaan</Label>
+            <Label htmlFor='cust-name'>{t('master.customers.nameLabel')}</Label>
             <Input
               id='cust-name'
               value={form.name}
               onChange={(event) =>
                 setForm({ ...form, name: event.target.value })
               }
-              placeholder='PT Contoh Logistik'
+              placeholder={t('master.customers.namePlaceholder')}
             />
           </div>
 
           <div className='grid gap-3 sm:grid-cols-2'>
             <div className='space-y-1'>
-              <Label htmlFor='cust-pic'>Nama PIC</Label>
+              <Label htmlFor='cust-pic'>{t('master.customers.picLabel')}</Label>
               <Input
                 id='cust-pic'
                 value={form.picName}
@@ -505,7 +510,7 @@ export function CustomerDialog({
               />
             </div>
             <div className='space-y-1'>
-              <Label htmlFor='cust-phone'>Telepon</Label>
+              <Label htmlFor='cust-phone'>{t('master.customers.phoneLabel')}</Label>
               <Input
                 id='cust-phone'
                 value={form.phone}
@@ -518,7 +523,7 @@ export function CustomerDialog({
 
           <div className='grid gap-3 sm:grid-cols-2'>
             <div className='space-y-1'>
-              <Label htmlFor='cust-email'>Email perusahaan</Label>
+              <Label htmlFor='cust-email'>{t('master.customers.emailLabel')}</Label>
               <Input
                 id='cust-email'
                 type='email'
@@ -526,14 +531,14 @@ export function CustomerDialog({
                 onChange={(event) =>
                   setForm({ ...form, email: event.target.value })
                 }
-                placeholder='ops@perusahaan.co.id'
+                placeholder={t('master.customers.emailPlaceholder')}
               />
               <p className='text-xs text-muted-foreground'>
-                Bukan email login. Login memakai email akun di bawah.
+                {t('master.customers.emailHint')}
               </p>
             </div>
             <div className='space-y-1'>
-              <Label htmlFor='cust-tax'>NPWP</Label>
+              <Label htmlFor='cust-tax'>{t('master.customers.taxIdLabel')}</Label>
               <Input
                 id='cust-tax'
                 value={form.taxId}
@@ -546,7 +551,7 @@ export function CustomerDialog({
 
           <div className='grid gap-3 sm:grid-cols-2'>
             <div className='space-y-1'>
-              <Label htmlFor='cust-city'>Kota</Label>
+              <Label htmlFor='cust-city'>{t('master.customers.cityLabel')}</Label>
               <Input
                 id='cust-city'
                 value={form.city}
@@ -556,7 +561,7 @@ export function CustomerDialog({
               />
             </div>
             <div className='space-y-1'>
-              <Label htmlFor='cust-address'>Alamat</Label>
+              <Label htmlFor='cust-address'>{t('master.customers.addressLabel')}</Label>
               <Input
                 id='cust-address'
                 value={form.address}
@@ -568,7 +573,7 @@ export function CustomerDialog({
           </div>
 
           <div className='space-y-1'>
-            <Label htmlFor='cust-note'>Catatan</Label>
+            <Label htmlFor='cust-note'>{t('master.customers.noteLabel')}</Label>
             <Textarea
               id='cust-note'
               rows={2}
@@ -582,9 +587,9 @@ export function CustomerDialog({
           <div className='grid gap-3 sm:grid-cols-2'>
             <div className='flex items-center justify-between rounded-md border p-3'>
               <div>
-                <p className='text-sm font-medium'>Aktif</p>
+                <p className='text-sm font-medium'>{t('master.field.active')}</p>
                 <p className='text-xs text-muted-foreground'>
-                  Nonaktif membuat akunnya gagal booking.
+                  {t('master.customers.accountInactiveHint')}
                 </p>
               </div>
               <Switch
@@ -596,9 +601,9 @@ export function CustomerDialog({
             </div>
             <div className='flex items-center justify-between rounded-md border p-3'>
               <div>
-                <p className='text-sm font-medium'>Booking otomatis</p>
+                <p className='text-sm font-medium'>{t('master.autoBooking')}</p>
                 <p className='text-xs text-muted-foreground'>
-                  Saat mode Manual, booking perusahaan ini tidak antre.
+                  {t('master.customers.manualModeHint')}
                 </p>
               </div>
               <Switch
@@ -615,11 +620,11 @@ export function CustomerDialog({
           <div className='space-y-3 border-t pt-4'>
             <div className='flex items-center gap-2'>
               <Users className='size-4 text-muted-foreground' />
-              <p className='text-sm font-medium'>Akun login</p>
+              <p className='text-sm font-medium'>{t('master.customers.loginAccounts')}</p>
             </div>
 
             {detail.isPending ? (
-              <LoadingBlock label='Memuat akun...' />
+              <LoadingBlock label={t('master.users.loadingAccounts')} />
             ) : detail.isError ? (
               <ErrorBlock
                 error={detail.error}
@@ -627,7 +632,7 @@ export function CustomerDialog({
               />
             ) : (detail.data?.users.length ?? 0) === 0 ? (
               <p className='text-sm text-muted-foreground'>
-                Belum ada akun. Customer tidak bisa login sebelum akun dibuat.
+                {t('master.customers.accountsEmpty')}
               </p>
             ) : (
               <DataTable
@@ -640,7 +645,7 @@ export function CustomerDialog({
 
             <div className='grid gap-2 rounded-md border p-3 sm:grid-cols-[1fr_1fr_1fr_auto]'>
               <Input
-                placeholder='Nama staf'
+                placeholder={t('master.customers.staffName')}
                 value={accountForm.name}
                 onChange={(event) =>
                   setAccountForm({ ...accountForm, name: event.target.value })
@@ -648,7 +653,7 @@ export function CustomerDialog({
               />
               <Input
                 type='email'
-                placeholder='email@perusahaan.co.id'
+                placeholder={t('master.customers.emailLoginPlaceholder')}
                 value={accountForm.email}
                 onChange={(event) =>
                   setAccountForm({ ...accountForm, email: event.target.value })
@@ -656,7 +661,7 @@ export function CustomerDialog({
               />
               <Input
                 type='password'
-                placeholder='Password awal'
+                placeholder={t('master.customers.initialPassword')}
                 value={accountForm.password}
                 onChange={(event) =>
                   setAccountForm({
@@ -675,7 +680,7 @@ export function CustomerDialog({
                 ) : (
                   <Plus />
                 )}
-                Tambah
+                {t('master.add')}
               </Button>
             </div>
           </div>
@@ -688,21 +693,21 @@ export function CustomerDialog({
               className='text-destructive hover:text-destructive'
               onClick={() => setDeleteOpen(true)}
             >
-              Hapus customer
+              {t('master.deleteCustomer')}
             </Button>
           ) : (
             <span />
           )}
           <div className='flex gap-2'>
             <Button variant='outline' onClick={onDone}>
-              Batal
+              {t('master.cancel')}
             </Button>
             <Button
               disabled={!valid || saveProfile.isPending}
               onClick={() => saveProfile.mutate()}
             >
               {saveProfile.isPending && <Loader2 className='animate-spin' />}
-              Simpan
+              {t('master.save')}
             </Button>
           </div>
         </DialogFooter>
@@ -723,9 +728,11 @@ export function CustomerDialog({
       <ConfirmDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        title='Hapus customer?'
-        desc={`Customer ${customer?.name ?? ''} hanya bisa dihapus bila tidak punya akun maupun booking.`}
-        confirmText='Ya, hapus'
+        title={t('master.customers.deleteTitle')}
+        desc={t('master.customers.deleteBlockedHint', {
+          name: customer?.name ?? '',
+        })}
+        confirmText={t('master.customers.deleteConfirm')}
         destructive
         isLoading={removeCustomer.isPending}
         handleConfirm={() => removeCustomer.mutate()}
@@ -753,6 +760,7 @@ function EditCustomerAccountDialog({
   onOpenChange: (open: boolean) => void
   onSaved: () => void
 }) {
+  const t = useT()
   const [form, setForm] = useState({
     name: account.name,
     email: account.email,
@@ -772,7 +780,7 @@ function EditCustomerAccountDialog({
         ...(form.password ? { password: form.password } : {}),
       }),
     onSuccess: () => {
-      toast.success('Akun customer disimpan')
+      toast.success(t('master.customers.accountSaved'))
       onSaved()
       onOpenChange(false)
     },
@@ -788,15 +796,15 @@ function EditCustomerAccountDialog({
     <Dialog open onOpenChange={onOpenChange}>
       <DialogContent className='sm:max-w-md'>
         <DialogHeader>
-          <DialogTitle>Ubah akun customer</DialogTitle>
+          <DialogTitle>{t('master.editAccountTitle')}</DialogTitle>
           <DialogDescription>
-            {account.email}. Kosongkan password bila tidak ingin menggantinya.
+            {t('master.editAccountDesc', { email: account.email })}
           </DialogDescription>
         </DialogHeader>
 
         <div className='grid gap-3'>
           <div className='space-y-1'>
-            <Label htmlFor='acc-name'>Nama</Label>
+            <Label htmlFor='acc-name'>{t('master.nameLabel')}</Label>
             <Input
               id='acc-name'
               value={form.name}
@@ -806,7 +814,7 @@ function EditCustomerAccountDialog({
             />
           </div>
           <div className='space-y-1'>
-            <Label htmlFor='acc-email'>Email login</Label>
+            <Label htmlFor='acc-email'>{t('master.loginEmailLabel')}</Label>
             <Input
               id='acc-email'
               type='email'
@@ -816,12 +824,11 @@ function EditCustomerAccountDialog({
               }
             />
             <p className='text-xs text-muted-foreground'>
-              Email adalah identitas login. Mengubahnya berarti akun harus masuk
-              dengan email baru.
+              {t('master.loginEmailHint')}
             </p>
           </div>
           <div className='space-y-1'>
-            <Label htmlFor='acc-phone'>No. HP</Label>
+            <Label htmlFor='acc-phone'>{t('master.phoneLabel')}</Label>
             <Input
               id='acc-phone'
               value={form.phone}
@@ -831,7 +838,7 @@ function EditCustomerAccountDialog({
             />
           </div>
           <div className='space-y-1'>
-            <Label htmlFor='acc-password'>Password baru (opsional)</Label>
+            <Label htmlFor='acc-password'>{t('master.newPasswordLabel')}</Label>
             <Input
               id='acc-password'
               type='password'
@@ -839,19 +846,19 @@ function EditCustomerAccountDialog({
               onChange={(event) =>
                 setForm({ ...form, password: event.target.value })
               }
-              placeholder='Kosongkan bila tidak diubah'
+              placeholder={t('master.customers.passwordHint')}
             />
             {form.password !== '' && form.password.length < 7 && (
               <p className='text-xs text-destructive'>
-                Password minimal 7 karakter.
+                {t('master.passwordMinHint')}
               </p>
             )}
           </div>
           <div className='flex items-center justify-between rounded-md border p-3'>
             <div>
-              <p className='text-sm font-medium'>Aktif</p>
+              <p className='text-sm font-medium'>{t('master.field.active')}</p>
               <p className='text-xs text-muted-foreground'>
-                Nonaktif membuat akun ini tidak bisa masuk.
+                {t('master.accountInactiveHint')}
               </p>
             </div>
             <Switch
@@ -865,14 +872,14 @@ function EditCustomerAccountDialog({
 
         <DialogFooter>
           <Button variant='outline' onClick={() => onOpenChange(false)}>
-            Batal
+            {t('master.cancel')}
           </Button>
           <Button
             disabled={!valid || save.isPending}
             onClick={() => save.mutate()}
           >
             {save.isPending && <Loader2 className='animate-spin' />}
-            Simpan
+            {t('master.save')}
           </Button>
         </DialogFooter>
       </DialogContent>

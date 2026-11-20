@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   CalendarClock,
   Clock,
+  Languages,
   LogIn,
   Palette,
   ShieldCheck,
@@ -14,7 +15,7 @@ import {
 import { toast } from 'sonner'
 import { apiErrorMessage } from '@/lib/api/client'
 import { BrandLogo } from '@/components/brand-logo'
-import { DEFAULT_LOGIN_DESCRIPTION, tabTitle } from '@/lib/branding'
+import { tabTitle } from '@/lib/branding'
 import { fetchSettings, saveSettings } from '@/lib/api/endpoints'
 import type { Settings } from '@/lib/api/types'
 import { cn } from '@/lib/utils'
@@ -26,10 +27,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useT, type MessageKey } from '@/lib/i18n'
 import { Main } from '@/components/layout/main'
 import { PageHeader } from '@/components/page-header'
 import { ErrorBlock, LoadingBlock } from '@/components/query-state'
 import { AppearancePicker } from './appearance-picker'
+import { LocaleSwitch } from '@/components/locale-switch'
 import {
   dirtySections,
   hoursNote,
@@ -49,52 +52,68 @@ import { LoginPanelFields } from './login-panel-fields'
 import { LoginPreview } from './login-preview'
 import { LogoField } from './logo-field'
 
-type Tab = SectionKey | 'appearance'
+type Tab = SectionKey | 'appearance' | 'language'
 
 const TABS: {
   key: Tab
-  label: string
+  labelKey: MessageKey
   icon: LucideIcon
-  group: string
+  groupKey: MessageKey
 }[] = [
   {
     key: 'identity',
-    label: 'Identitas gudang',
+    labelKey: 'settings.tab.identity',
     icon: Warehouse,
-    group: 'Gudang',
+    groupKey: 'settings.group.warehouse',
   },
   {
     key: 'brand',
-    label: 'Identitas merek',
+    labelKey: 'settings.tab.brand',
     icon: Type,
-    group: 'Merek',
+    groupKey: 'settings.group.brand',
   },
   {
     key: 'login',
-    label: 'Halaman masuk',
+    labelKey: 'settings.tab.login',
     icon: LogIn,
-    group: 'Merek',
+    groupKey: 'settings.group.brand',
   },
-  { key: 'hours', label: 'Jam operasional', icon: Clock, group: 'Operasional' },
+  {
+    key: 'hours',
+    labelKey: 'settings.tab.hours',
+    icon: Clock,
+    groupKey: 'settings.group.operations',
+  },
   {
     key: 'arrival',
-    label: 'Aturan kedatangan',
+    labelKey: 'settings.tab.arrival',
     icon: Truck,
-    group: 'Operasional',
+    groupKey: 'settings.group.operations',
   },
   {
     key: 'window',
-    label: 'Jendela pemesanan',
+    labelKey: 'settings.tab.window',
     icon: CalendarClock,
-    group: 'Kebijakan',
+    groupKey: 'settings.group.policy',
   },
   {
     key: 'approval',
-    label: 'Persetujuan booking',
+    labelKey: 'settings.tab.approval',
     icon: ShieldCheck,
-    group: 'Kebijakan',
+    groupKey: 'settings.group.policy',
   },
-  { key: 'appearance', label: 'Tampilan', icon: Palette, group: 'Preferensi' },
+  {
+    key: 'language',
+    labelKey: 'settings.tab.language',
+    icon: Languages,
+    groupKey: 'settings.group.preferences',
+  },
+  {
+    key: 'appearance',
+    labelKey: 'settings.tab.appearance',
+    icon: Palette,
+    groupKey: 'settings.group.preferences',
+  },
 ]
 
 /**
@@ -107,9 +126,11 @@ const timeInputClass =
   'tabular-nums [&::-webkit-calendar-picker-indicator]:cursor-pointer [&::-webkit-calendar-picker-indicator]:opacity-70 dark:[&::-webkit-calendar-picker-indicator]:invert'
 
 export function SettingsPage() {
+  const t = useT()
   const settings = useQuery({ queryKey: ['settings'], queryFn: fetchSettings })
 
-  if (settings.isPending) return <LoadingBlock label='Memuat pengaturan...' />
+  if (settings.isPending)
+    return <LoadingBlock label={t('settings.loading')} />
   if (settings.isError)
     return (
       <ErrorBlock
@@ -124,6 +145,7 @@ export function SettingsPage() {
 }
 
 function SettingsForm({ settings }: { settings: Settings }) {
+  const t = useT()
   const queryClient = useQueryClient()
   // Salinan draf awal. `toForm` murah dan hanya bergantung pada `settings`,
   // yang nilainya tetap selama komponen ini hidup (parent memberi `key` baru
@@ -133,7 +155,7 @@ function SettingsForm({ settings }: { settings: Settings }) {
   const [tab, setTab] = useState<Tab>('hours')
 
   const dirty = dirtySections(form, saved)
-  const impact = impactOf(form)
+  const impact = impactOf(form, t)
 
   const setField = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => ({ ...current, [key]: value }))
@@ -142,7 +164,7 @@ function SettingsForm({ settings }: { settings: Settings }) {
     mutationFn: (section: SectionKey) =>
       saveSettings(sectionPayload(section, form)),
     onSuccess: (_data, section) => {
-      toast.success(MESSAGE_BY_SECTION[section])
+      toast.success(t(MESSAGE_BY_SECTION[section]))
       void queryClient.invalidateQueries({ queryKey: ['settings'] })
       void queryClient.invalidateQueries({ queryKey: ['availability'] })
       // Judul di sidebar, halaman masuk, dan tab peramban dibaca dari sini.
@@ -172,8 +194,8 @@ function SettingsForm({ settings }: { settings: Settings }) {
   return (
     <Main className='flex w-full flex-1 flex-col gap-6'>
       <PageHeader
-        title='Pengaturan'
-        description='Semua di sini langsung memengaruhi kuota slot dan kebijakan booking. Simpan per seksi agar perubahan kecil tidak menimpa yang lain.'
+        title={t('settings.title')}
+        description={t('settings.description')}
         actions={
           <span className='flex items-center gap-2 text-xs text-muted-foreground'>
             {dirty.length === 0 ? (
@@ -182,7 +204,7 @@ function SettingsForm({ settings }: { settings: Settings }) {
                   className='size-1.5 rounded-full bg-emerald-500'
                   aria-hidden
                 />
-                Semua tersimpan
+                {t('settings.allSaved')}
               </>
             ) : (
               <>
@@ -190,7 +212,7 @@ function SettingsForm({ settings }: { settings: Settings }) {
                   className='size-1.5 rounded-full bg-amber-500'
                   aria-hidden
                 />
-                {dirty.length} seksi belum disimpan
+                {t('settings.dirtyCount', { count: dirty.length })}
               </>
             )}
           </span>
@@ -199,7 +221,7 @@ function SettingsForm({ settings }: { settings: Settings }) {
 
       <OperationsSummary
         impact={impact}
-        saved={impactOf(saved)}
+        saved={impactOf(saved, t)}
         dirtyCount={dirty.length}
       />
 
@@ -222,18 +244,18 @@ function SettingsForm({ settings }: { settings: Settings }) {
             {activeTab.key === 'identity' && (
               <SectionPanel
                 icon={Warehouse}
-                title='Identitas gudang'
-                description='Nama ini tercetak di tiket supir dan dipakai sebagai nama gudang pertama di Master Data. Keduanya ditulis bersamaan oleh server, jadi tidak mungkin berbeda.'
-                error={sectionError('identity', form)}
+                title={t('settings.identity.title')}
+                description={t('settings.identity.description')}
+                error={sectionError('identity', form, t)}
                 dirty={isDirty('identity', form, saved)}
                 pending={save.isPending && save.variables === 'identity'}
                 onSave={() => save.mutate('identity')}
                 onReset={() => resetSection('identity')}
               >
                 <FieldRow
-                  label='Nama gudang'
+                  label={t('settings.identity.name')}
                   htmlFor='warehouse-name'
-                  hint='Minimal 2 karakter, maksimal 120. Nama gudang lain di Master Data tidak boleh sama.'
+                  hint={t('settings.identity.nameHint')}
                 >
                   <Input
                     id='warehouse-name'
@@ -252,14 +274,14 @@ function SettingsForm({ settings }: { settings: Settings }) {
             {activeTab.key === 'brand' && (
               <SectionPanel
                 icon={Type}
-                title='Identitas merek'
-                description='Logo, judul, dan subjudul yang tampil di kepala sidebar, halaman masuk, dan judul tab peramban. Bukan nama gudang — identitas gudang tetap di seksi Identitas gudang.'
-                error={sectionError('brand', form)}
+                title={t('settings.brand.title')}
+                description={t('settings.brand.description')}
+                error={sectionError('brand', form, t)}
                 dirty={isDirty('brand', form, saved)}
                 pending={save.isPending && save.variables === 'brand'}
                 onSave={() => save.mutate('brand')}
                 onReset={() => resetSection('brand')}
-                footerNote='Berlaku untuk semua pengguna setelah disimpan. Halaman tiket supir tetap memakai nama perusahaan customer, bukan judul ini.'
+                footerNote={t('settings.brand.footer')}
               >
                 <LogoField
                   logoUrl={form.appLogoUrl}
@@ -268,9 +290,9 @@ function SettingsForm({ settings }: { settings: Settings }) {
                 />
 
                 <FieldRow
-                  label='Judul aplikasi'
+                  label={t('settings.brand.appName')}
                   htmlFor='app-name'
-                  hint='1–60 karakter. Huruf pertama dipakai sebagai lencana saat logo belum diunggah.'
+                  hint={t('settings.brand.appNameHint')}
                 >
                   <Input
                     id='app-name'
@@ -283,9 +305,9 @@ function SettingsForm({ settings }: { settings: Settings }) {
                 </FieldRow>
 
                 <FieldRow
-                  label='Subjudul'
+                  label={t('settings.brand.tagline')}
                   htmlFor='app-tagline'
-                  hint='Baris kecil di bawah judul. Boleh dikosongkan untuk menampilkan judul saja.'
+                  hint={t('settings.brand.taglineHint')}
                 >
                   <Input
                     id='app-tagline'
@@ -300,9 +322,9 @@ function SettingsForm({ settings }: { settings: Settings }) {
                 </FieldRow>
 
                 <FieldRow
-                  label='Nama pendek'
+                  label={t('settings.brand.shortName')}
                   htmlFor='app-short'
-                  hint='Untuk judul tab peramban dan layar sempit. Kosongkan agar memakai judul aplikasi.'
+                  hint={t('settings.brand.shortNameHint')}
                 >
                   <Input
                     id='app-short'
@@ -312,7 +334,7 @@ function SettingsForm({ settings }: { settings: Settings }) {
                     }
                     className='w-full sm:w-48'
                     maxLength={20}
-                    placeholder='Opsional'
+                    placeholder={t('settings.brand.optional')}
                     autoComplete='off'
                   />
                 </FieldRow>
@@ -329,19 +351,21 @@ function SettingsForm({ settings }: { settings: Settings }) {
             {activeTab.key === 'login' && (
               <SectionPanel
                 icon={LogIn}
-                title='Halaman masuk'
-                description='Kalimat sambutan dan tampilan panel kanan di halaman masuk. Yang diubah di sini hanya yang dilihat sebelum masuk.'
-                error={sectionError('login', form)}
+                title={t('settings.login.title')}
+                description={t('settings.login.description')}
+                error={sectionError('login', form, t)}
                 dirty={isDirty('login', form, saved)}
                 pending={save.isPending && save.variables === 'login'}
                 onSave={() => save.mutate('login')}
                 onReset={() => resetSection('login')}
-                footerNote='Teks sambutan tampil juga di ponsel di bawah nama aplikasi; gambar panel hanya di layar lebar.'
+                footerNote={t('settings.login.footer')}
               >
                 <FieldRow
-                  label='Teks sambutan'
+                  label={t('settings.login.descriptionLabel')}
                   htmlFor='login-description'
-                  hint={`1–${LOGIN_DESCRIPTION_MAX} karakter. Kosongkan untuk memakai teks bawaan.`}
+                  hint={t('settings.login.descriptionHint', {
+                    max: LOGIN_DESCRIPTION_MAX,
+                  })}
                 >
                   <div className='flex w-full flex-col gap-1.5 sm:w-96'>
                     <textarea
@@ -352,7 +376,7 @@ function SettingsForm({ settings }: { settings: Settings }) {
                       }
                       maxLength={LOGIN_DESCRIPTION_MAX}
                       rows={3}
-                      placeholder={DEFAULT_LOGIN_DESCRIPTION}
+                      placeholder={t('auth.defaultLoginDescription')}
                       className='min-h-20 w-full resize-y rounded-md border bg-transparent px-3 py-2 text-sm shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50'
                     />
                     <span className='self-end text-[11px] text-muted-foreground tabular-nums'>
@@ -379,19 +403,22 @@ function SettingsForm({ settings }: { settings: Settings }) {
             {activeTab.key === 'hours' && (
               <SectionPanel
                 icon={Clock}
-                title='Jam operasional'
-                description='Menentukan slot mana yang bisa dipesan hari ini. Setiap blok dimulai dari jam buka, jadi rentangnya wajib habis dibagi satuan blok.'
-                error={sectionError('hours', form)}
+                title={t('settings.hours.title')}
+                description={t('settings.hours.description')}
+                error={sectionError('hours', form, t)}
                 dirty={isDirty('hours', form, saved)}
                 pending={save.isPending && save.variables === 'hours'}
                 onSave={() => save.mutate('hours')}
                 onReset={() => resetSection('hours')}
-                footerNote={`Kapasitas per blok saat ini ${settings.capacity?.LOADING ?? 0} loading dan ${settings.capacity?.UNLOADING ?? 0} unloading — mengikuti jumlah dock aktif di Master Data, bukan diatur di sini.`}
+                footerNote={t('settings.hours.footer', {
+                  loading: settings.capacity?.LOADING ?? 0,
+                  unloading: settings.capacity?.UNLOADING ?? 0,
+                })}
               >
                 <FieldRow
-                  label='Jam buka'
+                  label={t('settings.hours.open')}
                   htmlFor='open'
-                  hint='Blok pertama dimulai tepat pada jam ini.'
+                  hint={t('settings.hours.openHint')}
                 >
                   <Input
                     id='open'
@@ -403,9 +430,9 @@ function SettingsForm({ settings }: { settings: Settings }) {
                 </FieldRow>
 
                 <FieldRow
-                  label='Jam tutup'
+                  label={t('settings.hours.close')}
                   htmlFor='close'
-                  hint='Tidak ada blok yang dimulai setelah jam ini; blok terakhir harus selesai tepat waktu.'
+                  hint={t('settings.hours.closeHint')}
                 >
                   <Input
                     id='close'
@@ -417,9 +444,9 @@ function SettingsForm({ settings }: { settings: Settings }) {
                 </FieldRow>
 
                 <FieldRow
-                  label='Satuan blok'
+                  label={t('settings.hours.unit')}
                   htmlFor='unit'
-                  hint='Ukuran satu slot. Mengubahnya mengubah jumlah blok per hari dan seluruh ketersediaan; booking lama tetap memakai blok yang sudah dikunci.'
+                  hint={t('settings.hours.unitHint')}
                 >
                   <NumberField
                     id='unit'
@@ -428,29 +455,21 @@ function SettingsForm({ settings }: { settings: Settings }) {
                     min={15}
                     max={120}
                     step={15}
-                    unit='menit'
+                    unit={t('settings.unit.minutes')}
                   />
                 </FieldRow>
 
                 <div className='mt-3 rounded-lg border border-dashed px-4 py-3 text-sm'>
                   <p className='text-muted-foreground'>
-                    Rentang{' '}
-                    <span className='font-medium text-foreground'>
-                      {impact.hours}
-                    </span>{' '}
-                    ={' '}
-                    <span className='font-medium text-foreground'>
-                      {impact.duration}
-                    </span>
-                    , berisi{' '}
-                    <span className='font-medium text-foreground'>
-                      {impact.blocks}
-                    </span>
-                    .
+                    {t('settings.hours.summary', {
+                      hours: impact.hours,
+                      duration: impact.duration,
+                      blocks: impact.blocks,
+                    })}
                   </p>
-                  {hoursNote(form.open, form.close, form.slotUnitMinutes) && (
+                  {hoursNote(form.open, form.close, form.slotUnitMinutes, t) && (
                     <p className='mt-1 text-xs text-muted-foreground'>
-                      {hoursNote(form.open, form.close, form.slotUnitMinutes)}
+                      {hoursNote(form.open, form.close, form.slotUnitMinutes, t)}
                     </p>
                   )}
                 </div>
@@ -460,18 +479,20 @@ function SettingsForm({ settings }: { settings: Settings }) {
             {activeTab.key === 'arrival' && (
               <SectionPanel
                 icon={Truck}
-                title='Aturan kedatangan'
-                description='Dua ambang ini dipakai petugas gate dan cron penanda tidak datang. Keduanya soal toleransi waktu, bukan kuota.'
-                error={sectionError('arrival', form)}
+                title={t('settings.arrival.title')}
+                description={t('settings.arrival.description')}
+                error={sectionError('arrival', form, t)}
                 dirty={isDirty('arrival', form, saved)}
                 pending={save.isPending && save.variables === 'arrival'}
                 onSave={() => save.mutate('arrival')}
                 onReset={() => resetSection('arrival')}
               >
                 <FieldRow
-                  label='Masa tenggang'
+                  label={t('settings.arrival.grace')}
                   htmlFor='grace'
-                  hint={`Truk yang datang dalam ${form.gracePeriodMinutes || '—'} menit setelah jadwal masih dihitung tepat waktu. Lewat dari itu masuk antrean terlambat.`}
+                  hint={t('settings.arrival.graceHint', {
+                    minutes: form.gracePeriodMinutes || '—',
+                  })}
                 >
                   <NumberField
                     id='grace'
@@ -479,14 +500,16 @@ function SettingsForm({ settings }: { settings: Settings }) {
                     onChange={(value) => setField('gracePeriodMinutes', value)}
                     min={0}
                     max={240}
-                    unit='menit'
+                    unit={t('settings.unit.minutes')}
                   />
                 </FieldRow>
 
                 <FieldRow
-                  label='Batas datang awal'
+                  label={t('settings.arrival.early')}
                   htmlFor='early'
-                  hint={`Gate-in ditolak bila truk datang lebih awal dari ${form.earlyArrivalLimitMinutes || '—'} menit sebelum jadwal.`}
+                  hint={t('settings.arrival.earlyHint', {
+                    minutes: form.earlyArrivalLimitMinutes || '—',
+                  })}
                 >
                   <NumberField
                     id='early'
@@ -496,7 +519,7 @@ function SettingsForm({ settings }: { settings: Settings }) {
                     }
                     min={0}
                     max={480}
-                    unit='menit'
+                    unit={t('settings.unit.minutes')}
                   />
                 </FieldRow>
 
@@ -504,8 +527,7 @@ function SettingsForm({ settings }: { settings: Settings }) {
                   Number(form.gracePeriodMinutes) * 4 &&
                   Number(form.gracePeriodMinutes) > 0 && (
                     <p className='mt-3 text-xs text-amber-700 dark:text-amber-400'>
-                      Batas datang awal jauh lebih longgar dari masa tenggang.
-                      Truk bisa menumpuk di area tunggu sebelum slotnya dimulai.
+                      {t('settings.arrival.warning')}
                     </p>
                   )}
               </SectionPanel>
@@ -514,18 +536,18 @@ function SettingsForm({ settings }: { settings: Settings }) {
             {activeTab.key === 'window' && (
               <SectionPanel
                 icon={CalendarClock}
-                title='Jendela pemesanan'
-                description='Seberapa jauh ke depan customer boleh memesan. Semakin panjang, semakin banyak slot yang harus disiapkan untuk setiap jenis aktivitas.'
-                error={sectionError('window', form)}
+                title={t('settings.window.title')}
+                description={t('settings.window.description')}
+                error={sectionError('window', form, t)}
                 dirty={isDirty('window', form, saved)}
                 pending={save.isPending && save.variables === 'window'}
                 onSave={() => save.mutate('window')}
                 onReset={() => resetSection('window')}
               >
                 <FieldRow
-                  label='Hari ke depan'
+                  label={t('settings.window.days')}
                   htmlFor='window'
-                  hint='Hari ini ikut dihitung. Customer tidak bisa memesan di luar rentang ini, termasuk lewat tautan langsung.'
+                  hint={t('settings.window.daysHint')}
                 >
                   <NumberField
                     id='window'
@@ -533,15 +555,15 @@ function SettingsForm({ settings }: { settings: Settings }) {
                     onChange={(value) => setField('bookingWindowDays', value)}
                     min={1}
                     max={90}
-                    unit='hari'
+                    unit={t('settings.unit.days')}
                   />
                 </FieldRow>
 
                 <div className='mt-3 grid gap-2 sm:grid-cols-3'>
                   {[
-                    { label: 'Hari ini', days: 1 },
-                    { label: 'Minggu ini', days: 7 },
-                    { label: 'Se bulan', days: 30 },
+                    { label: t('settings.window.today'), days: 1 },
+                    { label: t('settings.window.thisWeek'), days: 7 },
+                    { label: t('settings.window.thisMonth'), days: 30 },
                   ].map((preset) => {
                     const active =
                       Number(form.bookingWindowDays) === preset.days
@@ -560,7 +582,7 @@ function SettingsForm({ settings }: { settings: Settings }) {
                         )}
                       >
                         <span className='block text-sm tabular-nums'>
-                          {preset.days} hari
+                          {t('settings.window.daysUnit', { count: preset.days })}
                         </span>
                         <span className='text-muted-foreground'>
                           {preset.label}
@@ -575,21 +597,21 @@ function SettingsForm({ settings }: { settings: Settings }) {
             {activeTab.key === 'approval' && (
               <SectionPanel
                 icon={ShieldCheck}
-                title='Persetujuan booking'
-                description='Mengubah siapa yang boleh booking tanpa antre. Setiap perubahan mode dicatat di jejak audit beserta admin yang melakukannya.'
-                error={sectionError('approval', form)}
+                title={t('settings.approval.title')}
+                description={t('settings.approval.description')}
+                error={sectionError('approval', form, t)}
                 dirty={isDirty('approval', form, saved)}
                 pending={save.isPending && save.variables === 'approval'}
                 onSave={() => save.mutate('approval')}
                 onReset={() => resetSection('approval')}
               >
                 <FieldRow
-                  label='Mode'
+                  label={t('settings.approval.mode')}
                   htmlFor='approval-mode'
                   hint={
                     form.approvalMode === 'AUTO'
-                      ? 'Setiap booking langsung sah dan langsung mengunci kuota slot.'
-                      : 'Hanya customer bertanda "booking otomatis" di halaman Pengguna yang lolos; sisanya menunggu keputusan Admin.'
+                      ? t('settings.approval.modeAutoHint')
+                      : t('settings.approval.modeManualHint')
                   }
                 >
                   <div className='flex flex-col gap-2 sm:items-end'>
@@ -610,10 +632,10 @@ function SettingsForm({ settings }: { settings: Settings }) {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value='AUTO'>
-                          Otomatis — semua langsung disetujui
+                          {t('settings.approval.modeAuto')}
                         </SelectItem>
                         <SelectItem value='MANUAL'>
-                          Manual — perlu persetujuan Admin
+                          {t('settings.approval.modeManual')}
                         </SelectItem>
                       </SelectContent>
                     </Select>
@@ -622,9 +644,9 @@ function SettingsForm({ settings }: { settings: Settings }) {
                 </FieldRow>
 
                 <FieldRow
-                  label='Tenggat sebelum kedatangan'
+                  label={t('settings.approval.lead')}
                   htmlFor='approval-lead'
-                  hint='Keputusan harus selesai sekian menit sebelum jam kedatangan, kalau tidak booking kedaluwarsa dan kuotanya dilepas.'
+                  hint={t('settings.approval.leadHint')}
                 >
                   <NumberField
                     id='approval-lead'
@@ -632,15 +654,15 @@ function SettingsForm({ settings }: { settings: Settings }) {
                     onChange={(value) => setField('approvalLeadMinutes', value)}
                     min={5}
                     max={2880}
-                    unit='menit'
+                    unit={t('settings.unit.minutes')}
                     width='w-24'
                   />
                 </FieldRow>
 
                 <FieldRow
-                  label='Jendela keputusan minimum'
+                  label={t('settings.approval.minDecision')}
                   htmlFor='approval-min'
-                  hint='Booking mendesak tetap punya sekian menit untuk diputuskan, meski tenggat di atas sudah lewat.'
+                  hint={t('settings.approval.minDecisionHint')}
                 >
                   <NumberField
                     id='approval-min'
@@ -650,15 +672,15 @@ function SettingsForm({ settings }: { settings: Settings }) {
                     }
                     min={5}
                     max={1440}
-                    unit='menit'
+                    unit={t('settings.unit.minutes')}
                     width='w-24'
                   />
                 </FieldRow>
 
                 <FieldRow
-                  label='Ambang label mendesak'
+                  label={t('settings.approval.urgent')}
                   htmlFor='approval-urgent'
-                  hint='Hanya memengaruhi penanda di antrean admin, bukan keputusan atau kuota.'
+                  hint={t('settings.approval.urgentHint')}
                 >
                   <NumberField
                     id='approval-urgent'
@@ -668,19 +690,30 @@ function SettingsForm({ settings }: { settings: Settings }) {
                     }
                     min={0}
                     max={14400}
-                    unit='menit'
+                    unit={t('settings.unit.minutes')}
                     width='w-24'
                   />
                 </FieldRow>
               </SectionPanel>
             )}
 
+            {activeTab.key === 'language' && (
+              <SectionPanel
+                icon={Languages}
+                title={t('settings.language.title')}
+                description={t('settings.language.description')}
+                footerNote={t('settings.language.footer')}
+              >
+                <LocaleSwitch variant='full' />
+              </SectionPanel>
+            )}
+
             {activeTab.key === 'appearance' && (
               <SectionPanel
                 icon={Palette}
-                title='Tampilan'
-                description='Preferensi peramban ini, bukan bagian dari pengaturan gudang. Tersimpan di perangkat Anda dan tidak ikut terkirim saat seksi lain disimpan.'
-                footerNote='Bisa juga diubah dari menu Tema di kaki sidebar.'
+                title={t('settings.appearance.title')}
+                description={t('settings.appearance.description')}
+                footerNote={t('settings.appearance.footer')}
               >
                 <AppearancePicker />
               </SectionPanel>
@@ -709,12 +742,13 @@ function BrandPreview({
   appShortName: string
   logoUrl: string
 }) {
+  const t = useT()
   const name = appName.trim() || '—'
   const short = appShortName.trim()
   return (
     <div className='mt-4 rounded-lg border border-dashed px-4 py-3'>
       <p className='text-[11px] font-medium tracking-wide text-muted-foreground uppercase'>
-        Pratinjau
+        {t('settings.brand.preview')}
       </p>
 
       {/* Kepala sidebar: satu-satunya tempat logo, judul, dan subjudul tampil
@@ -741,21 +775,20 @@ function BrandPreview({
       </div>
 
       <p className='mt-3 text-xs text-muted-foreground'>
-        Nama pendek dipakai sebagai judul tab; kalau kosong, judul aplikasi yang
-        dipakai.
+        {t('settings.brand.previewNote')}
       </p>
     </div>
   )
 }
 
-const MESSAGE_BY_SECTION: Record<SectionKey, string> = {
-  identity: 'Identitas gudang disimpan',
-  brand: 'Identitas merek disimpan',
-  login: 'Halaman masuk disimpan',
-  hours: 'Jam operasional disimpan',
-  arrival: 'Aturan kedatangan disimpan',
-  window: 'Jendela pemesanan disimpan',
-  approval: 'Kebijakan persetujuan disimpan',
+const MESSAGE_BY_SECTION: Record<SectionKey, MessageKey> = {
+  identity: 'settings.saved.identity',
+  brand: 'settings.saved.brand',
+  login: 'settings.saved.login',
+  hours: 'settings.saved.hours',
+  arrival: 'settings.saved.arrival',
+  window: 'settings.saved.window',
+  approval: 'settings.saved.approval',
 }
 
 /**
@@ -774,11 +807,12 @@ function SectionNav({
   dirty: SectionKey[]
   manual: boolean
 }) {
-  const groups = [...new Set(TABS.map((item) => item.group))]
+  const t = useT()
+  const groups = [...new Set(TABS.map((item) => item.groupKey))]
 
   return (
     <nav
-      aria-label='Seksi pengaturan'
+      aria-label={t('settings.navAria')}
       className='min-w-0 lg:sticky lg:top-4 lg:self-start'
     >
       {/* Di layar kecil nav menjadi baris chip yang digeser. Tepi kanan diberi
@@ -788,9 +822,9 @@ function SectionNav({
         {groups.map((group) => (
           <div key={group} className='contents lg:block'>
             <p className='hidden px-2 pt-4 pb-1 text-[11px] font-medium tracking-wide text-muted-foreground uppercase first:pt-0 lg:block'>
-              {group}
+              {t(group)}
             </p>
-            {TABS.filter((item) => item.group === group).map((item) => {
+            {TABS.filter((item) => item.groupKey === group).map((item) => {
               const Icon = item.icon
               const isActive = active === item.key
               const isDirty = (dirty as string[]).includes(item.key)
@@ -810,17 +844,17 @@ function SectionNav({
                   )}
                 >
                   <Icon className='size-4 shrink-0' aria-hidden />
-                  {item.label}
+                  {t(item.labelKey)}
                   {item.key === 'approval' && manual && (
                     <span
                       className='size-1.5 rounded-full bg-amber-500'
-                      title='Mode manual aktif'
+                      title={t('settings.manualModeOn')}
                     />
                   )}
                   {isDirty && (
                     <span
                       className='size-1.5 rounded-full bg-amber-500 lg:ms-auto'
-                      title='Belum disimpan'
+                      title={t('settings.unsaved')}
                     />
                   )}
                 </button>
@@ -833,8 +867,8 @@ function SectionNav({
       <div className='mt-4 hidden rounded-lg border border-dashed px-3 py-2.5 lg:block'>
         <p className='text-[11px] leading-relaxed text-muted-foreground'>
           {dirty.length === 0
-            ? 'Tidak ada perubahan tertunda. Setiap seksi disimpan sendiri.'
-            : `${dirty.length} seksi berubah dan belum dikirim ke server.`}
+            ? t('settings.navEmpty')
+            : t('settings.navDirty', { count: dirty.length })}
         </p>
       </div>
     </nav>

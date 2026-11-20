@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -27,14 +27,26 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { useT, type MessageKey, type Vars } from '@/lib/i18n'
 
-const schema = z.object({
-  licensePlate: z.string().trim().min(1, 'Plat nomor wajib diisi').max(16),
-  driverName: z.string().trim().min(2, 'Nama supir wajib diisi').max(120),
-  driverPhone: z.string().trim().max(20).optional(),
-})
+type Translate = (key: MessageKey, vars?: Vars) => string
 
-type FormValues = z.infer<typeof schema>
+const makeSchema = (t: Translate) =>
+  z.object({
+    licensePlate: z
+      .string()
+      .trim()
+      .min(1, t('bookings.vehicle.plateRequired'))
+      .max(16),
+    driverName: z
+      .string()
+      .trim()
+      .min(2, t('bookings.vehicle.driverRequired'))
+      .max(120),
+    driverPhone: z.string().trim().max(20).optional(),
+  })
+
+type FormValues = z.infer<ReturnType<typeof makeSchema>>
 
 /**
  * Booking tidak boleh gate-in sebelum plat nomor dan nama supir terisi. Dialog
@@ -50,6 +62,8 @@ export function VehicleDialog({
   onOpenChange: (open: boolean) => void
 }) {
   const queryClient = useQueryClient()
+  const t = useT()
+  const schema = useMemo(() => makeSchema(t), [t])
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -77,7 +91,7 @@ export function VehicleDialog({
         driverPhone: values.driverPhone || undefined,
       }),
     onSuccess: () => {
-      toast.success('Data kendaraan tersimpan')
+      toast.success(t('bookings.vehicle.saved'))
       void queryClient.invalidateQueries({ queryKey: ['bookings'] })
       onOpenChange(false)
     },
@@ -88,10 +102,9 @@ export function VehicleDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Lengkapi data kendaraan</DialogTitle>
+          <DialogTitle>{t('bookings.vehicle.title')}</DialogTitle>
           <DialogDescription>
-            Booking {booking.bookingCode} belum bisa gate-in sebelum plat nomor dan nama
-            supir diisi.
+            {t('bookings.vehicle.dialogDesc', { code: booking.bookingCode })}
           </DialogDescription>
         </DialogHeader>
 
@@ -105,9 +118,13 @@ export function VehicleDialog({
               name='licensePlate'
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Plat nomor</FormLabel>
+                  <FormLabel>{t('bookings.vehicle.plate')}</FormLabel>
                   <FormControl>
-                    <Input placeholder='B 1234 XYZ' className='uppercase' {...field} />
+                    <Input
+                      placeholder={t('bookings.create.platePlaceholder')}
+                      className='uppercase'
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -118,9 +135,12 @@ export function VehicleDialog({
               name='driverName'
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nama supir</FormLabel>
+                  <FormLabel>{t('bookings.vehicle.driver')}</FormLabel>
                   <FormControl>
-                    <Input placeholder='Nama supir' {...field} />
+                    <Input
+                      placeholder={t('bookings.create.driverPlaceholder')}
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -131,11 +151,16 @@ export function VehicleDialog({
               name='driverPhone'
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nomor HP supir (opsional)</FormLabel>
+                  <FormLabel>{t('bookings.create.phoneOptional')}</FormLabel>
                   <FormControl>
-                    <Input placeholder='0812xxxxxxx' {...field} />
+                    <Input
+                      placeholder={t('bookings.create.phonePlaceholder')}
+                      {...field}
+                    />
                   </FormControl>
-                  <FormDescription>Dipakai untuk mengirim tautan tiket.</FormDescription>
+                  <FormDescription>
+                    {t('bookings.vehicle.phoneHint')}
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -148,11 +173,13 @@ export function VehicleDialog({
                 onClick={() => onOpenChange(false)}
                 disabled={save.isPending}
               >
-                Batal
+                {t('bookings.vehicle.cancel')}
               </Button>
               <Button type='submit' disabled={save.isPending}>
                 {save.isPending && <Loader2 className='animate-spin' />}
-                Simpan
+                {save.isPending
+                  ? t('bookings.vehicle.saving')
+                  : t('bookings.vehicle.save')}
               </Button>
             </DialogFooter>
           </form>

@@ -11,6 +11,7 @@ import {
 } from 'recharts'
 import type { ArrivalHour, ReportDay } from '@/lib/api/types'
 import { formatDateShort } from '@/lib/format'
+import { useT } from '@/lib/i18n'
 import {
   Card,
   CardContent,
@@ -36,6 +37,7 @@ const axis = {
 }
 
 export function ArrivalChart({ data }: { data: ArrivalHour[] }) {
+  const t = useT()
   const peak = data.reduce(
     (best, item) => (item.arrivals > best.arrivals ? item : best),
     data[0] ?? { hour: 0, label: '-', arrivals: 0, capacity: 0 }
@@ -44,9 +46,9 @@ export function ArrivalChart({ data }: { data: ArrivalHour[] }) {
   return (
     <Card className='gap-4'>
       <CardHeader>
-        <CardTitle>Kedatangan vs Kapasitas Slot</CardTitle>
+        <CardTitle>{t('dashboard.arrivalTitle')}</CardTitle>
         <CardDescription>
-          Per jam operasional · puncak {peak.label} ({peak.arrivals} truk)
+          {t('dashboard.arrivalDesc', { label: peak.label, count: peak.arrivals })}
         </CardDescription>
       </CardHeader>
       <CardContent className='ps-0'>
@@ -58,14 +60,14 @@ export function ArrivalChart({ data }: { data: ArrivalHour[] }) {
             <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'var(--accent)' }} />
             <Bar
               dataKey='capacity'
-              name='Kapasitas slot'
+              name={t('dashboard.slotCapacity')}
               fill='var(--chart-3)'
               radius={[4, 4, 0, 0]}
               maxBarSize={22}
             />
             <Bar
               dataKey='arrivals'
-              name='Kedatangan aktual'
+              name={t('dashboard.arrivalActual')}
               fill='var(--chart-1)'
               radius={[4, 4, 0, 0]}
               maxBarSize={22}
@@ -75,11 +77,11 @@ export function ArrivalChart({ data }: { data: ArrivalHour[] }) {
         <div className='mt-2 flex items-center gap-4 ps-6 text-xs text-muted-foreground'>
           <span className='flex items-center gap-1.5'>
             <span className='size-2 rounded-sm bg-[var(--chart-1)]' />
-            Kedatangan aktual
+            {t('dashboard.arrivalActual')}
           </span>
           <span className='flex items-center gap-1.5'>
             <span className='size-2 rounded-sm bg-[var(--chart-3)]' />
-            Kapasitas slot
+            {t('dashboard.slotCapacity')}
           </span>
         </div>
       </CardContent>
@@ -94,6 +96,7 @@ export function TurnaroundChart({
   data: ReportDay[]
   targetMinutes?: number
 }) {
+  const t = useT()
   const rows = data.map((day) => ({
     day: formatDateShort(`${day.date}T00:00:00.000Z`),
     aktual: day.averageTurnaroundMinutes,
@@ -104,10 +107,10 @@ export function TurnaroundChart({
   return (
     <Card className='gap-4'>
       <CardHeader>
-        <CardTitle>Turnaround Time</CardTitle>
+        <CardTitle>{t('dashboard.turnaroundTitle')}</CardTitle>
         <CardDescription>
-          Rata-rata per hari (menit) · target ≤ {targetMinutes} menit
-          {last ? ` · terakhir ${last.aktual} menit` : ''}
+          {t('dashboard.turnaroundDesc', { target: targetMinutes })}
+          {last ? t('dashboard.turnaroundLast', { minutes: last.aktual }) : ''}
         </CardDescription>
       </CardHeader>
       <CardContent className='ps-0'>
@@ -120,7 +123,7 @@ export function TurnaroundChart({
             <Line
               type='monotone'
               dataKey='target'
-              name='Target'
+              name={t('dashboard.target')}
               stroke='var(--muted-foreground)'
               strokeDasharray='4 4'
               strokeWidth={2}
@@ -129,7 +132,7 @@ export function TurnaroundChart({
             <Line
               type='monotone'
               dataKey='aktual'
-              name='Aktual'
+              name={t('dashboard.actual')}
               stroke='var(--chart-1)'
               strokeWidth={2.5}
               dot={{ r: 3, strokeWidth: 2, fill: 'var(--card)' }}
@@ -140,11 +143,11 @@ export function TurnaroundChart({
         <div className='mt-2 flex items-center gap-4 ps-6 text-xs text-muted-foreground'>
           <span className='flex items-center gap-1.5'>
             <span className='h-0.5 w-4 bg-[var(--chart-1)]' />
-            Aktual
+            {t('dashboard.actual')}
           </span>
           <span className='flex items-center gap-1.5'>
             <span className='h-0.5 w-4 border-t border-dashed border-muted-foreground' />
-            Target {targetMinutes} mnt
+            {t('dashboard.targetLegend', { minutes: targetMinutes })}
           </span>
         </div>
       </CardContent>

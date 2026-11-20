@@ -4,6 +4,7 @@ import { BrandLogo } from '@/components/brand-logo'
 import { Button } from '@/components/ui/button'
 import { apiErrorMessage } from '@/lib/api/client'
 import { uploadAppLogo } from '@/lib/api/endpoints'
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import type { FormState } from './form'
 import { FieldRow } from './section-panel'
@@ -26,6 +27,7 @@ type Props = {
  * 200 px bisa berubah jadi gumpalan di 28 px.
  */
 export function LogoField({ logoUrl, appName, onChange }: Props) {
+  const t = useT()
   const inputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -49,9 +51,9 @@ export function LogoField({ logoUrl, appName, onChange }: Props) {
 
   return (
     <FieldRow
-      label='Logo aplikasi'
+      label={t('settings.logo.label')}
       htmlFor='app-logo'
-      hint='PNG atau JPG, maksimal 2 MB. Latar transparan paling aman. Kosongkan untuk memakai huruf pertama judul.'
+      hint={t('settings.logo.hint')}
     >
       <div className='flex flex-col gap-3'>
         <div className='flex flex-wrap items-end gap-5'>
@@ -64,14 +66,18 @@ export function LogoField({ logoUrl, appName, onChange }: Props) {
             >
               <BrandLogo name={appName} logoUrl={logoUrl || null} size={40} />
             </div>
-            <span className='text-[11px] text-muted-foreground'>Sidebar</span>
+            <span className='text-[11px] text-muted-foreground'>
+              {t('settings.logo.sidebar')}
+            </span>
           </div>
 
           <div className='flex flex-col items-center gap-1.5'>
             <div className='flex h-16 items-center justify-center rounded-xl border border-dashed bg-muted/30 px-3'>
               <BrandLogo name={appName} logoUrl={logoUrl || null} size={16} />
             </div>
-            <span className='text-[11px] text-muted-foreground'>Ikon tab</span>
+            <span className='text-[11px] text-muted-foreground'>
+              {t('settings.logo.tabIcon')}
+            </span>
           </div>
         </div>
 
@@ -96,7 +102,11 @@ export function LogoField({ logoUrl, appName, onChange }: Props) {
             ) : (
               <Upload className='size-4' aria-hidden='true' />
             )}
-            {uploading ? 'Mengunggah…' : logoUrl ? 'Ganti logo' : 'Unggah logo'}
+            {uploading
+              ? t('settings.logo.uploading')
+              : logoUrl
+                ? t('settings.logo.replace')
+                : t('settings.logo.upload')}
           </Button>
           {logoUrl && (
             <Button
@@ -107,7 +117,7 @@ export function LogoField({ logoUrl, appName, onChange }: Props) {
               onClick={() => onChange('appLogoUrl', '')}
             >
               <Trash2 className='size-4' aria-hidden='true' />
-              Hapus
+              {t('settings.logo.remove')}
             </Button>
           )}
         </div>

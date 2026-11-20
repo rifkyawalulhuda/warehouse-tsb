@@ -2,9 +2,10 @@ import type { DockWithBooking } from '@/lib/api/types'
 import { formatTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { Card } from '@/components/ui/card'
+import { useT } from '@/lib/i18n/hooks'
 import { DockActionButton, type DockActionHandlers } from './dock-action-button'
 import {
-  dockActivityLabel,
+  dockActivityLabelKey,
   dockPhase,
   processClock,
   shortClock,
@@ -39,14 +40,6 @@ const phaseDot: Record<DockPhase, string> = {
   maintenance: 'bg-slate-400',
 }
 
-/** Label pendek khusus grid; versi panjang tidak muat di ubin sempit. */
-const phaseShort: Record<DockPhase, string> = {
-  starting: 'Siap',
-  serving: 'Diproses',
-  available: 'Kosong',
-  maintenance: 'Perawatan',
-}
-
 /**
  * Grid mini: banyak dock terlihat sekaligus dengan satu informasi kunci per
  * ubin (status, booking, jam). Cocok untuk memantau seluruh lantai dari satu
@@ -62,13 +55,12 @@ export function DockGrid({
   groups: DockGroup[]
   now: Date
 }) {
+  const t = useT()
   const docks = groups.flatMap((group) => group.docks)
 
   return (
     <div className='flex flex-col gap-2'>
-      <p className='text-xs text-muted-foreground'>
-        Urutan: perlu dimulai, sedang diproses, kosong, lalu perawatan.
-      </p>
+      <p className='text-xs text-muted-foreground'>{t('dock.gridOrder')}</p>
       <div className='grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6'>
         {docks.map((dock) => (
           <DockMiniTile
@@ -92,6 +84,7 @@ function DockMiniTile({
   onStart,
   onFinish,
 }: DockActionHandlers & { dock: DockWithBooking; now: Date }) {
+  const t = useT()
   const booking = dock.currentBooking
   const phase = dockPhase(dock)
   const serving = booking?.status === 'IN_PROGRESS'
@@ -111,12 +104,12 @@ function DockMiniTile({
             aria-hidden
             className={cn('size-1.5 rounded-full', phaseDot[phase])}
           />
-          {phaseShort[phase]}
+          {t(`dock.phaseShort.${phase}` as const)}
         </span>
       </div>
 
       <p className='truncate text-xs text-muted-foreground'>
-        {dockActivityLabel(dock.allowedActivity)}
+        {t(dockActivityLabelKey(dock.allowedActivity))}
       </p>
 
       <div className='min-h-9 min-w-0'>
@@ -126,14 +119,14 @@ function DockMiniTile({
               {booking.bookingCode}
             </p>
             <p className='truncate text-xs text-muted-foreground'>
-              {booking.licensePlate ?? 'Plat belum diisi'}
+              {booking.licensePlate ?? t('dock.plateEmpty')}
             </p>
           </>
         ) : (
           <p className='text-xs text-muted-foreground'>
             {phase === 'maintenance'
-              ? 'Tidak dipakai'
-              : 'Menunggu truk berikutnya'}
+              ? t('dock.notUsed')
+              : t('dock.waitingNext')}
           </p>
         )}
       </div>
@@ -148,17 +141,23 @@ function DockMiniTile({
                   toneText[clock.tone]
                 )}
               >
-                {shortClock(clock.elapsedMinutes)}
+                {shortClock(clock.elapsedMinutes, t)}
               </p>
               <p className='truncate text-muted-foreground tabular-nums'>
                 {clock.overrunMinutes > 0
-                  ? `Lewat ${shortClock(clock.overrunMinutes)}`
-                  : `Sisa ${shortClock(clock.remainingMinutes)}`}
+                  ? t('dock.overShort', {
+                      time: shortClock(clock.overrunMinutes, t),
+                    })
+                  : t('dock.remainingShort', {
+                      time: shortClock(clock.remainingMinutes, t),
+                    })}
               </p>
             </>
           ) : booking ? (
             <p className='truncate text-muted-foreground tabular-nums'>
-              Masuk {formatTime(booking.timeLog?.gateInAt ?? booking.startTime)}
+              {t('dock.enteredOnly', {
+                time: formatTime(booking.timeLog?.gateInAt ?? booking.startTime),
+              })}
             </p>
           ) : null}
         </div>

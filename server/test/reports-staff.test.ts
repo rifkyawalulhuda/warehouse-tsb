@@ -91,4 +91,40 @@ describe('laporan staf', () => {
     expect(row.getCell(1).value).toBe('TSB-20261113-001')
     expect(row.getCell(8).value).toBe('2026-11-13 09:00')
   })
+
+  it('menulis isi berkas dalam bahasa Inggris bila diminta', async () => {
+    await seedBooking(new Date('2026-11-13T02:00:00.000Z'))
+    const cookie = await loginCookie(app, 'admin@test.local')
+
+    const response = await request(app)
+      .get(`/api/reports/export.xlsx?from=${DAY}&to=${DAY}&lang=en`)
+      .set('Cookie', cookie)
+      .buffer(true)
+      .parse((res, callback) => {
+        const chunks: Buffer[] = []
+        res.on('data', (chunk: Buffer) => chunks.push(chunk))
+        res.on('end', () => callback(null, Buffer.concat(chunks)))
+      })
+
+    expect(response.status).toBe(200)
+    expect(response.headers['content-disposition']).toContain('report-tsb-')
+
+    const workbook = new ExcelJS.Workbook()
+    await workbook.xlsx.load(response.body as Buffer)
+
+    expect(workbook.worksheets.map((sheet) => sheet.name)).toEqual([
+      'Summary',
+      'Booking Detail',
+    ])
+
+    const summary = workbook.getWorksheet('Summary')!
+    expect(summary.getCell('A1').value).toBe('Metric')
+    expect(summary.getCell('A2').value).toBe('Period')
+
+    // Status enum mentah diganti label Inggris, bukan dibiarkan apa adanya.
+    const sheet = workbook.getWorksheet('Booking Detail')!
+    expect(sheet.getCell('G1').value).toBe('Status')
+    expect(sheet.getCell('G2').value).toBe('Checked out')
+    expect(sheet.getCell('C2').value).toBe('Unloading')
+  })
 })

@@ -10,6 +10,7 @@ import {
   waNumber,
 } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { useLocale, useT } from '@/lib/i18n'
 import { ApprovalBadge } from '@/components/approval-badge'
 import { StatusBadge } from '@/components/status-badge'
 import { Badge } from '@/components/ui/badge'
@@ -31,7 +32,9 @@ const URGENCY_BORDER = {
  * tetap menerima kliknya sendiri, bukan ikut membuka detail.
  */
 export function BookingCard({ booking, now }: { booking: Booking; now: Date }) {
-  const urgency = bookingUrgency(booking, now)
+  const locale = useLocale()
+  const t = useT()
+  const urgency = bookingUrgency(booking, now, locale)
   const accent = URGENCY_BORDER[urgency.key as keyof typeof URGENCY_BORDER]
 
   return (
@@ -92,20 +95,20 @@ export function BookingCard({ booking, now }: { booking: Booking; now: Date }) {
               variant='outline'
               className='border-orange-300 text-orange-700 dark:text-orange-300'
             >
-              Terlambat {booking.lateMinutes} menit
+              {t('bookings.late', { count: booking.lateMinutes })}
             </Badge>
           )}
         </div>
 
         <dl className='mt-3 grid gap-2 text-sm sm:grid-cols-2'>
-          <Row icon={Truck} label='Kendaraan'>
-            {booking.licensePlate ?? 'Belum diisi'}
+          <Row icon={Truck} label={t('bookings.vehicle')}>
+            {booking.licensePlate ?? t('bookings.notFilled')}
             {booking.driverName && (
               <span className='ms-1 text-xs text-muted-foreground'>({booking.driverName})</span>
             )}
           </Row>
-          <Row icon={MapPin} label='Dock'>
-            {dockLabel(booking)}
+          <Row icon={MapPin} label={t('bookings.dock')}>
+            {dockLabel(booking, locale)}
           </Row>
         </dl>
 
@@ -124,7 +127,7 @@ export function BookingCard({ booking, now }: { booking: Booking; now: Date }) {
                   target='_blank'
                   rel='noreferrer'
                 >
-                  WA supir
+                  {t('bookings.waDriver')}
                 </a>
               </>
             )}

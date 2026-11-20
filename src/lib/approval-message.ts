@@ -1,3 +1,4 @@
+import { getLocale, translate, type MessageKey } from '@/lib/i18n'
 import { formatDate, formatTime } from '@/lib/format'
 
 export type ApprovalMessageKind = 'pending' | 'approved' | 'rejected' | 'expired'
@@ -6,6 +7,9 @@ export type ApprovalMessageKind = 'pending' | 'approved' | 'rejected' | 'expired
  * Template pesan WhatsApp. Fase 1 sengaja tanpa email/penyedia pihak ketiga:
  * nomor pengirim belum punya domain terverifikasi, dan `wa.me` sudah dipakai
  * untuk berbagi tiket. Admin menyalin pesan ini lalu mengirimnya sendiri.
+ *
+ * Teksnya dibaca dari kamus saat dipanggil, bukan disusun sekali di modul:
+ * pesan yang disalin Admin harus mengikuti bahasa antarmuka yang sedang aktif.
  */
 export function buildApprovalMessage(
   booking: {
@@ -16,30 +20,34 @@ export function buildApprovalMessage(
   },
   options: { kind: ApprovalMessageKind; reason?: string | null }
 ): string {
-  const when = `${formatDate(booking.bookingDate)} pukul ${formatTime(booking.startTime)}`
+  const locale = getLocale()
+  const t = (key: string, vars?: Record<string, string | number>) =>
+    translate(locale, `approvalMsg.${key}` as MessageKey, vars)
+
+  const when = `${formatDate(booking.bookingDate)} ${t('at')} ${formatTime(booking.startTime)}`
 
   switch (options.kind) {
     case 'pending':
       return [
-        `Booking ${booking.bookingCode} (${when}) masih MENUNGGU PERSETUJUAN admin gudang.`,
-        `Dokumen: ${booking.referenceDocNo}.`,
-        'QR Code baru aktif setelah disetujui.',
+        t('pendingBody', { code: booking.bookingCode, when }),
+        t('docLine', { doc: booking.referenceDocNo }),
+        t('qrPending'),
       ].join('\n')
     case 'approved':
       return [
-        `Booking ${booking.bookingCode} (${when}) telah DISETUJUI.`,
-        'QR Code sudah aktif — tunjukkan di gerbang gudang.',
+        t('approvedBody', { code: booking.bookingCode, when }),
+        t('qrActive'),
       ].join('\n')
     case 'rejected':
       return [
-        `Booking ${booking.bookingCode} (${when}) DITOLAK.`,
-        `Alasan: ${options.reason ?? '-'}.`,
-        'Silakan buat booking baru.',
+        t('rejectedBody', { code: booking.bookingCode, when }),
+        t('reasonLine', { reason: options.reason ?? '-' }),
+        t('createNew'),
       ].join('\n')
     case 'expired':
       return [
-        `Booking ${booking.bookingCode} (${when}) KEDALUWARSA karena tidak diputuskan sampai tenggat.`,
-        'Silakan buat booking baru.',
+        t('expiredBody', { code: booking.bookingCode, when }),
+        t('createNew'),
       ].join('\n')
   }
 }

@@ -2,12 +2,14 @@ import { describe, expect, it, vi } from 'vitest'
 import { render } from 'vitest-browser-react'
 import { userEvent } from 'vitest/browser'
 import type { Booking, DockWithBooking } from '@/lib/api/types'
+import { translate } from '@/lib/i18n'
 import { DockGrid } from './dock-grid'
-import { shortClock } from './dock-model'
+import { shortClock, type Translate } from './dock-model'
 import { DockTable } from './dock-table'
 import { DockViewSwitch } from './dock-view-switch'
 
 const NOW = new Date('2026-11-11T10:00:00.000Z')
+const tId: Translate = (key, vars) => translate('id', key, vars)
 
 function makeBooking(overrides: Partial<Booking> = {}): Booking {
   return {
@@ -129,9 +131,9 @@ describe('DockTable', () => {
 
 describe('DockGrid', () => {
   it('shortens clock labels for narrow tiles', () => {
-    expect(shortClock(35)).toBe('35m')
-    expect(shortClock(60)).toBe('1j')
-    expect(shortClock(215)).toBe('3j 35m')
+    expect(shortClock(35, tId)).toBe('35m')
+    expect(shortClock(60, tId)).toBe('1j')
+    expect(shortClock(215, tId)).toBe('3j 35m')
   })
 
   it('starts the process from a compact tile', async () => {

@@ -3,12 +3,14 @@ import { BrandLogo } from '@/components/brand-logo'
 import { useBranding, tabTitle } from '@/lib/branding'
 import { useDocumentTitle } from '@/lib/use-document-title'
 import { useFavicon } from '@/lib/use-favicon'
+import { useT } from '@/lib/i18n'
 import { AuthLayout } from '../auth-layout'
 import { UserAuthForm } from './components/user-auth-form'
 
 export function SignIn() {
   const { redirect } = useSearch({ from: '/(auth)/sign-in' })
   const brand = useBranding()
+  const t = useT()
   useDocumentTitle(tabTitle(brand.appName, brand.appShortName))
   useFavicon(brand.appLogoUrl)
 
@@ -36,15 +38,17 @@ export function SignIn() {
         </p>
       )}
 
-      <h1 className='text-2xl font-semibold tracking-tight'>Masuk</h1>
+      <h1 className='text-2xl font-semibold tracking-tight'>
+        {t('auth.title')}
+      </h1>
       <p className='mt-1.5 mb-6 text-sm text-muted-foreground'>
-        Gunakan email dan password yang diberikan Admin gudang.
+        {t('auth.subtitle')}
       </p>
 
       <UserAuthForm redirectTo={redirect} />
 
       <p className='mt-6 text-xs text-muted-foreground'>
-        Belum punya akun? Hubungi Admin gudang untuk didaftarkan.
+        {t('auth.noAccount')}
       </p>
     </AuthLayout>
   )

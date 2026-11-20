@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { getLocale, translate, useT } from '@/lib/i18n'
 import { fetchBranding, type Branding } from '@/lib/api/endpoints'
 
 /**
@@ -6,8 +7,9 @@ import { fetchBranding, type Branding } from '@/lib/api/endpoints'
  * sebagai placeholder di Pengaturan, supaya Admin tahu persis teks apa yang
  * sedang menggantikan isian kosong.
  */
-export const DEFAULT_LOGIN_DESCRIPTION =
-  'Kelola jadwal bongkar, antrean dock, dan tiket supir dari satu tempat.'
+export function defaultLoginDescription(): string {
+  return translate(getLocale(), 'auth.defaultLoginDescription')
+}
 
 /**
  * Judul aplikasi yang diatur Admin. Muncul di sidebar, halaman masuk, dan judul
@@ -51,6 +53,7 @@ export function tabTitle(appName: string, appShortName: string | null): string {
 }
 
 export function useBranding(): Branding {
+  const t = useT()
   const query = useQuery({
     queryKey: ['branding'],
     queryFn: fetchBranding,
@@ -66,9 +69,10 @@ export function useBranding(): Branding {
     appShortName: data.appShortName,
     // Kosong berarti Admin belum mengunggah logo; lencana huruf lalu dipakai.
     appLogoUrl: data.appLogoUrl?.trim() || null,
-    // Paragraf sambutan selalu punya isi: kosong berarti teks bawaan, dan
-    // layar masuk tidak perlu tahu bedanya.
-    loginDescription: data.loginDescription?.trim() || DEFAULT_LOGIN_DESCRIPTION,
+    // Paragraf sambutan selalu punya isi: kosong berarti teks bawaan yang
+    // mengikuti bahasa aktif, dan layar masuk tidak perlu tahu bedanya.
+    loginDescription:
+      data.loginDescription?.trim() || t('auth.defaultLoginDescription'),
     // Kosong berarti Admin belum mengunggah apa pun; halaman masuk lalu memakai
     // gradien bawaan, bukan gambar kosong yang tampak rusak.
     loginCoverUrl: data.loginCoverUrl?.trim() || null,

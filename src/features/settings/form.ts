@@ -1,5 +1,9 @@
 import type { Settings } from '@/lib/api/types'
 import { labelToMinute } from '@/lib/format'
+import { localeToIntl, type MessageKey, type Vars } from '@/lib/i18n'
+
+/** Bentuk fungsi terjemahan yang diterima fungsi murni di berkas ini. */
+export type Translate = (key: MessageKey, vars?: Vars) => string
 
 /**
  * Bentuk state form Pengaturan. Angka disimpan sebagai string karena input
@@ -219,84 +223,85 @@ function minutesBetween(open: string, close: string) {  if (open === '' || close
  */
 export function sectionError(
   section: SectionKey,
-  form: FormState
+  form: FormState,
+  t: Translate
 ): string | null {
   switch (section) {
     case 'identity': {
       const name = form.warehouseName.trim()
-      if (name.length < 2) return 'Nama gudang minimal 2 karakter.'
-      if (name.length > 120) return 'Nama gudang maksimal 120 karakter.'
+      if (name.length < 2) return t('settings.error.warehouseMin')
+      if (name.length > 120) return t('settings.error.warehouseMax')
       return null
     }
     case 'brand': {
       const appName = form.appName.trim()
       // Nama kosong akan membuat header dan judul tab tampak rusak, jadi
       // ditolak di sini — bukan diam-diam diganti nilai bawaan.
-      if (appName.length === 0) return 'Judul aplikasi wajib diisi.'
-      if (appName.length > 60) return 'Judul aplikasi maksimal 60 karakter.'
+      if (appName.length === 0) return t('settings.error.appNameRequired')
+      if (appName.length > 60) return t('settings.error.appNameMax')
       if (form.appTagline.trim().length > 80) {
-        return 'Subjudul maksimal 80 karakter.'
+        return t('settings.error.taglineMax')
       }
       if (form.appShortName.trim().length > 20) {
-        return 'Nama pendek maksimal 20 karakter.'
+        return t('settings.error.shortNameMax')
       }
       const logo = form.appLogoUrl.trim()
       if (logo !== '' && !isSafeImageUrl(logo)) {
-        return 'Logo harus PNG atau JPG yang diunggah dari sini, atau alamat https.'
+        return t('settings.error.logo')
       }
       return null
     }
     case 'login': {
       if (form.loginDescription.trim().length > LOGIN_DESCRIPTION_MAX) {
-        return `Teks sambutan maksimal ${LOGIN_DESCRIPTION_MAX} karakter.`
+        return t('settings.error.loginMax', { max: LOGIN_DESCRIPTION_MAX })
       }
       const cover = form.loginCoverUrl.trim()
       if (cover !== '' && !isSafeImageUrl(cover)) {
-        return 'Gambar harus PNG atau JPG yang diunggah dari sini, atau alamat https.'
+        return t('settings.error.image')
       }
       const color = form.loginBrandColor.trim()
       if (color !== '' && !isHexColor(color)) {
-        return 'Warna aksen harus format #RRGGBB.'
+        return t('settings.error.color')
       }
       return null
     }
     case 'hours': {
       if (!isIntegerIn(form.slotUnitMinutes, 15, 120)) {
-        return 'Satuan blok harus angka 15–120 menit.'
+        return t('settings.error.unitRange')
       }
       const span = minutesBetween(form.open, form.close)
-      if (span === null) return 'Jam buka dan jam tutup wajib diisi.'
-      if (span <= 0) return 'Jam tutup harus setelah jam buka.'
+      if (span === null) return t('settings.error.hoursRequired')
+      if (span <= 0) return t('settings.error.hoursOrder')
       const unit = Number(form.slotUnitMinutes)
       if (span % unit !== 0) {
-        return `Rentang ${span} menit tidak habis dibagi satuan blok ${unit} menit.`
+        return t('settings.error.unitRemainder', { span, unit })
       }
       return null
     }
     case 'arrival': {
       if (!isIntegerIn(form.gracePeriodMinutes, 0, 240)) {
-        return 'Masa tenggang harus 0–240 menit.'
+        return t('settings.error.graceRange')
       }
       if (!isIntegerIn(form.earlyArrivalLimitMinutes, 0, 480)) {
-        return 'Batas datang awal harus 0–480 menit.'
+        return t('settings.error.earlyRange')
       }
       return null
     }
     case 'window': {
       if (!isIntegerIn(form.bookingWindowDays, 1, 90)) {
-        return 'Jendela pemesanan harus 1–90 hari.'
+        return t('settings.error.windowRange')
       }
       return null
     }
     case 'approval': {
       if (!isIntegerIn(form.approvalLeadMinutes, 5, 2880)) {
-        return 'Tenggat keputusan harus 5–2880 menit.'
+        return t('settings.error.leadRange')
       }
       if (!isIntegerIn(form.approvalMinDecisionMinutes, 5, 1440)) {
-        return 'Jendela keputusan minimum harus 5–1440 menit.'
+        return t('settings.error.minDecisionRange')
       }
       if (!isIntegerIn(form.approvalUrgentBufferMinutes, 0, 14400)) {
-        return 'Ambang label mendesak harus 0–14400 menit.'
+        return t('settings.error.urgentRange')
       }
       return null
     }
@@ -365,7 +370,7 @@ export type Impact = {
   approval: string
 }
 
-export function impactOf(form: FormState): Impact {
+export function impactOf(form: FormState, t: Translate): Impact {
   const span = minutesBetween(form.open, form.close)
   const unit = Number(form.slotUnitMinutes)
 
@@ -376,11 +381,21 @@ export function impactOf(form: FormState): Impact {
 
   return {
     hours: form.open && form.close ? `${form.open}–${form.close}` : '—',
-    duration: span !== null && span > 0 ? `${roundHours(span)} jam` : '—',
-    blocks: blocks > 0 ? `${blocks} blok` : '—',
-    grace: form.gracePeriodMinutes ? `${form.gracePeriodMinutes} menit` : '—',
-    window: form.bookingWindowDays ? `${form.bookingWindowDays} hari` : '—',
-    approval: form.approvalMode === 'AUTO' ? 'Otomatis' : 'Manual',
+    duration:
+      span !== null && span > 0
+        ? t('duration.hours', { count: roundHours(span) })
+        : '—',
+    blocks: blocks > 0 ? t('settings.impact.blocks', { count: blocks }) : '—',
+    grace: form.gracePeriodMinutes
+      ? t('duration.minutes', { count: form.gracePeriodMinutes })
+      : '—',
+    window: form.bookingWindowDays
+      ? t('settings.window.daysUnit', { count: form.bookingWindowDays })
+      : '—',
+    approval:
+      form.approvalMode === 'AUTO'
+        ? t('settings.approval.auto')
+        : t('settings.approval.manual'),
   }
 }
 
@@ -389,7 +404,9 @@ function roundHours(minutes: number) {
   const hours = minutes / 60
   return Number.isInteger(hours)
     ? String(hours)
-    : hours.toFixed(1).replace('.', ',')
+    : new Intl.NumberFormat(localeToIntl(), {
+        maximumFractionDigits: 1,
+      }).format(hours)
 }
 
 /**
@@ -397,12 +414,17 @@ function roundHours(minutes: number) {
  * bukan galat: server tetap menerima rentang seperti ini, tapi admin perlu tahu
  * bahwa ujung jendela operasional tidak bisa dipesan.
  */
-export function hoursNote(open: string, close: string, unitValue: string) {
+export function hoursNote(
+  open: string,
+  close: string,
+  unitValue: string,
+  t: Translate
+) {
   const span = minutesBetween(open, close)
   const unit = Number(unitValue)
   if (span === null || span <= 0) return null
   if (!Number.isInteger(unit) || unit <= 0) return null
   const remainder = span % unit
   if (remainder === 0) return null
-  return `${remainder} menit di ujung jam operasional tidak masuk blok mana pun, jadi tidak bisa dipesan.`
+  return t('settings.note.hours', { minutes: remainder })
 }

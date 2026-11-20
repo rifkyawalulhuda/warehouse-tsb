@@ -18,6 +18,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 import { Badge } from '../ui/badge'
+import { useT } from '@/lib/i18n'
 import {
   ApprovalPulseDot,
   PendingApprovalBadge,
@@ -95,6 +96,7 @@ function NavAttention({
 
 function SidebarMenuLink({ item, href }: { item: NavLink; href: string }) {
   const { state, isMobile, setOpenMobile } = useSidebar()
+  const t = useT()
   const collapsed = state === 'collapsed' && !isMobile
   return (
     <SidebarMenuItem>
@@ -103,7 +105,9 @@ function SidebarMenuLink({ item, href }: { item: NavLink; href: string }) {
         isActive={checkIsActive(href, item)}
         tooltip={
           item.attention
-            ? `${item.title} · ${item.attention} menunggu persetujuan`
+            ? `${item.title} · ${t('common.pendingApprovalTooltip', {
+                count: item.attention,
+              })}`
             : item.title
         }
       >

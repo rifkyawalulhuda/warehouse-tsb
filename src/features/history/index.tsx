@@ -10,6 +10,7 @@ import {
   roleLabels,
   todayISO,
 } from '@/lib/format'
+import { useT } from '@/lib/i18n'
 import { useDebouncedValue } from '@/hooks/use-debounced-value'
 import { useRealtimeSync } from '@/hooks/use-realtime'
 import { Badge } from '@/components/ui/badge'
@@ -22,121 +23,135 @@ import { Main } from '@/components/layout/main'
 import { PageHeader } from '@/components/page-header'
 import { ErrorBlock, LoadingBlock } from '@/components/query-state'
 
-const eventLabels: Record<GateHistoryEvent, string> = {
-  GATE_IN: 'Masuk',
-  GATE_OUT: 'Keluar',
-}
+type Translate = ReturnType<typeof useT>
 
 /**
  * Satu baris = satu peristiwa, bukan satu truk: truk yang masuk pagi dan keluar
  * siang muncul dua kali. Urutannya kronologis terbalik, sehingga kejadian
  * terakhir — yang biasanya ditanyakan orang — ada paling atas.
+ *
+ * Kolom dibangun di dalam komponen karena judulnya memakai bahasa aktif.
  */
-const columns: ColumnDef<GateHistoryRow>[] = [
-  {
-    accessorKey: 'at',
-    meta: {
-      label: 'Waktu',
-      cellClassName: 'text-sm whitespace-nowrap tabular-nums',
+function buildColumns(t: Translate): ColumnDef<GateHistoryRow>[] {
+  return [
+    {
+      accessorKey: 'at',
+      meta: {
+        label: t('history.col.time'),
+        cellClassName: 'text-sm whitespace-nowrap tabular-nums',
+      },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t('history.col.time')} />
+      ),
+      cell: ({ row }) => formatDateTime(row.original.at),
     },
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Waktu' />
-    ),
-    cell: ({ row }) => formatDateTime(row.original.at),
-  },
-  {
-    accessorKey: 'event',
-    enableGlobalFilter: false,
-    meta: { label: 'Peristiwa' },
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Peristiwa' />
-    ),
-    cell: ({ row }) => <EventBadge event={row.original.event} />,
-  },
-  {
-    id: 'bookingCode',
-    accessorFn: (row) => row.bookingCode ?? '',
-    meta: { label: 'Kode', cellClassName: 'font-mono text-xs' },
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Kode' />
-    ),
-    cell: ({ row }) => row.original.bookingCode ?? '—',
-  },
-  {
-    id: 'customer',
-    accessorFn: (row) => row.customer ?? '',
-    meta: { label: 'Customer', cellClassName: 'text-sm' },
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Customer' />
-    ),
-    cell: ({ row }) => row.original.customer ?? '—',
-  },
-  {
-    id: 'vehicle',
-    accessorFn: (row) => row.licensePlate ?? '',
-    meta: { label: 'Kendaraan', cellClassName: 'text-sm' },
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Kendaraan' />
-    ),
-    cell: ({ row }) => (
-      <>
-        {row.original.licensePlate ?? '—'}
-        {row.original.driverName && (
-          <span className='block text-xs text-muted-foreground'>
-            {row.original.driverName}
-          </span>
-        )}
-      </>
-    ),
-  },
-  {
-    id: 'dock',
-    accessorFn: (row) => row.dockCode ?? '',
-    meta: { label: 'Dock', cellClassName: 'text-sm' },
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Dock' />
-    ),
-    cell: ({ row }) => (
-      <>
-        {row.original.dockCode ?? '—'}
-        {row.original.activityType && (
-          <span className='block text-xs text-muted-foreground'>
-            {activityLabels[row.original.activityType]}
-          </span>
-        )}
-      </>
-    ),
-  },
-  {
-    id: 'officer',
-    accessorFn: (row) => row.officerName ?? '',
-    meta: { label: 'Petugas', cellClassName: 'text-sm' },
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Petugas' />
-    ),
-    cell: ({ row }) => (
-      <>
-        {row.original.officerName ?? '—'}
-        {row.original.officerRole && (
-          <span className='block text-xs text-muted-foreground'>
-            {roleLabels[row.original.officerRole]}
-          </span>
-        )}
-      </>
-    ),
-  },
-  {
-    id: 'description',
-    enableSorting: false,
-    enableGlobalFilter: false,
-    meta: { label: 'Keterangan', cellClassName: 'max-w-64 text-sm' },
-    header: () => <span>Keterangan</span>,
-    cell: ({ row }) => <Description row={row.original} />,
-  },
-]
+    {
+      accessorKey: 'event',
+      enableGlobalFilter: false,
+      meta: { label: t('history.col.event') },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t('history.col.event')} />
+      ),
+      cell: ({ row }) => <EventBadge event={row.original.event} />,
+    },
+    {
+      id: 'bookingCode',
+      accessorFn: (row) => row.bookingCode ?? '',
+      meta: { label: t('history.col.code'), cellClassName: 'font-mono text-xs' },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t('history.col.code')} />
+      ),
+      cell: ({ row }) => row.original.bookingCode ?? '—',
+    },
+    {
+      id: 'customer',
+      accessorFn: (row) => row.customer ?? '',
+      meta: { label: t('history.col.customer'), cellClassName: 'text-sm' },
+      header: ({ column }) => (
+        <DataTableColumnHeader
+          column={column}
+          title={t('history.col.customer')}
+        />
+      ),
+      cell: ({ row }) => row.original.customer ?? '—',
+    },
+    {
+      id: 'vehicle',
+      accessorFn: (row) => row.licensePlate ?? '',
+      meta: { label: t('history.col.vehicle'), cellClassName: 'text-sm' },
+      header: ({ column }) => (
+        <DataTableColumnHeader
+          column={column}
+          title={t('history.col.vehicle')}
+        />
+      ),
+      cell: ({ row }) => (
+        <>
+          {row.original.licensePlate ?? '—'}
+          {row.original.driverName && (
+            <span className='block text-xs text-muted-foreground'>
+              {row.original.driverName}
+            </span>
+          )}
+        </>
+      ),
+    },
+    {
+      id: 'dock',
+      accessorFn: (row) => row.dockCode ?? '',
+      meta: { label: t('history.col.dock'), cellClassName: 'text-sm' },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t('history.col.dock')} />
+      ),
+      cell: ({ row }) => (
+        <>
+          {row.original.dockCode ?? '—'}
+          {row.original.activityType && (
+            <span className='block text-xs text-muted-foreground'>
+              {activityLabels[row.original.activityType]}
+            </span>
+          )}
+        </>
+      ),
+    },
+    {
+      id: 'officer',
+      accessorFn: (row) => row.officerName ?? '',
+      meta: { label: t('history.col.officer'), cellClassName: 'text-sm' },
+      header: ({ column }) => (
+        <DataTableColumnHeader
+          column={column}
+          title={t('history.col.officer')}
+        />
+      ),
+      cell: ({ row }) => (
+        <>
+          {row.original.officerName ?? '—'}
+          {row.original.officerRole && (
+            <span className='block text-xs text-muted-foreground'>
+              {roleLabels[row.original.officerRole]}
+            </span>
+          )}
+        </>
+      ),
+    },
+    {
+      id: 'description',
+      enableSorting: false,
+      enableGlobalFilter: false,
+      meta: {
+        label: t('history.col.description'),
+        cellClassName: 'max-w-64 text-sm',
+      },
+      header: () => <span>{t('history.col.description')}</span>,
+      cell: ({ row }) => <Description row={row.original} />,
+    },
+  ]
+}
 
 export function GateHistoryPage() {
   useRealtimeSync()
+  const t = useT()
 
   const today = todayISO()
   const [from, setFrom] = useState(today)
@@ -154,6 +169,7 @@ export function GateHistoryPage() {
   })
 
   const rows = useMemo(() => history.data?.rows ?? [], [history.data])
+  const columns = useMemo(() => buildColumns(t), [t])
   const counts = useMemo(() => {
     return rows.reduce(
       (total, row) => {
@@ -167,48 +183,48 @@ export function GateHistoryPage() {
   return (
     <Main className='flex flex-1 flex-col gap-6'>
       <PageHeader
-        title='Riwayat Gate'
-        description='Truk yang sudah masuk dan keluar gate, dalam urutan kejadian.'
+        title={t('history.title')}
+        description={t('history.description')}
       />
 
       <Card>
         <CardContent className='flex flex-col gap-3 pt-6 sm:flex-row sm:flex-wrap sm:items-end'>
           <div className='flex flex-col gap-1.5'>
             <span className='text-xs font-medium text-muted-foreground'>
-              Dari tanggal
+              {t('history.from')}
             </span>
             <DatePicker
               value={from}
               onChange={setFrom}
               max={to}
               className='w-full sm:w-44'
-              aria-label='Tanggal awal'
+              aria-label={t('history.from')}
             />
           </div>
           <div className='flex flex-col gap-1.5'>
             <span className='text-xs font-medium text-muted-foreground'>
-              Sampai tanggal
+              {t('history.to')}
             </span>
             <DatePicker
               value={to}
               onChange={setTo}
               min={from}
               className='w-full sm:w-44'
-              aria-label='Tanggal akhir'
+              aria-label={t('history.to')}
             />
           </div>
           <div className='flex flex-1 flex-col gap-1.5 sm:min-w-56'>
             <span className='text-xs font-medium text-muted-foreground'>
-              Cari
+              {t('history.search')}
             </span>
             <div className='relative'>
               <SearchIcon className='pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground' />
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder='Kode booking, plat, atau supir'
+                placeholder={t('history.searchPlaceholder')}
                 className='ps-9'
-                aria-label='Cari kode booking, plat nomor, atau nama supir'
+                aria-label={t('history.searchAria')}
               />
             </div>
           </div>
@@ -221,7 +237,7 @@ export function GateHistoryPage() {
             }}
             disabled={from === today && to === today && search === ''}
           >
-            Hari ini
+            {t('history.today')}
           </Button>
           <Button
             variant='outline'
@@ -229,7 +245,7 @@ export function GateHistoryPage() {
             className='size-11 shrink-0 sm:size-9'
             onClick={() => void history.refetch()}
             disabled={history.isFetching}
-            aria-label='Muat ulang riwayat'
+            aria-label={t('history.refresh')}
           >
             <RefreshCwIcon
               className={history.isFetching ? 'animate-spin' : undefined}
@@ -241,11 +257,11 @@ export function GateHistoryPage() {
       {rangeInvalid ? (
         <Card>
           <CardContent className='py-10 text-center text-sm text-muted-foreground'>
-            Tanggal awal tidak boleh melewati tanggal akhir.
+            {t('history.rangeInvalid')}
           </CardContent>
         </Card>
       ) : history.isPending ? (
-        <LoadingBlock label='Memuat riwayat gate...' />
+        <LoadingBlock label={t('history.loading')} />
       ) : history.isError ? (
         <ErrorBlock
           error={history.error}
@@ -254,31 +270,30 @@ export function GateHistoryPage() {
       ) : (
         <>
           <div className='grid grid-cols-2 gap-2 sm:gap-4'>
-            <Summary label='Masuk' value={counts.GATE_IN} />
-            <Summary label='Keluar' value={counts.GATE_OUT} />
+            <Summary label={t('history.event.GATE_IN')} value={counts.GATE_IN} />
+            <Summary
+              label={t('history.event.GATE_OUT')}
+              value={counts.GATE_OUT}
+            />
           </div>
 
           {history.data.truncated && (
             <p className='text-sm text-muted-foreground'>
-              Menampilkan {rows.length} peristiwa terbaru. Persempit rentang
-              tanggal untuk melihat sisanya — angka di atas hanya menghitung
-              baris yang tampil.
+              {t('history.truncated', { count: rows.length })}
             </p>
           )}
 
           <Card>
             <CardHeader>
-              <CardTitle className='text-base'>Kronologi</CardTitle>
+              <CardTitle className='text-base'>{t('history.timeline')}</CardTitle>
             </CardHeader>
             <CardContent>
               {rows.length === 0 ? (
                 <div className='py-10 text-center text-sm text-muted-foreground'>
                   <p className='font-medium text-foreground'>
-                    Belum ada aktivitas gate
+                    {t('history.emptyTitle')}
                   </p>
-                  <p className='mt-1'>
-                    Tidak ada truk yang masuk atau keluar pada rentang ini.
-                  </p>
+                  <p className='mt-1'>{t('history.emptyBody')}</p>
                 </div>
               ) : (
                 <DataTable
@@ -286,7 +301,7 @@ export function GateHistoryPage() {
                   data={rows}
                   getRowId={(row) => row.id}
                   pageSize={20}
-                  emptyMessage='Tidak ada peristiwa gate pada rentang ini.'
+                  emptyMessage={t('history.emptyTable')}
                 />
               )}
             </CardContent>
@@ -311,27 +326,29 @@ function Summary({ label, value }: { label: string; value: number }) {
 }
 
 function EventBadge({ event }: { event: GateHistoryEvent }) {
+  const t = useT()
   return (
     <Badge variant={event === 'GATE_IN' ? 'default' : 'secondary'}>
-      {eventLabels[event]}
+      {t(`history.event.${event}`)}
     </Badge>
   )
 }
 
 function Description({ row }: { row: GateHistoryRow }) {
+  const t = useT()
   if (row.event === 'GATE_OUT' && row.minutesInside !== null) {
     return (
       <span className='text-muted-foreground'>
-        {row.minutesInside} menit di dalam
+        {t('history.minutesInside', { count: row.minutesInside })}
       </span>
     )
   }
   if (row.gateOutAt) {
     return (
       <span className='text-muted-foreground'>
-        Keluar {formatDateTime(row.gateOutAt)}
+        {t('history.gateOutAt', { time: formatDateTime(row.gateOutAt) })}
       </span>
     )
   }
-  return <span className='text-muted-foreground'>Masih di dalam</span>
+  return <span className='text-muted-foreground'>{t('history.stillInside')}</span>
 }

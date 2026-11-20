@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { BadgeCheck, ChevronsUpDown, LogOut } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth-store'
 import { roleLabels } from '@/lib/format'
+import { useT } from '@/lib/i18n'
 import useDialogState from '@/hooks/use-dialog-state'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
@@ -43,6 +44,7 @@ export function NavUser({ user }: NavUserProps) {
   const { isMobile } = useSidebar()
   const [open, setOpen] = useDialogState()
   const role = useAuthStore((state) => state.user?.role)
+  const t = useT()
 
   return (
     <>
@@ -96,7 +98,7 @@ export function NavUser({ user }: NavUserProps) {
                 <DropdownMenuItem asChild>
                   <Link to='/settings'>
                     <BadgeCheck />
-                    Pengaturan Akun
+                    {t('nav.accountSettings')}
                   </Link>
                 </DropdownMenuItem>
               </DropdownMenuGroup>
@@ -106,7 +108,7 @@ export function NavUser({ user }: NavUserProps) {
                 onClick={() => setOpen(true)}
               >
                 <LogOut />
-                Keluar
+                {t('nav.signOut')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

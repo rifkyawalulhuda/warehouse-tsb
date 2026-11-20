@@ -123,6 +123,23 @@ jadwalnya, supaya parkiran staging tidak menumpuk.
 
 ---
 
+## Bahasa (Indonesia / Inggris)
+
+Antarmuka punya dua bahasa: **IND** (bawaan) dan **ENG**, dapat diganti dari pengalih di header,
+sidebar, halaman Pengaturan, maupun halaman masuk dan tiket supir. Pilihan disimpan per perangkat
+di `localStorage` (`tsb.locale`), bukan per akun — satu orang bisa memakai bahasa berbeda di
+ponsel dan desktop tanpa perubahan skema database.
+
+- Kamus tinggal di `src/lib/i18n/messages/`. `id/` adalah sumber; tiap berkas `en/` diketik
+  `Record<Extract<MessageKey, 'prefiks.…'>, string>` sehingga kunci yang hilang atau berlebih
+  ditolak TypeScript, dan `messages.test.ts` menjaga placeholder `{nama}` tetap sama di kedua bahasa.
+- Format tanggal, jam, dan angka ikut bahasa aktif (`id-ID` / `en-GB`), termasuk kanvas PNG tiket.
+- Pesan galat server dikirim sebagai kode; klien yang menerjemahkannya, sehingga pesan yang sama
+  tampil dalam bahasa yang dipilih pengguna.
+- Berkas Excel laporan mengikuti bahasa halaman yang membuatnya (parameter `lang`).
+
+---
+
 ## Realtime
 
 Socket.io mengirim `booking.updated`, `dock.updated`, dan `queue.updated` ke room `admin`,

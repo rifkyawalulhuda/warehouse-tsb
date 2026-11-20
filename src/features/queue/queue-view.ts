@@ -13,11 +13,13 @@ export type QueueView = (typeof queueViews)[number]
 
 export const defaultQueueView: QueueView = 'board'
 
-export const queueViewLabels: Record<QueueView, string> = {
-  board: 'Papan',
-  list: 'Daftar',
-  cards: 'Kartu',
-  compact: 'Ringkas',
+import type { MessageKey } from '@/lib/i18n'
+
+export const queueViewLabelKey: Record<QueueView, MessageKey> = {
+  board: 'queue.view.board',
+  list: 'queue.view.list',
+  cards: 'queue.view.cards',
+  compact: 'queue.view.compact',
 }
 
 const storagePrefix = 'tsb.queue.view'

@@ -1,5 +1,6 @@
 import type { Booking, DockWithBooking } from '@/lib/api/types'
-import { activityLabels, formatTime } from '@/lib/format'
+import { formatTime } from '@/lib/format'
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { Card } from '@/components/ui/card'
 import {
@@ -14,7 +15,7 @@ import {
 import { DockActionButton, type DockActionHandlers } from './dock-action-button'
 import {
   clockLabel,
-  dockActivityLabel,
+  dockActivityLabelKey,
   dockPhase,
   processClock,
   shortClock,
@@ -45,21 +46,26 @@ export function DockTable({
   groups: DockGroup[]
   now: Date
 }) {
+  const t = useT()
   const docks = groups.flatMap((group) => group.docks)
 
   return (
     <Card className='gap-0 overflow-hidden py-0'>
       <Table>
         <TableCaption className='px-4 pb-4 text-start'>
-          Urutan baris: perlu dimulai, sedang diproses, kosong, lalu perawatan.
+          {t('dock.tableOrder')}
         </TableCaption>
         <TableHeader>
           <TableRow className='bg-muted/40 hover:bg-muted/40'>
-            <TableHead className='h-11 ps-4'>Dock</TableHead>
-            <TableHead className='h-11'>Status</TableHead>
-            <TableHead className='h-11'>Booking aktif</TableHead>
-            <TableHead className='h-11 max-md:hidden'>Jam proses</TableHead>
-            <TableHead className='h-11 pe-4 text-end'>Aksi</TableHead>
+            <TableHead className='h-11 ps-4'>{t('dock.colDock')}</TableHead>
+            <TableHead className='h-11'>{t('dock.colStatus')}</TableHead>
+            <TableHead className='h-11'>{t('dock.colBooking')}</TableHead>
+            <TableHead className='h-11 max-md:hidden'>
+              {t('dock.colProcess')}
+            </TableHead>
+            <TableHead className='h-11 pe-4 text-end'>
+              {t('dock.action')}
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -84,6 +90,7 @@ function DockTableRow({
   now,
   ...handlers
 }: DockActionHandlers & { dock: DockWithBooking; now: Date }) {
+  const t = useT()
   const booking = dock.currentBooking
   const phase = dockPhase(dock)
 
@@ -92,13 +99,13 @@ function DockTableRow({
       <TableCell className='ps-4'>
         <p className='font-semibold'>{dock.dockCode}</p>
         <p className='text-xs text-muted-foreground max-sm:hidden'>
-          {dockActivityLabel(dock.allowedActivity)}
+          {t(dockActivityLabelKey(dock.allowedActivity))}
           {dock.areaName ? ` · ${dock.areaName}` : ''}
         </p>
       </TableCell>
 
       <TableCell>
-        <DockStatusPill phase={phase} compact />
+        <DockStatusPill phase={phase} />
       </TableCell>
 
       <TableCell className='max-w-72 whitespace-normal'>
@@ -111,16 +118,20 @@ function DockTableRow({
               <MobileClock booking={booking} now={now} />
             )}
             <p className='truncate text-xs text-muted-foreground max-sm:hidden'>
-              {booking.customer.name} ·{' '}
-              {booking.licensePlate ?? 'plat belum diisi'}
+              {booking.customer.name}
+              {booking.licensePlate
+                ? ` · ${booking.licensePlate}`
+                : t('dock.plateEmptyShort')}
             </p>
             <p className='text-xs text-muted-foreground max-sm:hidden'>
-              {activityLabels[booking.activityType]}
+              {t(dockActivityLabelKey(booking.activityType))}
             </p>
           </>
         ) : (
           <span className='text-xs text-muted-foreground'>
-            {phase === 'maintenance' ? 'Dock tidak dipakai' : 'Tidak ada truk'}
+            {phase === 'maintenance'
+              ? t('dock.maintenanceNote')
+              : t('dock.tableEmpty')}
           </span>
         )}
       </TableCell>
@@ -139,6 +150,7 @@ function DockTableRow({
 }
 
 function MobileClock({ booking, now }: { booking: Booking; now: Date }) {
+  const t = useT()
   const clock = processClock(booking, now)
   return (
     <div className='md:hidden'>
@@ -148,18 +160,21 @@ function MobileClock({ booking, now }: { booking: Booking; now: Date }) {
           toneText[clock.tone]
         )}
       >
-        {shortClock(clock.elapsedMinutes)}
+        {shortClock(clock.elapsedMinutes, t)}
       </p>
       <p className='text-xs text-muted-foreground tabular-nums whitespace-nowrap'>
         {clock.overrunMinutes > 0
-          ? `lewat ${shortClock(clock.overrunMinutes)}`
-          : `sisa ${shortClock(clock.remainingMinutes)}`}
+          ? t('dock.overShort', { time: shortClock(clock.overrunMinutes, t) })
+          : t('dock.remainingShort', {
+              time: shortClock(clock.remainingMinutes, t),
+            })}
       </p>
     </div>
   )
 }
 
 function ProcessCell({ dock, now }: { dock: DockWithBooking; now: Date }) {
+  const t = useT()
   const booking = dock.currentBooking
   if (!booking) {
     return <span className='text-xs text-muted-foreground'>—</span>
@@ -169,12 +184,14 @@ function ProcessCell({ dock, now }: { dock: DockWithBooking; now: Date }) {
     return (
       <>
         <p className='text-xs tabular-nums'>
-          Jadwal {formatTime(booking.startTime)}
+          {t('dock.scheduleStart', { time: formatTime(booking.startTime) })}
         </p>
         <p className='text-xs text-muted-foreground'>
           {booking.timeLog?.gateInAt
-            ? `Masuk ${formatTime(booking.timeLog.gateInAt)} · belum mulai`
-            : 'Belum mulai proses'}
+            ? t('dock.gateInNotStarted', {
+                time: formatTime(booking.timeLog.gateInAt),
+              })
+            : t('dock.notStarted')}
         </p>
       </>
     )
@@ -184,7 +201,9 @@ function ProcessCell({ dock, now }: { dock: DockWithBooking; now: Date }) {
   return (
     <>
       <p className='text-xs tabular-nums'>
-        Mulai {formatTime(booking.timeLog?.processStartedAt)}
+        {t('dock.startProcessAt', {
+          time: formatTime(booking.timeLog?.processStartedAt),
+        })}
       </p>
       <p
         className={cn(
@@ -192,13 +211,17 @@ function ProcessCell({ dock, now }: { dock: DockWithBooking; now: Date }) {
           toneText[clock.tone]
         )}
       >
-        {clockLabel(clock.elapsedMinutes)} dari{' '}
-        {clockLabel(clock.targetMinutes)}{' '}
+        {t('dock.processFrom', {
+          elapsed: clockLabel(clock.elapsedMinutes, t),
+          target: clockLabel(clock.targetMinutes, t),
+        })}{' '}
         <span className='font-normal'>
           ·{' '}
           {clock.overrunMinutes > 0
-            ? `lewat ${clockLabel(clock.overrunMinutes)}`
-            : `sisa ${clockLabel(clock.remainingMinutes)}`}
+            ? t('dock.overShort', { time: clockLabel(clock.overrunMinutes, t) })
+            : t('dock.remainingShort', {
+                time: clockLabel(clock.remainingMinutes, t),
+              })}
         </span>
       </p>
     </>

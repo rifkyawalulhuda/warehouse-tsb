@@ -1,6 +1,7 @@
 import type { Booking } from '@/lib/api/types'
 import { TIME_ZONE, formatTime } from '@/lib/format'
 import { getCookie, setCookie } from '@/lib/cookies'
+import { translate, type Locale, type MessageKey } from '@/lib/i18n'
 
 /* ------------------------------------------------------------------ */
 /* Pilihan tampilan                                                    */
@@ -41,14 +42,14 @@ export const ACTIVE_FILTERS: BookingFilter[] = ['all', 'action', 'ready', 'onsit
 /** Chip untuk tab Riwayat: hasil akhir sebuah booking. */
 export const PAST_FILTERS: BookingFilter[] = ['all', 'done', 'cancelled', 'noshow']
 
-export const BOOKING_FILTERS: { value: BookingFilter; label: string }[] = [
-  { value: 'all', label: 'Semua' },
-  { value: 'action', label: 'Perlu tindakan' },
-  { value: 'ready', label: 'Siap datang' },
-  { value: 'onsite', label: 'Di gudang' },
-  { value: 'done', label: 'Selesai' },
-  { value: 'cancelled', label: 'Dibatalkan' },
-  { value: 'noshow', label: 'Tidak hadir' },
+export const BOOKING_FILTERS: { value: BookingFilter; key: MessageKey }[] = [
+  { value: 'all', key: 'bookings.filter.all' },
+  { value: 'action', key: 'bookings.filter.action' },
+  { value: 'ready', key: 'bookings.filter.ready' },
+  { value: 'onsite', key: 'bookings.filter.onsite' },
+  { value: 'done', key: 'bookings.filter.done' },
+  { value: 'cancelled', key: 'bookings.filter.cancelled' },
+  { value: 'noshow', key: 'bookings.filter.noshow' },
 ]
 
 export function filtersFor(scope: 'active' | 'past'): BookingFilter[] {
@@ -175,45 +176,65 @@ function dayDistance(from: number, to: number): number {
  * Label waktu relatif untuk blok booking berikutnya. Satuan menit dipakai
  * sampai satu jam, setelah itu hari lebih mudah dicerna daripada "1.440 menit".
  */
-export function bookingUrgency(booking: Booking, now: Date): Urgency {
+export function bookingUrgency(booking: Booking, now: Date, locale: Locale = 'id'): Urgency {
+  const t = (key: MessageKey, vars?: Record<string, string | number>) =>
+    translate(locale, key, vars)
   const start = Date.parse(booking.startTime)
   const end = Date.parse(booking.endTime)
   if (Number.isNaN(start) || Number.isNaN(end)) {
-    return { key: 'upcoming', label: 'Jadwal tidak terbaca', badge: 'Jadwal tidak terbaca' }
+    return {
+      key: 'upcoming',
+      label: t('bookings.urgency.unreadable'),
+      badge: t('bookings.urgency.unreadable'),
+    }
   }
 
   const current = now.getTime()
-  if (current >= end) return { key: 'overdue', label: 'Jam sudah lewat', badge: 'Jam sudah lewat' }
+  if (current >= end) {
+    return {
+      key: 'overdue',
+      label: t('bookings.urgency.overdue'),
+      badge: t('bookings.urgency.overdue'),
+    }
+  }
   if (current >= start) {
-    return { key: 'in-progress', label: 'Sedang berlangsung', badge: 'Sedang berlangsung' }
+    return {
+      key: 'in-progress',
+      label: t('bookings.urgency.inProgress'),
+      badge: t('bookings.urgency.inProgress'),
+    }
   }
 
   const minutes = Math.round((start - current) / 60_000)
-  if (minutes <= 0) return { key: 'imminent', label: 'Waktunya masuk', badge: 'Waktunya masuk' }
-  if (minutes < 60) {
+  if (minutes <= 0) {
     return {
       key: 'imminent',
-      label: `Masuk dalam ${minutes} menit`,
-      badge: `Masuk dalam ${minutes} menit`,
+      label: t('bookings.urgency.imminent'),
+      badge: t('bookings.urgency.imminent'),
     }
+  }
+  if (minutes < 60) {
+    const label = t('bookings.urgency.inMinutes', { count: minutes })
+    return { key: 'imminent', label, badge: label }
   }
 
   const days = dayDistance(current, start)
   if (days <= 0) {
     return {
       key: 'today',
-      label: `Hari ini, ${formatTime(booking.startTime)}`,
-      badge: 'Hari ini',
+      label: `${t('bookings.urgency.today')}, ${formatTime(booking.startTime)}`,
+      badge: t('bookings.urgency.today'),
     }
   }
   if (days === 1) {
     return {
       key: 'today',
-      label: `Besok, ${formatTime(booking.startTime)}`,
-      badge: 'Besok',
+      label: `${t('bookings.urgency.tomorrow')}, ${formatTime(booking.startTime)}`,
+      badge: t('bookings.urgency.tomorrow'),
     }
   }
-  return { key: 'upcoming', label: `${days} hari lagi`, badge: `${days} hari lagi` }
+  const label = t('bookings.urgency.daysLeft', { count: days })
+  return { key: 'upcoming', label, badge: label }
 }
 
 /* ------------------------------------------------------------------ */
@@ -225,8 +246,8 @@ export function bookingUrgency(booking: Booking, now: Date): Urgency {
  * ditentukan", baris menulis "Belum ada dock", dan blok berikutnya menulis
  * "Ditentukan saat check-in" — tiga bunyi berbeda untuk satu keadaan yang sama.
  */
-export function dockLabel(booking: Booking): string {
-  return booking.assignedDock?.dockCode ?? 'Ditentukan saat check-in'
+export function dockLabel(booking: Booking, locale: Locale = 'id'): string {
+  return booking.assignedDock?.dockCode ?? translate(locale, 'bookings.dockTbd')
 }
 
 /* ------------------------------------------------------------------ */
@@ -244,7 +265,7 @@ export type BookingDay = {
  * dipertahankan, sehingga tampilan jadwal mengikuti urutan dari server
  * (naik untuk aktif, turun untuk riwayat).
  */
-export function groupByDay(bookings: Booking[]): BookingDay[] {
+export function groupByDay(bookings: Booking[], locale: Locale = 'id'): BookingDay[] {
   const days: BookingDay[] = []
   const index = new Map<string, BookingDay>()
 
@@ -252,7 +273,7 @@ export function groupByDay(bookings: Booking[]): BookingDay[] {
     const date = booking.bookingDate.slice(0, 10)
     let day = index.get(date)
     if (!day) {
-      day = { date, label: dayLabel(date), items: [] }
+      day = { date, label: dayLabel(date, locale), items: [] }
       index.set(date, day)
       days.push(day)
     }
@@ -262,10 +283,10 @@ export function groupByDay(bookings: Booking[]): BookingDay[] {
   return days
 }
 
-function dayLabel(date: string): string {
+function dayLabel(date: string, locale: Locale = 'id'): string {
   const parsed = new Date(`${date}T00:00:00.000Z`)
   if (Number.isNaN(parsed.getTime())) return date
-  return new Intl.DateTimeFormat('id-ID', {
+  return new Intl.DateTimeFormat(locale === 'en' ? 'en-GB' : 'id-ID', {
     weekday: 'long',
     day: '2-digit',
     month: 'short',

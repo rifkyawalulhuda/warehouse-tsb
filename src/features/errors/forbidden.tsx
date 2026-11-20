@@ -1,23 +1,26 @@
 import { useNavigate, useRouter } from '@tanstack/react-router'
+import { useT } from '@/lib/i18n'
 import { Button } from '@/components/ui/button'
 
 export function ForbiddenError() {
+  const t = useT()
   const navigate = useNavigate()
   const { history } = useRouter()
   return (
     <div className='h-svh'>
       <div className='m-auto flex h-full w-full flex-col items-center justify-center gap-2'>
         <h1 className='text-[7rem] leading-tight font-bold'>403</h1>
-        <span className='font-medium'>Access Forbidden</span>
-        <p className='text-center text-muted-foreground'>
-          You don't have necessary permission <br />
-          to view this resource.
+        <span className='font-medium'>{t('errors.forbidden')}</span>
+        <p className='max-w-md text-center text-muted-foreground'>
+          {t('errors.forbiddenBody')}
         </p>
         <div className='mt-6 flex gap-4'>
           <Button variant='outline' onClick={() => history.go(-1)}>
-            Go Back
+            {t('errors.goBack')}
           </Button>
-          <Button onClick={() => navigate({ to: '/' })}>Back to Home</Button>
+          <Button onClick={() => navigate({ to: '/' })}>
+            {t('errors.backHome')}
+          </Button>
         </div>
       </div>
     </div>

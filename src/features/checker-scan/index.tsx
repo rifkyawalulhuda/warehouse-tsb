@@ -17,6 +17,7 @@ import {
 } from '@/lib/api/endpoints'
 import type { CheckerScanResult } from '@/lib/api/types'
 import { activityLabels, formatDate, formatTime } from '@/lib/format'
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { useRealtimeSync } from '@/hooks/use-realtime'
 import { Button } from '@/components/ui/button'
@@ -37,6 +38,7 @@ import { StatusBadge } from '@/components/status-badge'
 import { QrScanner } from '@/features/scanner/qr-scanner'
 
 type PendingAction = 'assign' | 'start' | 'finish'
+type Translate = ReturnType<typeof useT>
 
 /**
  * Pindai di sisi checker: satu pindai langsung membawa checker ke truk yang
@@ -45,6 +47,7 @@ type PendingAction = 'assign' | 'start' | 'finish'
  */
 export function CheckerScanPage() {
   useRealtimeSync()
+  const t = useT()
   const queryClient = useQueryClient()
 
   const [token, setToken] = useState<string | null>(null)
@@ -113,7 +116,7 @@ export function CheckerScanPage() {
       return startProcess(input.bookingId)
     },
     onSuccess: () => {
-      toast.success('Truk ditugaskan dan proses dimulai')
+      toast.success(t('ops.checker.assignedAndStarted'))
       invalidate()
       reset()
     },
@@ -127,7 +130,7 @@ export function CheckerScanPage() {
   const start = useMutation({
     mutationFn: (bookingId: string) => startProcess(bookingId),
     onSuccess: () => {
-      toast.success('Proses dimulai')
+      toast.success(t('ops.checker.started'))
       invalidate()
       reset()
     },
@@ -140,7 +143,7 @@ export function CheckerScanPage() {
   const finish = useMutation({
     mutationFn: (bookingId: string) => finishProcess(bookingId),
     onSuccess: () => {
-      toast.success('Proses selesai, dock kembali tersedia')
+      toast.success(t('ops.checker.finished'))
       invalidate()
       reset()
     },
@@ -158,17 +161,15 @@ export function CheckerScanPage() {
   return (
     <Main className='mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6'>
       <PageHeader
-        title='Scan Checker'
-        description='Pindai QR tiket atau ketik kode booking untuk menugaskan dock, memulai, atau menyelesaikan proses.'
+        title={t('ops.checker.title')}
+        description={t('ops.checker.description')}
       />
 
       <Card>
         <CardHeader>
-          <CardTitle className='text-base'>Pindai tiket</CardTitle>
+          <CardTitle className='text-base'>{t('ops.scanTitle')}</CardTitle>
           <CardDescription>
-            {scanning
-              ? 'Memeriksa tiket...'
-              : 'Arahkan kamera ke QR, atau ketik token / kode booking.'}
+            {scanning ? t('ops.scanChecking') : t('ops.scanHint')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -189,31 +190,31 @@ export function CheckerScanPage() {
           </CardHeader>
           <CardContent className='space-y-4'>
             <dl className='grid gap-3 text-sm sm:grid-cols-2'>
-              <Row label='Aktivitas'>
+              <Row label={t('ops.field.activity')}>
                 {activityLabels[result.booking.activityType]}
               </Row>
-              <Row label='Jadwal'>
+              <Row label={t('ops.field.schedule')}>
                 {formatDate(result.booking.bookingDate)} ·{' '}
                 {formatTime(result.booking.startTime)}–
                 {formatTime(result.booking.endTime)}
               </Row>
-              <Row label='Plat nomor'>
-                {result.booking.licensePlate ?? 'Belum diisi'}
+              <Row label={t('ops.field.plate')}>
+                {result.booking.licensePlate ?? t('ops.notFilled')}
               </Row>
-              <Row label='Supir'>
-                {result.booking.driverName ?? 'Belum diisi'}
+              <Row label={t('ops.field.driver')}>
+                {result.booking.driverName ?? t('ops.notFilled')}
               </Row>
-              <Row label='Dock'>
-                {result.booking.assignedDock?.dockCode ?? 'Belum ditugaskan'}
+              <Row label={t('ops.field.dock')}>
+                {result.booking.assignedDock?.dockCode ?? t('ops.dockUnassigned')}
               </Row>
-              <Row label='Masuk gate'>
+              <Row label={t('ops.field.gateInAt')}>
                 {result.booking.timeLog?.gateInAt
                   ? formatTime(result.booking.timeLog.gateInAt)
-                  : 'Belum masuk'}
+                  : t('ops.notGatedIn')}
               </Row>
               {result.waitingPosition !== null && (
-                <Row label='Urutan tunggu'>
-                  Ke-{result.waitingPosition} dari truk yang menunggu
+                <Row label={t('ops.field.waitPosition')}>
+                  {t('ops.waitPosition', { position: result.waitingPosition })}
                 </Row>
               )}
             </dl>
@@ -221,11 +222,16 @@ export function CheckerScanPage() {
             {result.actions.assignDock && (
               <div className='space-y-3'>
                 <div className='space-y-1'>
-                  <p className='text-sm font-medium'>Pilih dock</p>
+                  <p className='text-sm font-medium'>
+                    {t('ops.checker.pickDock')}
+                  </p>
                   <p className='text-xs text-muted-foreground'>
-                    Hanya dock kosong yang melayani{' '}
-                    {activityLabels[result.booking.activityType].toLowerCase()}{' '}
-                    yang bisa dipilih.
+                    {t('ops.checker.pickDockHint', {
+                      activity:
+                        activityLabels[
+                          result.booking.activityType
+                        ].toLowerCase(),
+                    })}
                   </p>
                 </div>
 
@@ -233,10 +239,13 @@ export function CheckerScanPage() {
                   <Notice
                     tone='warning'
                     icon={AlertTriangle}
-                    title='Tidak ada dock kosong'
-                    body={`Semua dock sedang terpakai atau tidak melayani ${activityLabels[
-                      result.booking.activityType
-                    ].toLowerCase()}. Selesaikan proses truk lain lebih dulu.`}
+                    title={t('ops.checker.noDockTitle')}
+                    body={t('ops.checker.noDockBody', {
+                      activity:
+                        activityLabels[
+                          result.booking.activityType
+                        ].toLowerCase(),
+                    })}
                   />
                 ) : (
                   <RadioGroup
@@ -272,19 +281,20 @@ export function CheckerScanPage() {
 
                 {blockedDocks.length > 0 && (
                   <p className='text-xs text-muted-foreground'>
-                    Tidak bisa dipilih:{' '}
-                    {blockedDocks
-                      .map(
-                        (dock) =>
-                          `${dock.dockCode} (${
-                            dock.currentStatus === 'MAINTENANCE'
-                              ? 'perawatan'
-                              : dock.currentStatus === 'OCCUPIED'
-                                ? 'terpakai'
-                                : 'aktivitas berbeda'
-                          })`
-                      )
-                      .join(' · ')}
+                    {t('ops.checker.blocked', {
+                      list: blockedDocks
+                        .map(
+                          (dock) =>
+                            `${dock.dockCode} (${
+                              dock.currentStatus === 'MAINTENANCE'
+                                ? t('ops.checker.blockedMaintenance')
+                                : dock.currentStatus === 'OCCUPIED'
+                                  ? t('ops.checker.blockedOccupied')
+                                  : t('ops.checker.blockedOtherActivity')
+                            })`
+                        )
+                        .join(' · '),
+                    })}
                   </p>
                 )}
 
@@ -293,10 +303,10 @@ export function CheckerScanPage() {
                     disabled={busy || chosenDock === undefined}
                     onClick={() => setPending('assign')}
                   >
-                    <PlayCircle /> Tugaskan &amp; mulai proses
+                    <PlayCircle /> {t('ops.checker.assignAndStart')}
                   </Button>
                   <Button variant='ghost' onClick={reset}>
-                    <ArrowRightLeft /> Pindai tiket lain
+                    <ArrowRightLeft /> {t('ops.scanAnother')}
                   </Button>
                 </div>
               </div>
@@ -307,15 +317,17 @@ export function CheckerScanPage() {
                 <Notice
                   tone='success'
                   icon={CheckCircle2}
-                  title={`Sudah ditugaskan ke ${result.booking.assignedDock?.dockCode ?? 'dock'}`}
-                  body='Mulai proses saat truk benar-benar siap dibongkar atau dimuat.'
+                  title={t('ops.checker.assignedTo', {
+                    dock: result.booking.assignedDock?.dockCode ?? 'dock',
+                  })}
+                  body={t('ops.checker.startBody')}
                 />
                 <div className='flex flex-wrap gap-2'>
                   <Button disabled={busy} onClick={() => setPending('start')}>
-                    <PlayCircle /> Mulai proses
+                    <PlayCircle /> {t('ops.checker.start')}
                   </Button>
                   <Button variant='ghost' onClick={reset}>
-                    <ArrowRightLeft /> Pindai tiket lain
+                    <ArrowRightLeft /> {t('ops.scanAnother')}
                   </Button>
                 </div>
               </div>
@@ -326,19 +338,25 @@ export function CheckerScanPage() {
                 <Notice
                   tone='success'
                   icon={CheckCircle2}
-                  title={`Sedang diproses di ${result.booking.assignedDock?.dockCode ?? 'dock'}`}
+                  title={t('ops.checker.inProgressAt', {
+                    dock: result.booking.assignedDock?.dockCode ?? 'dock',
+                  })}
                   body={
                     result.booking.timeLog?.processStartedAt
-                      ? `Mulai ${formatTime(result.booking.timeLog.processStartedAt)}.`
-                      : 'Selesaikan saat bongkar/muat benar-benar tuntas.'
+                      ? t('ops.checker.startedAt', {
+                          time: formatTime(
+                            result.booking.timeLog.processStartedAt
+                          ),
+                        })
+                      : t('ops.checker.finishBody')
                   }
                 />
                 <div className='flex flex-wrap gap-2'>
                   <Button disabled={busy} onClick={() => setPending('finish')}>
-                    <CheckCircle2 /> Selesaikan proses
+                    <CheckCircle2 /> {t('ops.checker.finish')}
                   </Button>
                   <Button variant='ghost' onClick={reset}>
-                    <ArrowRightLeft /> Pindai tiket lain
+                    <ArrowRightLeft /> {t('ops.scanAnother')}
                   </Button>
                 </div>
               </div>
@@ -351,11 +369,11 @@ export function CheckerScanPage() {
                   <Notice
                     tone='warning'
                     icon={QrCode}
-                    title={inactiveTitle(result)}
-                    body={inactiveBody(result)}
+                    title={inactiveTitle(result, t)}
+                    body={inactiveBody(result, t)}
                   />
                   <Button variant='ghost' onClick={reset}>
-                    <ArrowRightLeft /> Pindai tiket lain
+                    <ArrowRightLeft /> {t('ops.scanAnother')}
                   </Button>
                 </div>
               )}
@@ -368,20 +386,22 @@ export function CheckerScanPage() {
         onOpenChange={(open) => !open && setPending(null)}
         title={
           pending === 'assign'
-            ? 'Tugaskan dan mulai proses?'
+            ? t('ops.checker.confirmAssignTitle')
             : pending === 'start'
-              ? 'Mulai proses di dock ini?'
-              : 'Selesaikan proses ini?'
+              ? t('ops.checker.confirmStartTitle')
+              : t('ops.checker.confirmFinishTitle')
         }
         desc={
           result ? (
             <div className='space-y-2'>
               <p>
                 {pending === 'assign'
-                  ? `${chosenDock?.dockCode ?? 'Dock'} dikunci untuk truk ini, lalu waktu mulai proses dicatat sekarang.`
+                  ? t('ops.checker.confirmAssignBody', {
+                      dock: chosenDock?.dockCode ?? t('ops.field.dock'),
+                    })
                   : pending === 'start'
-                    ? 'Waktu mulai proses dicatat sebagai sekarang dan dock ditandai sedang dipakai.'
-                    : 'Waktu selesai dicatat dan dock langsung dibebaskan untuk truk berikutnya.'}
+                    ? t('ops.checker.confirmStartBody')
+                    : t('ops.checker.confirmFinishBody')}
               </p>
               <div className='rounded-md border bg-muted/50 p-3 text-xs'>
                 <p className='font-mono text-sm font-semibold text-foreground'>
@@ -393,7 +413,7 @@ export function CheckerScanPage() {
                     : result.booking.assignedDock?.dockCode}
                   {result.booking.licensePlate
                     ? ` · ${result.booking.licensePlate}`
-                    : ' · plat belum diisi'}
+                    : ` · ${t('ops.checker.plateEmpty')}`}
                 </p>
                 <p className='mt-0.5'>
                   {result.booking.customer.name} ·{' '}
@@ -407,12 +427,12 @@ export function CheckerScanPage() {
         }
         confirmText={
           pending === 'assign'
-            ? 'Ya, tugaskan & mulai'
+            ? t('ops.checker.confirmAssign')
             : pending === 'start'
-              ? 'Ya, mulai proses'
-              : 'Ya, selesaikan'
+              ? t('ops.checker.confirmStart')
+              : t('ops.checker.confirmFinish')
         }
-        cancelBtnText='Batal'
+        cancelBtnText={t('common.cancel')}
         isLoading={busy}
         handleConfirm={() => {
           if (!result) return
@@ -426,39 +446,39 @@ export function CheckerScanPage() {
   )
 }
 
-function inactiveTitle(result: CheckerScanResult) {
+function inactiveTitle(result: CheckerScanResult, t: Translate) {
   if (result.booking.approvalStatus === 'PENDING')
-    return 'Menunggu persetujuan Admin'
+    return t('ops.checker.inactiveApprovalTitle')
   switch (result.booking.status) {
     case 'BOOKED_INCOMPLETE':
     case 'BOOKED_READY':
-      return 'Truk belum check-in di gate'
+      return t('ops.checker.inactiveNotGatedTitle')
     case 'COMPLETED':
-      return 'Proses sudah selesai'
+      return t('ops.checker.inactiveCompletedTitle')
     case 'CHECKED_OUT':
-      return 'Tiket sudah selesai dipakai'
+      return t('ops.checker.inactiveCheckedOutTitle')
     case 'NO_SHOW':
-      return 'Booking ditandai no-show'
+      return t('ops.checker.inactiveNoShowTitle')
     default:
-      return 'Belum ada tindakan untuk tiket ini'
+      return t('ops.checker.inactiveDefaultTitle')
   }
 }
 
-function inactiveBody(result: CheckerScanResult) {
+function inactiveBody(result: CheckerScanResult, t: Translate) {
   if (result.booking.approvalStatus === 'PENDING')
-    return 'Booking belum disetujui Admin gudang, jadi belum boleh ditugaskan ke dock.'
+    return t('ops.checker.inactiveApprovalBody')
   switch (result.booking.status) {
     case 'BOOKED_INCOMPLETE':
     case 'BOOKED_READY':
-      return 'Arahkan supir ke gate untuk check-in. Setelah tercatat masuk, truk muncul di sini dan di antrean dock.'
+      return t('ops.checker.inactiveNotGatedBody')
     case 'COMPLETED':
-      return 'Tinggal gate-out di pos gate. Tidak ada lagi yang perlu dikerjakan di dock.'
+      return t('ops.checker.inactiveCompletedBody')
     case 'CHECKED_OUT':
-      return 'Truk sudah keluar dan slotnya dilepas. Pindai tiket lain.'
+      return t('ops.checker.inactiveCheckedOutBody')
     case 'NO_SHOW':
-      return 'Admin menandai booking ini tidak hadir. Hubungi Admin bila truk ternyata ada.'
+      return t('ops.checker.inactiveNoShowBody')
     default:
-      return 'Periksa status tiket di Papan Dock.'
+      return t('ops.checker.inactiveDefaultBody')
   }
 }
 
