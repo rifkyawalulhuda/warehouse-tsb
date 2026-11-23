@@ -100,6 +100,7 @@ type ReportRow = {
   customer: string
   truckType: string
   dockCode: string | null
+  dockAreaName: string | null
   status: string
   approvalStatus: string
   scheduledStart: string
@@ -142,7 +143,7 @@ async function buildReport(from: string, to: string, customerId?: string) {
       lateMinutes: true,
       customer: { select: { name: true } },
       truckType: { select: { truckName: true } },
-      assignedDock: { select: { dockCode: true } },
+      assignedDock: { select: { dockCode: true, areaName: true } },
       timeLog: true,
     },
     orderBy: [{ bookingDate: 'asc' }, { startTime: 'asc' }],
@@ -157,6 +158,7 @@ async function buildReport(from: string, to: string, customerId?: string) {
       customer: booking.customer.name,
       truckType: booking.truckType.truckName,
       dockCode: booking.assignedDock?.dockCode ?? null,
+      dockAreaName: booking.assignedDock?.areaName ?? null,
       status: booking.status,
       approvalStatus: booking.approvalStatus,
       scheduledStart: formatReportInstant(booking.startTime) ?? '',
@@ -274,7 +276,7 @@ reportsRouter.get('/export.xlsx', staffOnly, async (req, res, next) => {
       { header: col.activity, key: 'activityType', width: 12 },
       { header: col.customer, key: 'customer', width: 26 },
       { header: col.truckType, key: 'truckType', width: 18 },
-      { header: col.dock, key: 'dockCode', width: 10 },
+      { header: col.dock, key: 'dockCode', width: 16 },
       { header: col.status, key: 'status', width: 20 },
       { header: col.scheduledStart, key: 'scheduledStart', width: 20 },
       { header: col.gateInAt, key: 'gateInAt', width: 20 },
@@ -292,6 +294,8 @@ reportsRouter.get('/export.xlsx', staffOnly, async (req, res, next) => {
         activityType: activityTypeLabel(lang, row.activityType),
         status: bookingStatusLabel(lang, row.status),
         approvalStatus: approvalStatusLabel(lang, row.approvalStatus),
+        // Berkas yang diunduh mencerminkan layar: area menempel pada kode dock.
+        dockCode: [row.dockCode, row.dockAreaName].filter(Boolean).join(' · ') || '-',
       }))
     )
     sheet.getRow(1).font = { bold: true }
@@ -322,6 +326,7 @@ type CustomerReportRow = {
   driverName: string | null
   referenceDocNo: string
   dockCode: string | null
+  dockAreaName: string | null
   status: string
   approvalStatus: string
   scheduledStart: string
@@ -380,7 +385,7 @@ async function buildCustomerReport(from: string, to: string, customerId: string)
         driverName: true,
         referenceDocNo: true,
         truckType: { select: { truckName: true } },
-        assignedDock: { select: { dockCode: true } },
+        assignedDock: { select: { dockCode: true, areaName: true } },
         timeLog: true,
       },
       orderBy: [{ bookingDate: 'asc' }, { startTime: 'asc' }],
@@ -409,6 +414,7 @@ async function buildCustomerReport(from: string, to: string, customerId: string)
       driverName: booking.driverName,
       referenceDocNo: booking.referenceDocNo,
       dockCode: booking.assignedDock?.dockCode ?? null,
+      dockAreaName: booking.assignedDock?.areaName ?? null,
       status: booking.status,
       approvalStatus: booking.approvalStatus,
       scheduledStart: formatReportInstant(booking.startTime) ?? '',
@@ -571,7 +577,7 @@ reportsRouter.get('/my/export.xlsx', customerOnly, async (req, res, next) => {
       { header: col.licensePlate, key: 'licensePlate', width: 14 },
       { header: col.driver, key: 'driverName', width: 20 },
       { header: col.referenceDocNo, key: 'referenceDocNo', width: 20 },
-      { header: col.dock, key: 'dockCode', width: 9 },
+      { header: col.dock, key: 'dockCode', width: 16 },
       { header: col.status, key: 'status', width: 22 },
       { header: col.approval, key: 'approvalStatus', width: 22 },
       { header: col.scheduledStart, key: 'scheduledStart', width: 20 },
@@ -596,7 +602,7 @@ reportsRouter.get('/my/export.xlsx', customerOnly, async (req, res, next) => {
         approvalStatus: approvalStatusLabel(lang, row.approvalStatus),
         licensePlate: row.licensePlate ?? '-',
         driverName: row.driverName ?? '-',
-        dockCode: row.dockCode ?? '-',
+        dockCode: [row.dockCode, row.dockAreaName].filter(Boolean).join(' · ') || '-',
       }))
     )
     sheet.getRow(1).font = { bold: true }

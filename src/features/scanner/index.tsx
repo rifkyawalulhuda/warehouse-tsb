@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { apiErrorMessage } from '@/lib/api/client'
 import { gateIn, gateOut, scanQr } from '@/lib/api/endpoints'
 import type { ScanResult } from '@/lib/api/types'
+import { dockWithArea } from '@/lib/dock-label'
 import { useT } from '@/lib/i18n'
 import { useRealtimeSync } from '@/hooks/use-realtime'
 import {
@@ -142,7 +143,9 @@ export function ScanPage() {
                 {result.booking.driverName ?? t('ops.notFilled')}
               </Row>
               <Row label={t('ops.field.dock')}>
-                {result.booking.assignedDock?.dockCode ?? '-'}
+                {result.booking.assignedDock
+                  ? dockWithArea(result.booking.assignedDock)
+                  : '-'}
               </Row>
               <Row label={t('ops.field.grace')}>
                 {t('ops.graceMinutes', { count: result.gracePeriodMinutes })}

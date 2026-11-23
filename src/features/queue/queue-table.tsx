@@ -4,7 +4,7 @@ import type { Booking, DockWithBooking } from '@/lib/api/types'
 import { activityLabels, formatTime } from '@/lib/format'
 import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
-import { dockOptionLabel } from '@/lib/dock-label'
+import { dockOptionLabel, dockWithArea } from '@/lib/dock-label'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { DockPicker } from '@/components/dock-picker'
@@ -204,7 +204,9 @@ function mobileSummary(
   if (laneKey === 'upcoming') return t('queue.notGatedInSuffix')
   if (laneKey === 'atDock') {
     return ` · ${t('queue.dockAt', {
-      dock: booking.assignedDock?.dockCode ?? t('queue.noDock'),
+      dock: booking.assignedDock
+        ? dockWithArea(booking.assignedDock)
+        : t('queue.noDock'),
     })}`
   }
   const clock = waitClock(booking, now)
@@ -242,7 +244,11 @@ function WaitCell({
       </p>
       <p className='text-xs text-muted-foreground'>
         {laneKey === 'atDock'
-          ? t('queue.dockAt', { dock: booking.assignedDock?.dockCode ?? '—' })
+          ? t('queue.dockAt', {
+              dock: booking.assignedDock
+                ? dockWithArea(booking.assignedDock)
+                : '—',
+            })
           : t('queue.enteredShort', { time: formatTime(clock.since) })}
       </p>
     </>

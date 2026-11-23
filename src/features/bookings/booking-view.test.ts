@@ -132,11 +132,27 @@ describe('dockLabel', () => {
     const undecided = booking({ bookingCode: 'A' })
     const assigned = booking({
       bookingCode: 'B',
-      assignedDock: { id: 1, dockCode: 'D4', allowedActivity: 'UNLOADING' },
+      assignedDock: {
+        id: 1,
+        dockCode: 'D4',
+        allowedActivity: 'UNLOADING',
+        areaName: null,
+      },
+    })
+    const withArea = booking({
+      bookingCode: 'C',
+      assignedDock: {
+        id: 2,
+        dockCode: 'D5',
+        allowedActivity: 'LOADING',
+        areaName: 'Area B',
+      },
     })
 
     expect(dockLabel(undecided)).toBe('Ditentukan saat check-in')
     expect(dockLabel(assigned)).toBe('D4')
+    // Area ikut disebut supaya dua dock berkode mirip bisa dibedakan.
+    expect(dockLabel(withArea)).toBe('D5 · Area B')
   })
 })
 

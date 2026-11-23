@@ -4,6 +4,7 @@ import type { ColumnDef } from '@tanstack/react-table'
 import { SearchIcon, RefreshCwIcon } from 'lucide-react'
 import { fetchGateHistory } from '@/lib/api/endpoints'
 import type { GateHistoryEvent, GateHistoryRow } from '@/lib/api/types'
+import { dockWithArea } from '@/lib/dock-label'
 import {
   activityLabels,
   formatDateTime,
@@ -105,7 +106,12 @@ function buildColumns(t: Translate): ColumnDef<GateHistoryRow>[] {
       ),
       cell: ({ row }) => (
         <>
-          {row.original.dockCode ?? '—'}
+          {row.original.dockCode
+            ? dockWithArea({
+                dockCode: row.original.dockCode,
+                areaName: row.original.dockAreaName,
+              })
+            : '—'}
           {row.original.activityType && (
             <span className='block text-xs text-muted-foreground'>
               {activityLabels[row.original.activityType]}

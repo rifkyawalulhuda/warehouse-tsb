@@ -46,6 +46,7 @@ describe('halaman riwayat gate', () => {
           driverName: 'Supir Satu',
           activityType: 'UNLOADING',
           dockCode: 'DOCK-01',
+          dockAreaName: null,
           gateInAt: `${today}T02:00:00.000Z`,
           gateOutAt: `${today}T04:00:00.000Z`,
           minutesInside: 120,

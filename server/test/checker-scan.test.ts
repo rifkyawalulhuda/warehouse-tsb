@@ -98,7 +98,7 @@ describe('pindai checker', () => {
       docks: [
         { dockCode: 'D1', allowedActivity: 'UNLOADING' },
         { dockCode: 'D2', allowedActivity: 'LOADING' },
-        { dockCode: 'D3', allowedActivity: 'BOTH' },
+        { dockCode: 'D3', allowedActivity: 'BOTH', areaName: 'Area B' },
       ],
     })
     const cookie = await loginCookie(app, 'checker@test.local')
@@ -125,6 +125,8 @@ describe('pindai checker', () => {
 
     const eligible = data.docks.filter((dock: { eligible: boolean }) => dock.eligible)
     expect(eligible.map((dock: { dockCode: string }) => dock.dockCode)).toEqual(['D3'])
+    // Pilihan dock di layar checker menyebut areanya, bukan hanya kodenya.
+    expect(eligible[0].areaName).toBe('Area B')
 
     const terpakai = data.docks.find((dock: { dockCode: string }) => dock.dockCode === 'D1')
     expect(terpakai.eligible).toBe(false)

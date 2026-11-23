@@ -1,4 +1,5 @@
 import type { Booking } from '@/lib/api/types'
+import { dockWithArea } from '@/lib/dock-label'
 import { TIME_ZONE, formatTime } from '@/lib/format'
 import { getCookie, setCookie } from '@/lib/cookies'
 import { translate, type Locale, type MessageKey } from '@/lib/i18n'
@@ -247,7 +248,8 @@ export function bookingUrgency(booking: Booking, now: Date, locale: Locale = 'id
  * "Ditentukan saat check-in" — tiga bunyi berbeda untuk satu keadaan yang sama.
  */
 export function dockLabel(booking: Booking, locale: Locale = 'id'): string {
-  return booking.assignedDock?.dockCode ?? translate(locale, 'bookings.dockTbd')
+  if (!booking.assignedDock) return translate(locale, 'bookings.dockTbd')
+  return dockWithArea(booking.assignedDock)
 }
 
 /* ------------------------------------------------------------------ */

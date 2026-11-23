@@ -19,6 +19,7 @@ const ticket: PublicTicket = {
   customerName: 'PT Sinar Jaya Logistik',
   truckType: { truckName: 'Fuso', durationMinutes: 60 },
   dockCode: 'L1',
+  dockAreaName: null,
   lateMinutes: 0,
   vehicleComplete: true,
   warehouseName: 'Gudang Cikarang',

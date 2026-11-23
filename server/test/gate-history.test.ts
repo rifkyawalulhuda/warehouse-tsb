@@ -15,6 +15,7 @@ async function seedBooking(options: {
   customerId: string
   truckTypeId: number
   startTime: Date
+  dockId?: number
   status?: 'BOOKED_INCOMPLETE' | 'BOOKED_READY' | 'COMPLETED' | 'CHECKED_OUT'
 }) {
   const companyId = (
@@ -40,6 +41,7 @@ async function seedBooking(options: {
       status: options.status ?? 'BOOKED_READY',
       licensePlate: 'B 1234 TSB',
       driverName: 'Supir Tes',
+      assignedDockId: options.dockId ?? null,
     },
   })
 }
@@ -152,6 +154,43 @@ describe('riwayat gate', () => {
     expect(gateOut.bookingCode).toBe(booking.bookingCode)
     expect(gateOut.customer).toBe('PT Alpha Logistik')
     expect(gateOut.officerName).toBe('Gate Tes')
+  })
+
+  it('menyebut nama area dock pada baris riwayat', async () => {
+    await resetDatabase(prisma)
+    const { customer, truckTypes, gate, docks } = await seedBase(prisma, {
+      docks: [
+        { dockCode: 'D1', allowedActivity: 'UNLOADING', areaName: 'Area B' },
+      ],
+    })
+    const cookie = await loginCookie(app, 'gate@test.local')
+    const date = todayISO()
+
+    const booking = await seedBooking({
+      customerId: customer.id,
+      truckTypeId: truckTypes[0]!.id,
+      startTime: jakartaInstant(date, 9 * 60),
+      dockId: docks[0]!.id,
+    })
+
+    await prisma.bookingTimeLog.create({
+      data: {
+        bookingId: booking.id,
+        gateInAt: jakartaInstant(date, 9 * 60),
+        gateInBy: gate.id,
+      },
+    })
+
+    const response = await request(app)
+      .get('/api/ops/gate-history')
+      .query({ from: date, to: date })
+      .set('Cookie', cookie)
+
+    expect(response.status).toBe(200)
+    expect(response.body.data.rows[0]).toMatchObject({
+      dockCode: 'D1',
+      dockAreaName: 'Area B',
+    })
   })
 
   it('tidak menampilkan pemindaian yang ditolak di riwayat gate', async () => {

@@ -18,6 +18,7 @@ async function seedBooking(options: {
   bookingCode: string
   qrToken: string
   startTime: Date
+  dockId?: number
 }) {
   const companyId = (
     await prisma.user.findUniqueOrThrow({
@@ -42,6 +43,7 @@ async function seedBooking(options: {
       status: 'BOOKED_READY',
       licensePlate: 'B 1234 TSB',
       driverName: 'Supir Tes',
+      assignedDockId: options.dockId ?? null,
     },
   })
 }
@@ -199,5 +201,30 @@ describe('pindai tiket di gate', () => {
     const response = await request(app).get(`/api/tickets/${BOOKING_CODE}`)
 
     expect(response.status).toBe(404)
+  })
+
+  it('mengirim nama area dock di tiket supir', async () => {
+    await resetDatabase(prisma)
+    const seed = await seedBase(prisma, {
+      docks: [
+        { dockCode: 'L1', allowedActivity: 'UNLOADING', areaName: 'Area Tengah' },
+      ],
+    })
+    const booking = await seedBooking({
+      customerId: seed.customer.id,
+      truckTypeId: seed.truckTypes[0]!.id,
+      bookingCode: BOOKING_CODE,
+      qrToken: QR_TOKEN,
+      startTime: new Date(Date.now() + 5 * 60_000),
+      dockId: seed.docks[0]!.id,
+    })
+
+    const response = await request(app).get(`/api/tickets/${booking.qrToken}`)
+
+    expect(response.status).toBe(200)
+    expect(response.body.data).toMatchObject({
+      dockCode: 'L1',
+      dockAreaName: 'Area Tengah',
+    })
   })
 })

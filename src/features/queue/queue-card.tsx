@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { ApprovalBadge } from '@/components/approval-badge'
 import { DockPicker } from '@/components/dock-picker'
-import { dockOptionLabel } from '@/lib/dock-label'
+import { dockOptionLabel, dockWithArea } from '@/lib/dock-label'
 import { StatusBadge } from '@/components/status-badge'
 import { useT } from '@/lib/i18n'
 import {
@@ -123,7 +123,9 @@ export function QueueCard({
                 {t('ops.field.dock')}
               </span>
               <span className='text-sm font-semibold'>
-                {booking.assignedDock?.dockCode ?? '—'}
+                {booking.assignedDock
+                  ? dockWithArea(booking.assignedDock)
+                  : '—'}
               </span>
             </div>
             <p className='mt-0.5 text-xs text-muted-foreground'>

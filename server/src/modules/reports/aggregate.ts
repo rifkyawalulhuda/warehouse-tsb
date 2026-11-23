@@ -17,6 +17,7 @@ export type ReportRowLike = {
   approvalStatus: string
   gateInAt: string | null
   dockCode?: string | null
+  dockAreaName?: string | null
   waitingMinutes: number | null
   processingMinutes: number | null
   turnaroundMinutes: number | null
@@ -50,6 +51,7 @@ export type DaySummary = {
 
 export type DockSummary = {
   dockCode: string
+  areaName: string | null
   activity: string
   trucks: number
   usedHours: number
@@ -230,6 +232,7 @@ export function buildDockSummary(
 ): DockSummary[] {
   type Accumulator = {
     dockCode: string
+    areaName: string | null
     activities: Set<string>
     trucks: number
     usedMinutes: number
@@ -241,6 +244,9 @@ export function buildDockSummary(
     if (!row.dockCode) continue
     const entry = byDock.get(row.dockCode) ?? {
       dockCode: row.dockCode,
+      // Nama area bisa berubah di master; rekap memakai nilai pertama yang
+      // tercatat supaya nama lama tidak hilang dari laporan historis.
+      areaName: row.dockAreaName ?? null,
       activities: new Set<string>(),
       trucks: 0,
       usedMinutes: 0,
@@ -265,6 +271,7 @@ export function buildDockSummary(
       const activities = [...entry.activities]
       return {
         dockCode: entry.dockCode,
+        areaName: entry.areaName,
         activity: activities.length > 1 ? 'BOTH' : (activities[0] ?? ''),
         trucks: entry.trucks,
         usedHours: Math.round((entry.usedMinutes / 60) * 10) / 10,

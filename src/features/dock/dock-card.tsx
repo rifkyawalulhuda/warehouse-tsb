@@ -1,5 +1,6 @@
 import { CheckCircle2, Clock, PlayCircle } from 'lucide-react'
 import type { Booking, DockWithBooking } from '@/lib/api/types'
+import { dockAreaSuffix, dockWithArea } from '@/lib/dock-label'
 import { formatTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
@@ -90,6 +91,7 @@ export function DockCard({
             </p>
             <p className='mt-0.5 text-xs text-muted-foreground'>
               {t(dockActivityLabelKey(dock.allowedActivity))}
+              {dockAreaSuffix(dock.areaName)}
             </p>
           </div>
           <DockStatusPill phase={serving ? 'serving' : 'starting'} />
@@ -137,7 +139,7 @@ export function DockCard({
             <div
               role='progressbar'
               aria-label={t('dock.progressAria', {
-                dock: dock.dockCode,
+                dock: dockWithArea(dock),
                 elapsed: clockLabel(clock.elapsedMinutes, t),
                 target: clockLabel(clock.targetMinutes, t),
               })}

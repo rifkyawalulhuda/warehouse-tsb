@@ -3,6 +3,7 @@ import { render } from 'vitest-browser-react'
 import { userEvent } from 'vitest/browser'
 import type { Booking, DockWithBooking } from '@/lib/api/types'
 import { translate } from '@/lib/i18n'
+import { DockCard } from './dock-card'
 import { DockGrid } from './dock-grid'
 import { shortClock, type Translate } from './dock-model'
 import { DockTable } from './dock-table'
@@ -40,7 +41,12 @@ function makeBooking(overrides: Partial<Booking> = {}): Booking {
       durationMinutes: 60,
       blocksRequired: 2,
     },
-    assignedDock: { id: 1, dockCode: 'D1', allowedActivity: 'BOTH' },
+    assignedDock: {
+      id: 1,
+      dockCode: 'D1',
+      allowedActivity: 'BOTH',
+      areaName: null,
+    },
     timeLog: {
       vehicleCompletedAt: null,
       gateInAt: '2026-11-11T08:55:00.000Z',
@@ -158,5 +164,79 @@ describe('DockGrid', () => {
     )
 
     expect(onStart).toHaveBeenCalledWith(dock.currentBooking, dock)
+  })
+})
+
+describe('label area', () => {
+  it('menempelkan area pada baris aktivitas kartu', async () => {
+    const dock = makeDock({ areaName: 'Area B' })
+    const { getByText } = await render(
+      <DockCard
+        dock={dock}
+        now={NOW}
+        actionPending={false}
+        onStart={vi.fn()}
+        onFinish={vi.fn()}
+      />
+    )
+
+    await expect
+      .element(getByText('Bongkar & muat · Area B'))
+      .toBeInTheDocument()
+  })
+
+  it('menyebut area di label aksesibilitas tombol aksi', async () => {
+    const { getByRole } = await render(
+      <DockGrid
+        groups={[{ phase: 'serving', docks: [makeDock({ areaName: 'Area B' })] }]}
+        now={NOW}
+        actionPending={false}
+        onStart={vi.fn()}
+        onFinish={vi.fn()}
+      />
+    )
+
+    await expect
+      .element(
+        getByRole('button', {
+          name: 'Selesaikan proses TSB-20261111-001 di D1 · Area B',
+        })
+      )
+      .toBeInTheDocument()
+  })
+
+  it('menyembunyikan area kosong dan memasukkannya ke ubin mini bila ada', async () => {
+    const tanpaArea = await render(
+      <DockGrid
+        groups={[{ phase: 'available', docks: [makeDock({ currentBooking: null })] }]}
+        now={NOW}
+        actionPending={false}
+        onStart={vi.fn()}
+        onFinish={vi.fn()}
+      />
+    )
+    await expect
+      .element(tanpaArea.getByText('Bongkar & muat', { exact: true }))
+      .toBeInTheDocument()
+
+    const denganArea = await render(
+      <DockGrid
+        groups={[
+          {
+            phase: 'available',
+            docks: [
+              makeDock({ currentBooking: null, areaName: 'Area Tengah' }),
+            ],
+          },
+        ]}
+        now={NOW}
+        actionPending={false}
+        onStart={vi.fn()}
+        onFinish={vi.fn()}
+      />
+    )
+    await expect
+      .element(denganArea.getByText('Bongkar & muat · Area Tengah'))
+      .toBeInTheDocument()
   })
 })

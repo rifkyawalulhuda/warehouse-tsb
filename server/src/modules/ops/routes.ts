@@ -319,6 +319,7 @@ opsRouter.get(
           dockCode: true,
           allowedActivity: true,
           currentStatus: true,
+          areaName: true,
         },
       })
 
@@ -1160,7 +1161,7 @@ opsRouter.get('/gate-history', requireRole('GATE_OFFICER', 'CHECKER'), async (re
       licensePlate: true,
       driverName: true,
       activityType: true,
-      assignedDock: { select: { dockCode: true } },
+      assignedDock: { select: { dockCode: true, areaName: true } },
       customer: { select: { name: true } },
     } satisfies Prisma.BookingSelect
 
@@ -1208,6 +1209,7 @@ opsRouter.get('/gate-history', requireRole('GATE_OFFICER', 'CHECKER'), async (re
         driverName: log.booking.driverName,
         activityType: log.booking.activityType,
         dockCode: log.booking.assignedDock?.dockCode ?? null,
+        dockAreaName: log.booking.assignedDock?.areaName ?? null,
         gateInAt: log.gateInAt,
         gateOutAt: log.gateOutAt,
         minutesInside: diffMinutes(log.gateInAt, log.gateOutAt),
@@ -1224,6 +1226,7 @@ opsRouter.get('/gate-history', requireRole('GATE_OFFICER', 'CHECKER'), async (re
         driverName: log.booking.driverName,
         activityType: log.booking.activityType,
         dockCode: log.booking.assignedDock?.dockCode ?? null,
+        dockAreaName: log.booking.assignedDock?.areaName ?? null,
         gateInAt: log.gateInAt,
         gateOutAt: log.gateOutAt,
         minutesInside: diffMinutes(log.gateInAt, log.gateOutAt),

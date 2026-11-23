@@ -163,6 +163,13 @@ describe('groupDocks', () => {
     expect(matchesDockQuery(docks[1], '   ')).toBe(true)
   })
 
+  it('mencari nama area, dan tetap bisa mencari saat area kosong', () => {
+    expect(matchesDockQuery(makeDock({ areaName: 'Area B' }), 'area b')).toBe(
+      true
+    )
+    expect(matchesDockQuery(makeDock({ areaName: null }), 'area b')).toBe(false)
+  })
+
   it('mengembalikan kosong ketika pencarian tidak menemukan apa pun', () => {
     expect(groupDocks(docks, 'all', 'tidak-ada')).toEqual([])
   })

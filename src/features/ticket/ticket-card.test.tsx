@@ -20,6 +20,7 @@ const ticket: PublicTicket = {
   customerName: 'PT Sinar Jaya Logistik',
   truckType: { truckName: 'Fuso', durationMinutes: 60 },
   dockCode: 'L1',
+  dockAreaName: null,
   lateMinutes: 0,
   vehicleComplete: true,
   warehouseName: 'Gudang Cikarang',
@@ -55,6 +56,19 @@ describe('kartu tiket', () => {
     ]) {
       await expect.element(screen.getByText(value)).toBeInTheDocument()
     }
+  })
+
+  it('menyebut area di samping kode dock supaya supir tahu lokasinya', async () => {
+    const model = buildTicketModel({
+      ...ticket,
+      dockAreaName: 'Area Tengah',
+    })
+
+    const screen = await render(<TicketCard model={model} />)
+
+    await expect
+      .element(screen.getByText('L1 · Area Tengah'))
+      .toBeInTheDocument()
   })
 
   it('memakai tanda hubung saat plat atau supir belum diisi', async () => {

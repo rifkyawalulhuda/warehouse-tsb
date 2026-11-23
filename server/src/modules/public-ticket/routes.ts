@@ -44,6 +44,7 @@ publicTicketRouter.get('/:qrToken', async (req, res, next) => {
         customerName: booking.customer.name,
         truckType: booking.truckType,
         dockCode: booking.assignedDock?.dockCode ?? null,
+        dockAreaName: booking.assignedDock?.areaName ?? null,
         lateMinutes: booking.lateMinutes,
         vehicleComplete: Boolean(booking.licensePlate && booking.driverName),
         warehouseName: settings.warehouseName,

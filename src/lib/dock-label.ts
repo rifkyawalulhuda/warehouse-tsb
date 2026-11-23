@@ -22,3 +22,22 @@ export function dockOptionPlace(dock: DockOption): string {
     .filter((part): part is string => Boolean(part))
     .join(' · ')
 }
+
+/**
+ * Kode dock berikut areanya untuk tempat sempit: `D1 · Area B`. Nama gudang
+ * sengaja tidak ikut — papan operasional, tiket, dan laporan hanya butuh
+ * area. Bagian kosong dilewati, dock lama tanpa area tetap terbaca `D1`.
+ */
+export function dockWithArea(dock: {
+  dockCode: string | null
+  areaName?: string | null
+}): string {
+  return [dock.dockCode, dock.areaName]
+    .filter((part): part is string => Boolean(part))
+    .join(' · ')
+}
+
+/** Potongan ` · Area B` untuk ditempel di belakang teks lain; kosong bila tak ada area. */
+export function dockAreaSuffix(areaName?: string | null): string {
+  return areaName ? ` · ${areaName}` : ''
+}

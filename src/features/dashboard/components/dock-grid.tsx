@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { MoreHorizontal, Truck } from 'lucide-react'
 import type { DockWithBooking } from '@/lib/api/types'
+import { dockAreaSuffix } from '@/lib/dock-label'
 import { bookingDurationMinutes, formatTime } from '@/lib/format'
 import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
@@ -119,6 +120,7 @@ export function DockGrid({ docks }: { docks: DockWithBooking[] }) {
               <div className='flex flex-wrap items-center justify-between gap-x-1.5 gap-y-1'>
                 <span className='min-w-0 text-[11px] leading-tight text-muted-foreground'>
                   {t(activityKey[dock.allowedActivity])}
+                  {dockAreaSuffix(dock.areaName)}
                 </span>
                 <Badge
                   variant='outline'

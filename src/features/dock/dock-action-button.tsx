@@ -1,5 +1,6 @@
 import { CheckCircle2, PlayCircle } from 'lucide-react'
 import type { Booking, DockWithBooking } from '@/lib/api/types'
+import { dockWithArea } from '@/lib/dock-label'
 import { Button } from '@/components/ui/button'
 import { useT } from '@/lib/i18n'
 
@@ -34,12 +35,14 @@ export function DockActionButton({
 
   const serving = booking.status === 'IN_PROGRESS'
   const label = serving ? t('dock.finish') : t('dock.start')
+  // Pembaca layar ikut mendengar area: dua dock berkode mirip bisa berbeda area.
+  const place = dockWithArea(dock)
   const ariaLabel = serving
     ? t('dock.finishAria', {
         code: booking.bookingCode,
-        dock: dock.dockCode,
+        dock: place,
       })
-    : t('dock.startAria', { code: booking.bookingCode, dock: dock.dockCode })
+    : t('dock.startAria', { code: booking.bookingCode, dock: place })
   const handleClick = () =>
     serving ? onFinish(booking, dock) : onStart(booking, dock)
 

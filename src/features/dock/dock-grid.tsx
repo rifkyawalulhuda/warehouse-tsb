@@ -1,4 +1,5 @@
 import type { DockWithBooking } from '@/lib/api/types'
+import { dockAreaSuffix } from '@/lib/dock-label'
 import { formatTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { Card } from '@/components/ui/card'
@@ -110,6 +111,7 @@ function DockMiniTile({
 
       <p className='truncate text-xs text-muted-foreground'>
         {t(dockActivityLabelKey(dock.allowedActivity))}
+        {dockAreaSuffix(dock.areaName)}
       </p>
 
       <div className='min-h-9 min-w-0'>

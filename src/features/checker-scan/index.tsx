@@ -31,7 +31,7 @@ import {
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { dockOptionLabel, dockOptionPlace } from '@/lib/dock-label'
+import { dockOptionLabel, dockOptionPlace, dockWithArea } from '@/lib/dock-label'
 import { Main } from '@/components/layout/main'
 import { PageHeader } from '@/components/page-header'
 import { StatusBadge } from '@/components/status-badge'
@@ -205,7 +205,9 @@ export function CheckerScanPage() {
                 {result.booking.driverName ?? t('ops.notFilled')}
               </Row>
               <Row label={t('ops.field.dock')}>
-                {result.booking.assignedDock?.dockCode ?? t('ops.dockUnassigned')}
+                {result.booking.assignedDock
+                  ? dockWithArea(result.booking.assignedDock)
+                  : t('ops.dockUnassigned')}
               </Row>
               <Row label={t('ops.field.gateInAt')}>
                 {result.booking.timeLog?.gateInAt
@@ -397,7 +399,9 @@ export function CheckerScanPage() {
               <p>
                 {pending === 'assign'
                   ? t('ops.checker.confirmAssignBody', {
-                      dock: chosenDock?.dockCode ?? t('ops.field.dock'),
+                      dock: chosenDock
+                        ? dockWithArea(chosenDock)
+                        : t('ops.field.dock'),
                     })
                   : pending === 'start'
                     ? t('ops.checker.confirmStartBody')
@@ -409,8 +413,9 @@ export function CheckerScanPage() {
                 </p>
                 <p className='mt-1 text-foreground'>
                   {pending === 'assign'
-                    ? chosenDock?.dockCode
-                    : result.booking.assignedDock?.dockCode}
+                    ? chosenDock && dockWithArea(chosenDock)
+                    : result.booking.assignedDock &&
+                      dockWithArea(result.booking.assignedDock)}
                   {result.booking.licensePlate
                     ? ` · ${result.booking.licensePlate}`
                     : ` · ${t('ops.checker.plateEmpty')}`}

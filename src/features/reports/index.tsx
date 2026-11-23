@@ -84,7 +84,19 @@ function buildColumns(
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title={t('report.col.dock')} />
       ),
-      cell: ({ row }) => row.original.dockCode ?? '-',
+      cell: ({ row }) =>
+        row.original.dockCode ? (
+          <>
+            {row.original.dockCode}
+            {row.original.dockAreaName ? (
+              <span className='block text-xs text-muted-foreground'>
+                {row.original.dockAreaName}
+              </span>
+            ) : null}
+          </>
+        ) : (
+          '-'
+        ),
     },
     {
       id: 'status',

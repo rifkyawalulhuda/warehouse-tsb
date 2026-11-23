@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { ArrowRight, Loader2, TimerReset } from 'lucide-react'
 import { activityLabels, formatTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { dockOptionLabel } from '@/lib/dock-label'
+import { dockOptionLabel, dockWithArea } from '@/lib/dock-label'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { useT } from '@/lib/i18n'
@@ -83,7 +83,9 @@ export function QueueCompact({
                   {laneKey === 'upcoming'
                     ? t('queue.notArrived')
                     : laneKey === 'atDock'
-                      ? (booking.assignedDock?.dockCode ?? t('queue.noDock'))
+                      ? booking.assignedDock
+                        ? dockWithArea(booking.assignedDock)
+                        : t('queue.noDock')
                       : clock
                         ? waitLabel(clock.minutes, t)
                         : '—'}

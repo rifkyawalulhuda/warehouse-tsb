@@ -78,7 +78,14 @@ export function DockUtilization({
             <TableBody>
               {rows.map((row) => (
                 <TableRow key={row.dockCode}>
-                  <TableCell className='ps-6 font-medium'>{row.dockCode}</TableCell>
+                  <TableCell className='ps-6 font-medium'>
+                    {row.dockCode}
+                    {row.areaName ? (
+                      <span className='block text-xs font-normal text-muted-foreground'>
+                        {row.areaName}
+                      </span>
+                    ) : null}
+                  </TableCell>
                   <TableCell className='text-muted-foreground'>
                     {row.activity === 'BOTH'
                       ? 'Loading & Unloading'

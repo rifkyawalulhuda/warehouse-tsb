@@ -88,8 +88,8 @@ function matchesFilter(dock: DockWithBooking, filter: DockFilter) {
 
 /**
  * Pencarian mencakup apa saja yang mungkin dibaca checker dari kartu: kode
- * dock, kode booking, plat, perusahaan, dan nama supir. Huruf besar/kecil dan
- * spasi tepi tidak membedakan.
+ * dock, nama area, kode booking, plat, perusahaan, dan nama supir. Huruf
+ * besar/kecil dan spasi tepi tidak membedakan.
  */
 export function matchesDockQuery(dock: DockWithBooking, rawQuery: string) {
   const query = rawQuery.trim().toLowerCase()
@@ -98,6 +98,7 @@ export function matchesDockQuery(dock: DockWithBooking, rawQuery: string) {
   const booking = dock.currentBooking
   const haystack = [
     dock.dockCode,
+    dock.areaName,
     booking?.bookingCode,
     booking?.licensePlate,
     booking?.driverName,

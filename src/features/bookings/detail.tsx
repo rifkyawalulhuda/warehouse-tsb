@@ -18,6 +18,7 @@ import { toast } from 'sonner'
 import { apiErrorMessage } from '@/lib/api/client'
 import { cancelBooking, fetchBooking } from '@/lib/api/endpoints'
 import type { ApprovalStatus } from '@/lib/api/types'
+import { dockWithArea } from '@/lib/dock-label'
 import { useRealtimeSync } from '@/hooks/use-realtime'
 import { useNow } from '@/hooks/use-now'
 import {
@@ -222,7 +223,9 @@ export function BookingDetail() {
               {durationLabel(bookingDurationMinutes(booking))} ({t('bookings.detail.blocks', { count: booking.blocksLocked })})
             </Field>
             <Field label={t('bookings.detail.dock')}>
-              {booking.assignedDock?.dockCode ?? t('bookings.detail.dockTbd')}
+              {booking.assignedDock
+                ? dockWithArea(booking.assignedDock)
+                : t('bookings.detail.dockTbd')}
             </Field>
             <Field label={t('bookings.detail.plate')}>
               {booking.licensePlate ?? t('bookings.detail.empty')}

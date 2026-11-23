@@ -88,7 +88,12 @@ const atDock = makeBooking({
   bookingCode: 'TSB-20261112-008',
   licensePlate: 'B 5555 EF',
   status: 'DOCK_ASSIGNED',
-  assignedDock: { id: 1, dockCode: 'D1', allowedActivity: 'BOTH' },
+  assignedDock: {
+    id: 1,
+    dockCode: 'D1',
+    allowedActivity: 'BOTH',
+    areaName: null,
+  },
 })
 const upcoming = makeBooking({
   id: 'upcoming',

@@ -13,6 +13,7 @@ import type { Booking, DockWithBooking } from '@/lib/api/types'
 import { useNow } from '@/hooks/use-now'
 import { useRealtimeSync } from '@/hooks/use-realtime'
 import { useT } from '@/lib/i18n'
+import { dockWithArea } from '@/lib/dock-label'
 import { todayISO } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { ConfirmDialog } from '@/components/confirm-dialog'
@@ -313,7 +314,7 @@ export function DockBoard() {
                   {pending.booking.bookingCode}
                 </p>
                 <p className='mt-1 text-foreground'>
-                  {pending.dock.dockCode}
+                  {dockWithArea(pending.dock)}
                   {pending.booking.licensePlate
                     ? ` · ${pending.booking.licensePlate}`
                     : t('dock.plateEmptyShort')}

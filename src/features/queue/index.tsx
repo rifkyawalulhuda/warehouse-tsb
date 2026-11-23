@@ -14,7 +14,7 @@ import {
 } from '@/lib/api/endpoints'
 import type { Booking, DockWithBooking } from '@/lib/api/types'
 import { todayISO } from '@/lib/format'
-import { dockOptionLabel } from '@/lib/dock-label'
+import { dockOptionLabel, dockWithArea } from '@/lib/dock-label'
 import { cn } from '@/lib/utils'
 import { useNow } from '@/hooks/use-now'
 import { usePendingApprovals } from '@/hooks/use-pending-approvals'
@@ -45,7 +45,7 @@ import { useQueueView } from './use-queue-view'
 import { useT } from '@/lib/i18n'
 import { QueueViewSwitch } from './queue-view-switch'
 
-type AssignVars = { bookingId: string; dockId: number; dockCode: string }
+type AssignVars = { bookingId: string; dockId: number; dockLabel: string }
 
 /** Pilih dock yang menunggu konfirmasi sebelum benar-benar ditugaskan. */
 type PendingAssign = { booking: Booking; dock: DockWithBooking }
@@ -154,7 +154,7 @@ export function QueuePage({ tab, onTabChange }: QueuePageProps) {
       void queryClient.invalidateQueries({ queryKey: ['ops'] })
       toast.success(t('queue.assignDone', {
         code: booking.bookingCode,
-        dock: variables.dockCode,
+        dock: variables.dockLabel,
       }), {
         description:
           t('queue.assignDoneDesc'),
@@ -368,7 +368,7 @@ export function QueuePage({ tab, onTabChange }: QueuePageProps) {
           assign.mutate({
             bookingId: pendingAssign.booking.id,
             dockId: pendingAssign.dock.id,
-            dockCode: pendingAssign.dock.dockCode,
+            dockLabel: dockWithArea(pendingAssign.dock),
           })
         }
       />

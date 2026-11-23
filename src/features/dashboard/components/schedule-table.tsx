@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { CalendarClock, Download, Plus } from 'lucide-react'
 import type { Booking } from '@/lib/api/types'
+import { dockWithArea } from '@/lib/dock-label'
 import { activityLabels, formatDate, formatTime } from '@/lib/format'
 import { reportExportUrl } from '@/lib/api/endpoints'
 import { useT } from '@/lib/i18n'
@@ -135,7 +136,7 @@ export function ScheduleTable({
                     <TableCell className='hidden text-sm md:table-cell'>
                       {booking.assignedDock ? (
                         <Badge variant='secondary' className='font-normal'>
-                          {booking.assignedDock.dockCode}
+                          {dockWithArea(booking.assignedDock)}
                         </Badge>
                       ) : (
                         <span className='text-muted-foreground'>—</span>

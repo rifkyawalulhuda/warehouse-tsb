@@ -20,7 +20,7 @@ afterAll(async () => {
 })
 
 /** Booking satu baris, dibuat langsung supaya tidak bergantung aturan pembuatan. */
-async function seedBooking(startTime: Date) {
+async function seedBooking(startTime: Date, dockId?: number) {
   return prisma.booking.create({
     data: {
       bookingCode: 'TSB-20261113-001',
@@ -37,6 +37,7 @@ async function seedBooking(startTime: Date) {
       status: 'CHECKED_OUT',
       licensePlate: 'B 1234 TSB',
       driverName: 'Supir Tes',
+      assignedDockId: dockId ?? null,
     },
   })
 }
@@ -90,6 +91,46 @@ describe('laporan staf', () => {
 
     expect(row.getCell(1).value).toBe('TSB-20261113-001')
     expect(row.getCell(8).value).toBe('2026-11-13 09:00')
+  })
+
+  it('menyertakan nama area dock di baris, rekap per dock, dan Excel', async () => {
+    const dock = seed.docks[0]!
+    await prisma.dock.update({
+      where: { id: dock.id },
+      data: { areaName: 'Area B' },
+    })
+    await seedBooking(new Date('2026-11-13T02:00:00.000Z'), dock.id)
+
+    const cookie = await loginCookie(app, 'admin@test.local')
+    const response = await request(app)
+      .get(`/api/reports/kpi?from=${DAY}&to=${DAY}`)
+      .set('Cookie', cookie)
+
+    expect(response.status).toBe(200)
+    expect(response.body.data.rows[0]).toMatchObject({
+      dockCode: 'D1',
+      dockAreaName: 'Area B',
+    })
+    expect(response.body.data.byDock[0]).toMatchObject({
+      dockCode: 'D1',
+      areaName: 'Area B',
+    })
+
+    const excel = await request(app)
+      .get(`/api/reports/export.xlsx?from=${DAY}&to=${DAY}`)
+      .set('Cookie', cookie)
+      .buffer(true)
+      .parse((res, callback) => {
+        const chunks: Buffer[] = []
+        res.on('data', (chunk: Buffer) => chunks.push(chunk))
+        res.on('end', () => callback(null, Buffer.concat(chunks)))
+      })
+
+    const workbook = new ExcelJS.Workbook()
+    await workbook.xlsx.load(excel.body as Buffer)
+    // Kolom 6 = Dock; area menempel supaya berkas sama dengan layar.
+    const cell = workbook.getWorksheet('Detail Booking')!.getRow(2).getCell(6)
+    expect(cell.value).toBe('D1 · Area B')
   })
 
   it('menulis isi berkas dalam bahasa Inggris bila diminta', async () => {

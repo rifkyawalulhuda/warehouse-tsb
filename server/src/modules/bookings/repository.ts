@@ -26,7 +26,9 @@ export const bookingSelect = {
   /// Akun yang menekan tombol booking. Jejak, bukan pemilik.
   createdBy: { select: { id: true, name: true } },
   truckType: { select: { id: true, truckName: true, durationMinutes: true, blocksRequired: true } },
-  assignedDock: { select: { id: true, dockCode: true, allowedActivity: true } },
+  assignedDock: {
+    select: { id: true, dockCode: true, allowedActivity: true, areaName: true },
+  },
   timeLog: {
     select: {
       vehicleCompletedAt: true,

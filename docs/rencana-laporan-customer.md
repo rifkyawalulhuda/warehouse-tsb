@@ -81,6 +81,7 @@ type CustomerReportRow = {
   driverName: string | null
   referenceDocNo: string
   dockCode: string | null
+  dockAreaName: string | null   // nama area dock; ikut tampil di samping kodenya
   status: BookingStatus
   approvalStatus: ApprovalStatus
   scheduledStart: string       // jam Jakarta, id-ID
@@ -150,7 +151,7 @@ Nama berkas: `laporan-<kode-customer>-<from>-<to>.xlsx`.
 | Sheet | Isi |
 | :--- | :--- |
 | `Ringkasan` | Nama & kode perusahaan, periode, seluruh KPI, termasuk pemakaian slot dan jumlah lewat blok |
-| `Detail` | Kode, tanggal, aktivitas, jenis truk, plat, supir, no. dokumen, dock, status, persetujuan, jadwal, gate-in, mulai proses, selesai proses, gate-out, tunggu, proses, turnaround, terlambat, blok, menit slot, pemakaian slot (%), lewat blok (menit) |
+| `Detail` | Kode, tanggal, aktivitas, jenis truk, plat, supir, no. dokumen, dock (+ area), status, persetujuan, jadwal, gate-in, mulai proses, selesai proses, gate-out, tunggu, proses, turnaround, terlambat, blok, menit slot, pemakaian slot (%), lewat blok (menit) |
 | `per Hari` | Tanggal, total, selesai, terlambat, rata-rata tunggu/proses/turnaround, rata-rata pemakaian slot |
 
 Header tebal, baris pertama dibekukan, `autoFilter` pada sheet `Detail`. Status dan aktivitas

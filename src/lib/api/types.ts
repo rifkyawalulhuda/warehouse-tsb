@@ -139,6 +139,8 @@ export type Booking = {
     id: number
     dockCode: string
     allowedActivity: DockActivity
+    /// Nama area di dalam gudang; null kalau belum diisi.
+    areaName: string | null
   } | null
   timeLog: TimeLog | null
 }
@@ -231,6 +233,7 @@ export type CheckerScanResult = {
     dockCode: string
     allowedActivity: ActivityType | 'BOTH'
     currentStatus: 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE'
+    areaName: string | null
     /** Kosong dan melayani aktivitas booking ini. */
     eligible: boolean
   }>
@@ -252,6 +255,7 @@ export type PublicTicket = {
   customerName: string
   truckType: { truckName: string; durationMinutes: number }
   dockCode: string | null
+  dockAreaName: string | null
   lateMinutes: number
   vehicleComplete: boolean
   warehouseName: string
@@ -266,6 +270,7 @@ export type ReportRow = {
   customer: string
   truckType: string
   dockCode: string | null
+  dockAreaName: string | null
   status: BookingStatus
   approvalStatus: ApprovalStatus
   scheduledStart: string
@@ -310,6 +315,7 @@ export type ArrivalHour = {
 
 export type DockReport = {
   dockCode: string
+  areaName: string | null
   activity: string
   trucks: number
   usedHours: number
@@ -338,6 +344,7 @@ export type CustomerReportRow = {
   driverName: string | null
   referenceDocNo: string
   dockCode: string | null
+  dockAreaName: string | null
   status: BookingStatus
   approvalStatus: ApprovalStatus
   scheduledStart: string
@@ -482,6 +489,7 @@ export type GateHistoryRow = {
   driverName: string | null
   activityType: ActivityType | null
   dockCode: string | null
+  dockAreaName: string | null
   gateInAt: string | null
   gateOutAt: string | null
   /** Lama truk di dalam gudang, dalam menit; null bila belum keluar. */

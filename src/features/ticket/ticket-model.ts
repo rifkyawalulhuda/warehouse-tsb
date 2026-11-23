@@ -1,4 +1,5 @@
 import type { PublicTicket } from '@/lib/api/types'
+import { dockWithArea } from '@/lib/dock-label'
 import { activityLabels, formatDate, formatTime } from '@/lib/format'
 import { getLocale, translate, type Locale, type MessageKey, type Vars } from '@/lib/i18n'
 
@@ -59,7 +60,15 @@ export function buildTicketModel(
       { label: t('ticket.fieldTruck'), value: ticket.truckType.truckName },
       { label: t('ticket.fieldPlate'), value: ticket.licensePlate ?? '-' },
       { label: t('ticket.fieldDriver'), value: ticket.driverName ?? '-' },
-      { label: t('ticket.fieldDock'), value: ticket.dockCode ?? t('ticket.noDock') },
+      {
+        label: t('ticket.fieldDock'),
+        // Supir mencari dock lewat area, jadi area menempel pada kode docknya.
+        value:
+          dockWithArea({
+            dockCode: ticket.dockCode,
+            areaName: ticket.dockAreaName,
+          }) || t('ticket.noDock'),
+      },
       { label: t('ticket.fieldDocNo'), value: ticket.referenceDocNo },
     ],
     instruction: t('ticket.cardInstruction'),

@@ -68,6 +68,7 @@ function result(overrides: {
         dockCode: 'D1',
         allowedActivity: 'UNLOADING',
         currentStatus: 'AVAILABLE',
+        areaName: null,
         eligible: true,
       },
       {
@@ -75,6 +76,7 @@ function result(overrides: {
         dockCode: 'D2',
         allowedActivity: 'LOADING',
         currentStatus: 'AVAILABLE',
+        areaName: null,
         eligible: false,
       },
       {
@@ -82,6 +84,7 @@ function result(overrides: {
         dockCode: 'D3',
         allowedActivity: 'BOTH',
         currentStatus: 'OCCUPIED',
+        areaName: null,
         eligible: false,
       },
     ],
