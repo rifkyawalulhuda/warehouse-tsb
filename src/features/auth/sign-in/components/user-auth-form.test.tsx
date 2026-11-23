@@ -80,6 +80,21 @@ describe('UserAuthForm', () => {
     await expect.element(submitButton).toBeInTheDocument()
   })
 
+  it('memperingatkan Caps Lock walau yang diketik kolom email', async () => {
+    // Deteksi Caps Lock berlaku sehalaman: pengguna sering menyalakannya saat
+    // mengisi email, sebelum sempat mengetik password.
+    const element = emailInput.element()
+    element.focus()
+    element.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'A', bubbles: true })
+    )
+
+    await expect.element(screen.getByRole('status')).toBeInTheDocument()
+    await expect
+      .element(screen.getByRole('status'))
+      .toHaveTextContent(/Caps Lock/)
+  })
+
   it('menolak email yang tidak valid', async () => {
     await userEvent.fill(emailInput, 'bukan-email')
     await userEvent.fill(passwordInput, 'apapun')

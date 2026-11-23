@@ -1,8 +1,8 @@
 import * as React from 'react'
 import { Eye, EyeOff, TriangleAlert } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { useCapsLock } from '@/lib/use-caps-lock'
 import { useT } from '@/lib/i18n'
+import { useCapsLock } from '@/lib/use-caps-lock'
+import { cn } from '@/lib/utils'
 import { Button } from './ui/button'
 
 type PasswordInputProps = Omit<
@@ -23,31 +23,29 @@ export function PasswordInput({
   className,
   disabled,
   ref,
+  'aria-describedby': describedBy,
   ...props
 }: PasswordInputProps) {
   const [showPassword, setShowPassword] = React.useState(false)
-  const { capsLock, inputRef } = useCapsLock(!disabled)
+  const capsLock = useCapsLock(!disabled)
+  const capsLockId = React.useId()
   const t = useT()
 
-  // ref dari pemanggil (react-hook-form) dan ref milik hook dipakai bersamaan:
-  // yang pertama untuk validasi, yang kedua untuk mendengar papan ketik.
-  const setRefs = React.useCallback(
-    (element: HTMLInputElement | null) => {
-      inputRef.current = element
-      if (typeof ref === 'function') ref(element)
-      else if (ref) ref.current = element
-    },
-    [ref, inputRef]
-  )
+  // react-hook-form menitipkan deskripsi pesan galatnya lewat properti yang
+  // sama; keduanya digabung supaya pembaca layar membaca galat validasi dan
+  // peringatan Caps Lock, bukan hanya salah satunya.
+  const describedByIds = [describedBy, capsLock ? capsLockId : undefined]
+    .filter(Boolean)
+    .join(' ')
 
   return (
     <div className='grid gap-1.5'>
       <div className={cn('relative rounded-md', className)}>
         <input
           type={showPassword ? 'text' : 'password'}
-          ref={setRefs}
+          ref={ref}
           disabled={disabled}
-          aria-describedby={capsLock ? 'password-caps-lock' : undefined}
+          aria-describedby={describedByIds || undefined}
           className='flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-hidden disabled:cursor-not-allowed disabled:opacity-50 md:text-sm'
           {...props}
         />
@@ -67,11 +65,14 @@ export function PasswordInput({
       </div>
       {capsLock && (
         <p
-          id='password-caps-lock'
+          id={capsLockId}
           role='status'
           className='flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-500'
         >
-          <TriangleAlert className='mt-0.5 size-3.5 shrink-0' aria-hidden='true' />
+          <TriangleAlert
+            className='mt-0.5 size-3.5 shrink-0'
+            aria-hidden='true'
+          />
           {t('password.capsLock')}
         </p>
       )}

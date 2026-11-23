@@ -11,6 +11,25 @@ import {
 } from '@/components/ui/form'
 import { PasswordInput } from './password-input'
 
+/**
+ * Menekan satu tombol pada elemen. Event dipakai langsung karena Caps Lock
+ * tidak bisa dinyalakan pada papan ketik sungguhan di dalam test; yang diuji
+ * di sini adalah bacaan hook atas event yang bentuknya sama dengan event asli
+ * (huruf besar tanpa Shift, atau tombol Caps Lock ditekan lalu dilepas).
+ */
+function press(
+  element: Element,
+  init: KeyboardEventInit,
+  type: 'keydown' | 'keyup' = 'keydown'
+) {
+  element.dispatchEvent(new KeyboardEvent(type, { bubbles: true, ...init }))
+}
+
+function pressCapsLock(element: Element) {
+  press(element, { key: 'CapsLock' })
+  press(element, { key: 'CapsLock' }, 'keyup')
+}
+
 describe('PasswordInput', () => {
   it('renders the password input correctly', async () => {
     const { getByPlaceholder, getByRole } = await render(
@@ -18,7 +37,9 @@ describe('PasswordInput', () => {
     )
 
     const passwordInput = getByPlaceholder('password')
-    const showPasswordButton = getByRole('button', { name: /Tampilkan password/i })
+    const showPasswordButton = getByRole('button', {
+      name: /Tampilkan password/i,
+    })
 
     await expect.element(passwordInput).toBeInTheDocument()
     await expect.element(passwordInput).toHaveAttribute('type', 'password')
@@ -31,7 +52,9 @@ describe('PasswordInput', () => {
     )
 
     const passwordInput = getByPlaceholder('password')
-    const showPasswordButton = getByRole('button', { name: /Tampilkan password/i })
+    const showPasswordButton = getByRole('button', {
+      name: /Tampilkan password/i,
+    })
 
     await expect.element(passwordInput).toHaveAttribute('type', 'password')
     await expect.element(showPasswordButton).toBeInTheDocument()
@@ -39,7 +62,9 @@ describe('PasswordInput', () => {
     await userEvent.click(showPasswordButton)
 
     await expect.element(passwordInput).toHaveAttribute('type', 'text')
-    const hidePasswordButton = getByRole('button', { name: /Sembunyikan password/i })
+    const hidePasswordButton = getByRole('button', {
+      name: /Sembunyikan password/i,
+    })
     await expect.element(hidePasswordButton).toBeInTheDocument()
 
     await userEvent.click(hidePasswordButton)
@@ -56,7 +81,9 @@ describe('PasswordInput', () => {
     )
 
     const passwordInput = getByPlaceholder('password')
-    const showPasswordButton = getByRole('button', { name: /Tampilkan password/i })
+    const showPasswordButton = getByRole('button', {
+      name: /Tampilkan password/i,
+    })
     await expect.element(showPasswordButton).toBeDisabled()
     await expect.element(passwordInput).toBeDisabled()
   })
@@ -95,5 +122,62 @@ describe('PasswordInput', () => {
     await userEvent.type(password, 'secret-value')
 
     await expect.element(password).toHaveValue('secret-value')
+  })
+
+  it('memperingatkan Caps Lock saat huruf besar keluar tanpa Shift', async () => {
+    const { getByPlaceholder, getByRole } = await render(
+      <PasswordInput placeholder='password' />
+    )
+
+    const password = getByPlaceholder('password').element()
+    press(password, { key: 'A' })
+
+    await expect.element(getByRole('status')).toBeInTheDocument()
+    await expect.element(getByRole('status')).toHaveTextContent(/Caps Lock/)
+
+    // Huruf kecil tanpa Shift hanya mungkin keluar saat Caps Lock dimatikan.
+    press(password, { key: 'a' })
+
+    await expect.element(getByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('memperingatkan Caps Lock saat tombolnya ditekan', async () => {
+    const { getByPlaceholder, getByRole } = await render(
+      <PasswordInput placeholder='password' />
+    )
+
+    const password = getByPlaceholder('password').element()
+    pressCapsLock(password)
+
+    await expect.element(getByRole('status')).toBeInTheDocument()
+
+    pressCapsLock(password)
+
+    await expect.element(getByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('tidak memperingatkan saat huruf besar diketik dengan Shift', async () => {
+    const { getByPlaceholder, getByRole } = await render(
+      <PasswordInput placeholder='password' />
+    )
+
+    // Shift menghasilkan huruf besar walau Caps Lock mati.
+    press(getByPlaceholder('password').element(), { key: 'A', shiftKey: true })
+
+    await expect.element(getByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('membaca getModifierState untuk tombol selain huruf', async () => {
+    const { getByPlaceholder, getByRole } = await render(
+      <PasswordInput placeholder='password' />
+    )
+
+    const event = new KeyboardEvent('keydown', { key: '1', bubbles: true })
+    Object.defineProperty(event, 'getModifierState', {
+      value: (key: string) => key === 'CapsLock',
+    })
+    getByPlaceholder('password').element().dispatchEvent(event)
+
+    await expect.element(getByRole('status')).toBeInTheDocument()
   })
 })
