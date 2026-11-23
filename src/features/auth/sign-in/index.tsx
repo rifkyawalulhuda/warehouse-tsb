@@ -1,5 +1,6 @@
 import { useSearch } from '@tanstack/react-router'
 import { BrandLogo } from '@/components/brand-logo'
+import { CapsDiagnostic } from '@/dev/caps-diagnostic'
 import { useBranding, tabTitle } from '@/lib/branding'
 import { useDocumentTitle } from '@/lib/use-document-title'
 import { useFavicon } from '@/lib/use-favicon'
@@ -50,6 +51,12 @@ export function SignIn() {
       <p className='mt-6 text-xs text-muted-foreground'>
         {t('auth.noAccount')}
       </p>
+
+      {/* Sementara: diagnosis Caps Lock. Lihat src/dev/caps-diagnostic.tsx. */}
+      {import.meta.env.DEV &&
+        new URLSearchParams(window.location.search).has('capsdiag') && (
+          <CapsDiagnostic />
+        )}
     </AuthLayout>
   )
 }
