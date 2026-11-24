@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { render } from 'vitest-browser-react'
 import type { PublicTicket } from '@/lib/api/types'
 import { TicketCard } from './ticket-card'
+import { TICKET_DESIGNS } from './ticket-design'
 import { buildTicketModel } from './ticket-model'
 
 const ticket: PublicTicket = {
@@ -88,5 +89,53 @@ describe('kartu tiket', () => {
       (cell) => cell.textContent === '-'
     )
     expect(dashes).toHaveLength(2)
+  })
+})
+
+describe('tiga desain tiket', () => {
+  const model = buildTicketModel(ticket)
+
+  it('memakai Klasik saat desain tidak disebut', async () => {
+    const screen = await render(<TicketCard model={model} />)
+    expect(
+      screen.container
+        .querySelector('[data-ticket-design]')
+        ?.getAttribute('data-ticket-design')
+    ).toBe('CLASSIC')
+  })
+
+  for (const design of TICKET_DESIGNS) {
+    it(`tetap memuat data yang dibutuhkan gate di desain ${design}`, async () => {
+      const screen = await render(<TicketCard model={model} design={design} />)
+
+      // Nilai yang muncul di ketiga desain. Tanggal dan jam sengaja tidak
+      // diperiksa di sini: Minimal memecahnya jadi sorotan besar di samping QR.
+      for (const value of [
+        'TSB-20261111-003',
+        'Loading (muat)',
+        'Fuso',
+        'B 3434 TT',
+        'Udin',
+        'L1',
+        'D3133232',
+        'PT Sinar Jaya Logistik',
+        'Gudang Cikarang',
+      ]) {
+        await expect.element(screen.getByText(value)).toBeInTheDocument()
+      }
+
+      // QR tetap ada dan tetap memuat token, bukan hiasan.
+      expect(screen.container.querySelector('svg')).toBeTruthy()
+    })
+  }
+
+  it('menaruh tanggal besar di samping QR pada desain Minimal', async () => {
+    const screen = await render(<TicketCard model={model} design='MINIMAL' />)
+
+    await expect.element(screen.getByText('11 Nov 2026')).toBeInTheDocument()
+    await expect.element(screen.getByText('Rab')).toBeInTheDocument()
+    // Jam ditulis sesuai bahasa aktif ("08.30" vs "08:30"), jadi dibandingkan
+    // dengan nilai model, bukan teks yang dipatok di tes.
+    await expect.element(screen.getByText(model.schedule)).toBeInTheDocument()
   })
 })

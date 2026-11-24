@@ -1,4 +1,4 @@
-import type { Settings } from '@/lib/api/types'
+import type { Settings, TicketDesign } from '@/lib/api/types'
 import { labelToMinute } from '@/lib/format'
 import { localeToIntl, type MessageKey, type Vars } from '@/lib/i18n'
 
@@ -23,6 +23,8 @@ export type FormState = {
   loginCoverUrl: string
   /** Warna aksen halaman masuk, hex; kosong = warna bawaan tema. */
   loginBrandColor: string
+  /** Tata letak kartu tiket supir; satu pilihan untuk semua tiket. */
+  ticketDesign: TicketDesign
   open: string
   close: string
   slotUnitMinutes: string
@@ -44,6 +46,7 @@ export type SectionKey =
   | 'arrival'
   | 'window'
   | 'approval'
+  | 'ticket'
 
 export const FIELD_GROUPS = {
   identity: ['warehouseName'],
@@ -60,6 +63,9 @@ export const FIELD_GROUPS = {
     'approvalMinDecisionMinutes',
     'approvalUrgentBufferMinutes',
   ],
+  // Tata letak tiket dipilih Admin; nilainya bukan teks bebas, jadi tidak ada
+  // validasi isian — hanya pilihan tertutup dari tiga desain.
+  ticket: ['ticketDesign'],
 } as const satisfies Record<SectionKey, readonly (keyof FormState)[]>
 
 export const SECTION_KEYS = Object.keys(FIELD_GROUPS) as SectionKey[]
@@ -77,6 +83,7 @@ export type SettingsPayload = {
   loginDescription?: string | null
   loginCoverUrl?: string | null
   loginBrandColor?: string | null
+  ticketDesign?: TicketDesign
   operatingStartMinute?: number
   operatingEndMinute?: number
   slotUnitMinutes?: number
@@ -99,6 +106,7 @@ export function toForm(settings: Settings): FormState {
     loginDescription: settings.loginDescription ?? '',
     loginCoverUrl: settings.loginCoverUrl ?? '',
     loginBrandColor: settings.loginBrandColor ?? '',
+    ticketDesign: settings.ticketDesign,
     open: settings.operatingStartLabel,
     close: settings.operatingEndLabel,
     slotUnitMinutes: String(settings.slotUnitMinutes),
@@ -162,6 +170,8 @@ export function restoreSection(
         approvalMinDecisionMinutes: saved.approvalMinDecisionMinutes,
         approvalUrgentBufferMinutes: saved.approvalUrgentBufferMinutes,
       }
+    case 'ticket':
+      return { ...current, ticketDesign: saved.ticketDesign }
   }
 }
 
@@ -207,9 +217,11 @@ export function isHexColor(value: string) {
  * dari pemeriksaan biasa, jadi ditolak di sini dan juga di server.
  */
 export function isSafeImageUrl(value: string) {
-  return value.startsWith('/api/uploads/') || /^https:\/\//i.test(value)}
+  return value.startsWith('/api/uploads/') || /^https:\/\//i.test(value)
+}
 
-function minutesBetween(open: string, close: string) {  if (open === '' || close === '') return null
+function minutesBetween(open: string, close: string) {
+  if (open === '' || close === '') return null
   const start = labelToMinute(open)
   const end = labelToMinute(close)
   if (!Number.isFinite(start) || !Number.isFinite(end)) return null
@@ -305,6 +317,9 @@ export function sectionError(
       }
       return null
     }
+    case 'ticket':
+      // Pilihannya tertutup (tiga tombol), jadi tidak ada isian yang bisa salah.
+      return null
   }
 }
 
@@ -355,6 +370,8 @@ export function sectionPayload(
         approvalMinDecisionMinutes: Number(form.approvalMinDecisionMinutes),
         approvalUrgentBufferMinutes: Number(form.approvalUrgentBufferMinutes),
       }
+    case 'ticket':
+      return { ticketDesign: form.ticketDesign }
   }
 }
 

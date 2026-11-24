@@ -6,7 +6,8 @@ export const settings = {
   'settings.dirtyCount': '{count} seksi belum disimpan',
   'settings.loading': 'Memuat pengaturan...',
   'settings.navAria': 'Seksi pengaturan',
-  'settings.navEmpty': 'Tidak ada perubahan tertunda. Setiap seksi disimpan sendiri.',
+  'settings.navEmpty':
+    'Tidak ada perubahan tertunda. Setiap seksi disimpan sendiri.',
   'settings.navDirty': '{count} seksi berubah dan belum dikirim ke server.',
   'settings.manualModeOn': 'Mode manual aktif',
   'settings.unsaved': 'Belum disimpan',
@@ -25,6 +26,7 @@ export const settings = {
   'settings.tab.window': 'Jendela pemesanan',
   'settings.tab.approval': 'Persetujuan booking',
   'settings.tab.language': 'Bahasa',
+  'settings.tab.ticket': 'Desain tiket',
   'settings.tab.appearance': 'Tampilan',
 
   'settings.saved.identity': 'Identitas gudang disimpan',
@@ -34,6 +36,7 @@ export const settings = {
   'settings.saved.arrival': 'Aturan kedatangan disimpan',
   'settings.saved.window': 'Jendela pemesanan disimpan',
   'settings.saved.approval': 'Kebijakan persetujuan disimpan',
+  'settings.saved.ticket': 'Desain tiket disimpan',
 
   'settings.panel.dirty': 'Perubahan di seksi ini belum dikirim ke server.',
   'settings.panel.clean': 'Tidak ada perubahan pada seksi ini.',
@@ -119,8 +122,7 @@ export const settings = {
   'settings.hours.unit': 'Satuan blok',
   'settings.hours.unitHint':
     'Ukuran satu slot. Mengubahnya mengubah jumlah blok per hari dan seluruh ketersediaan; booking lama tetap memakai blok yang sudah dikunci.',
-  'settings.hours.summary':
-    'Rentang {hours} = {duration}, berisi {blocks}.',
+  'settings.hours.summary': 'Rentang {hours} = {duration}, berisi {blocks}.',
 
   'settings.arrival.title': 'Aturan kedatangan',
   'settings.arrival.description':
@@ -185,11 +187,31 @@ export const settings = {
   'settings.appearance.light': 'Terang',
   'settings.appearance.lightDesc': 'Latar putih, nyaman di ruangan terang.',
   'settings.appearance.dark': 'Gelap',
-  'settings.appearance.darkDesc': 'Latar gelap, mengurangi silau di malam hari.',
+  'settings.appearance.darkDesc':
+    'Latar gelap, mengurangi silau di malam hari.',
   'settings.appearance.system': 'Ikuti sistem',
   'settings.appearance.systemDesc': 'Menyesuaikan pengaturan perangkat Anda.',
   'settings.appearance.active': 'Aktif sekarang {theme}',
   'settings.appearance.followSystem': ' — mengikuti perangkat',
+
+  'settings.ticket.title': 'Desain tiket',
+  'settings.ticket.description':
+    'Tampilan kartu tiket supir. Desain yang dipilih berlaku untuk semua tiket — yang tampil di layar, hasil cetak, dan PNG yang dikirim lewat WhatsApp.',
+  'settings.ticket.footer':
+    'Isi tiket tidak berubah karena desain: delapan nilai dan QR tetap ada. Tiket yang tautannya dibuka ulang juga ikut desain terpilih.',
+  'settings.ticket.legend': 'Pilih desain tiket',
+  'settings.ticket.preview': 'Pratinjau desain',
+  'settings.ticket.previewNote':
+    'Data di atas hanya contoh, bukan booking sungguhan. Nama aplikasi dan logo mengikuti seksi Identitas merek.',
+  'settings.ticket.classic': 'Klasik Biru',
+  'settings.ticket.classicHint':
+    'Biru penuh dengan pita sobek. Paling akrab bagi supir yang sudah biasa dengan tiket lama.',
+  'settings.ticket.minimal': 'Minimal Putih',
+  'settings.ticket.minimalHint':
+    'Putih bersih dengan tanggal besar di samping QR. Paling terbaca saat dicetak hitam-putih.',
+  'settings.ticket.navy': 'Navy Resmi',
+  'settings.ticket.navyHint':
+    'Pita navy dan kartu QR yang menonjol. Paling tegas untuk gudang dengan banyak dokumen.',
 
   'settings.summary.aria': 'Ringkasan operasional',
   'settings.summary.title': 'Berlaku di mesin kuota',

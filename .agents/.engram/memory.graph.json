@@ -1,0 +1,63 @@
+{
+  "version": "0.0.25",
+  "last_updated": "2026-11-24T13:22:49.308Z",
+  "nodes": [
+    {
+      "id": "scope:workspace",
+      "kind": "scope",
+      "level": 0,
+      "label": "workspace",
+      "scope": "workspace"
+    },
+    {
+      "id": "scope:workspace:type:rule",
+      "kind": "type",
+      "level": 1,
+      "label": "rule",
+      "scope": "workspace",
+      "memoryType": "rule"
+    },
+    {
+      "id": "scope:workspace:type:skill",
+      "kind": "type",
+      "level": 1,
+      "label": "skill",
+      "scope": "workspace",
+      "memoryType": "skill"
+    },
+    {
+      "id": "scope:workspace:type:knowledge",
+      "kind": "type",
+      "level": 1,
+      "label": "knowledge",
+      "scope": "workspace",
+      "memoryType": "knowledge"
+    }
+  ],
+  "edges": [
+    {
+      "id": "contains:scope:workspace->scope:workspace:type:rule",
+      "kind": "contains",
+      "from": "scope:workspace",
+      "to": "scope:workspace:type:rule",
+      "weight": 1,
+      "reason": "scope contains memory type"
+    },
+    {
+      "id": "contains:scope:workspace->scope:workspace:type:skill",
+      "kind": "contains",
+      "from": "scope:workspace",
+      "to": "scope:workspace:type:skill",
+      "weight": 1,
+      "reason": "scope contains memory type"
+    },
+    {
+      "id": "contains:scope:workspace->scope:workspace:type:knowledge",
+      "kind": "contains",
+      "from": "scope:workspace",
+      "to": "scope:workspace:type:knowledge",
+      "weight": 1,
+      "reason": "scope contains memory type"
+    }
+  ]
+}

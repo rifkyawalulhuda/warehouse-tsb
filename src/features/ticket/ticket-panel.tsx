@@ -32,11 +32,21 @@ export function TicketPanel({
   )
   const [ready, setReady] = useState<{
     model: typeof model
+    design: typeof brand.ticketDesign
+    logoUrl: string | null
     url: string
   } | null>(null)
-  // PNG hanya dipakai kalau dibuat dari model yang sedang tampil; kalau tiket
-  // berubah, gambar lama tidak boleh terunduh.
-  const png = ready?.model === model ? ready.url : null
+  // PNG hanya dipakai kalau dibuat dari isi, desain, dan logo yang sedang
+  // tampil; kalau salah satunya berubah, gambar lama tidak boleh terunduh.
+  const design = brand.ticketDesign
+  const logoUrl = brand.appLogoUrl
+  const png =
+    ready &&
+    ready.model === model &&
+    ready.design === design &&
+    ready.logoUrl === logoUrl
+      ? ready.url
+      : null
 
   // Ctrl+P juga harus menghasilkan kartu saja, bukan hanya tombol Cetak.
   useEffect(() => {
@@ -54,11 +64,18 @@ export function TicketPanel({
   }, [])
 
   useEffect(() => {
-    if (ready?.model === model) return
+    if (
+      ready &&
+      ready.model === model &&
+      ready.design === design &&
+      ready.logoUrl === logoUrl
+    ) {
+      return
+    }
     let cancelled = false
-    void renderTicketPng(model)
+    void renderTicketPng(model, 2, { design, logoUrl })
       .then((url) => {
-        if (!cancelled) setReady({ model, url })
+        if (!cancelled) setReady({ model, design, logoUrl, url })
       })
       // Gagal menyiapkan lebih awal bukan alasan mematikan tombol: klik
       // berikutnya mencoba lagi dan baru menampilkan pesan kalau ikut gagal.
@@ -66,17 +83,22 @@ export function TicketPanel({
     return () => {
       cancelled = true
     }
-  }, [model, ready])
+  }, [model, design, logoUrl, ready])
 
   const onDownload = () => {
-    void downloadTicket(model, png).catch(() => {
+    void downloadTicket(model, png, { design, logoUrl }).catch(() => {
       toast.error(t('ticket.downloadFailed'))
     })
   }
 
   return (
     <div className='space-y-3'>
-      <TicketCard model={model} label={t('ticket.cardLabel', { code: model.code })} />
+      <TicketCard
+        model={model}
+        design={design}
+        logoUrl={logoUrl}
+        label={t('ticket.cardLabel', { code: model.code })}
+      />
 
       {ticket.lateMinutes > 0 && !finished && (
         <p className='text-center text-sm font-medium text-orange-600 dark:text-orange-400'>

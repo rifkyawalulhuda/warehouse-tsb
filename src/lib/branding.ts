@@ -1,6 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { getLocale, translate, useT } from '@/lib/i18n'
 import { fetchBranding, type Branding } from '@/lib/api/endpoints'
+import { getLocale, translate, useT } from '@/lib/i18n'
+import {
+  DEFAULT_TICKET_DESIGN,
+  isTicketDesign,
+} from '@/features/ticket/ticket-design'
 
 /**
  * Paragraf sambutan bawaan halaman masuk. Dipakai sebagai nilai cadangan dan
@@ -29,6 +33,9 @@ export const DEFAULT_BRANDING: Branding = {
   loginDescription: null,
   loginCoverUrl: null,
   loginBrandColor: null,
+  // Desain tiket bawaan harus sama dengan nilai bawaan kolom di database;
+  // kalau berbeda, tiket tampil beda sesaat sebelum pengaturan termuat.
+  ticketDesign: DEFAULT_TICKET_DESIGN,
 }
 
 /**
@@ -77,5 +84,10 @@ export function useBranding(): Branding {
     // gradien bawaan, bukan gambar kosong yang tampak rusak.
     loginCoverUrl: data.loginCoverUrl?.trim() || null,
     loginBrandColor: data.loginBrandColor?.trim() || null,
+    // Server versi lama belum mengirim desain tiket; nilai tak dikenal jatuh
+    // ke Klasik supaya tiket tidak pernah gagal dirender.
+    ticketDesign: isTicketDesign(data.ticketDesign)
+      ? data.ticketDesign
+      : DEFAULT_TICKET_DESIGN,
   }
 }

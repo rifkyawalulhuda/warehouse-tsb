@@ -27,6 +27,12 @@ export type ApprovalMode = 'AUTO' | 'MANUAL'
 export type ApprovalStatus =
   'NOT_REQUIRED' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED'
 
+/**
+ * Tata letak kartu tiket supir. Satu nilai global yang dipilih Admin; setiap
+ * desain membawa isi yang sama, hanya komposisinya yang berbeda.
+ */
+export type TicketDesign = 'CLASSIC' | 'MINIMAL' | 'NAVY'
+
 export type SessionUser = {
   id: string
   name: string
@@ -170,6 +176,8 @@ export type Settings = {
   loginCoverUrl: string | null
   /** Warna aksen halaman masuk (hex) pilihan Admin; null = warna bawaan. */
   loginBrandColor: string | null
+  /** Tata letak kartu tiket supir yang dipakai semua tiket. */
+  ticketDesign: TicketDesign
   operatingStartMinute: number
   operatingEndMinute: number
   operatingStartLabel: string

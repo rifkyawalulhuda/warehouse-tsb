@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { PublicTicket } from '@/lib/api/types'
+import { TICKET_DESIGNS } from './ticket-design'
 import { downloadTicket, renderTicketPng } from './ticket-image'
 import { buildTicketModel, ticketFileName } from './ticket-model'
 
@@ -127,5 +128,48 @@ describe('gambar tiket', () => {
     expect(ticketFileName('TSB-20261111-003', 'en')).toBe(
       'ticket-TSB-20261111-003.png'
     )
+  })
+})
+
+describe('PNG tiga desain tiket', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  /**
+   * Setiap desain harus menghasilkan berkas 2x yang benar-benar berisi. Kalau
+   * salah satu lupa dipasang di `renderTicketPng`, tiket yang diunduh supir
+   * akan berbeda dari yang ia lihat di layar — dan itu baru ketahuan setelah
+   * sampai di gerbang.
+   */
+  for (const design of TICKET_DESIGNS) {
+    it(`menggambar desain ${design} pada ukuran 720x964`, async () => {
+      const url = await renderTicketPng(model, 2, { design })
+      expect(url.startsWith('data:image/png;base64,')).toBe(true)
+
+      const image = await inspect(url)
+      expect(image.width).toBe(720)
+      expect(image.height).toBe(964)
+      // Teks dan modul QR selalu menyisakan ribuan piksel gelap, apa pun
+      // warnanya — desain Navy pun tetap punya QR hitam.
+      expect(image.dark).toBeGreaterThan(5000)
+    })
+  }
+
+  it('tidak pernah menghasilkan gambar yang sama untuk dua desain', async () => {
+    const [classic, minimal, navy] = await Promise.all(
+      TICKET_DESIGNS.map((design) => renderTicketPng(model, 1, { design }))
+    )
+
+    expect(new Set([classic, minimal, navy]).size).toBe(3)
+  })
+
+  it('memakai desain Klasik bila tidak diminta', async () => {
+    const [fallback, classic] = await Promise.all([
+      renderTicketPng(model, 1),
+      renderTicketPng(model, 1, { design: 'CLASSIC' }),
+    ])
+
+    expect(fallback).toBe(classic)
   })
 })

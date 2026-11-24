@@ -25,6 +25,7 @@ const settings: Settings = {
   loginDescription: null,
   loginCoverUrl: null,
   loginBrandColor: null,
+  ticketDesign: 'CLASSIC',
   operatingStartMinute: 480,
   operatingEndMinute: 1020,
   operatingStartLabel: '08:00',
@@ -114,10 +115,18 @@ describe('seksi identitas merek', () => {
 
   it('menolak logo yang bukan unggahan atau alamat https', () => {
     expect(
-      sectionError('brand', { ...saved, appLogoUrl: 'javascript:alert(1)' }, tId)
+      sectionError(
+        'brand',
+        { ...saved, appLogoUrl: 'javascript:alert(1)' },
+        tId
+      )
     ).toContain('Logo harus PNG atau JPG')
     expect(
-      sectionError('brand', { ...saved, appLogoUrl: '/api/uploads/logo-a.png' }, tId)
+      sectionError(
+        'brand',
+        { ...saved, appLogoUrl: '/api/uploads/logo-a.png' },
+        tId
+      )
     ).toBeNull()
   })
 
@@ -142,7 +151,30 @@ describe('seksi identitas merek', () => {
   it('membaca null dari server sebagai kolom kosong di form', () => {
     expect(toForm(settings).appShortName).toBe('')
     expect(toForm(settings).appLogoUrl).toBe('')
-    expect(toForm({ ...settings, appShortName: 'TSB' }).appShortName).toBe('TSB')
+    expect(toForm({ ...settings, appShortName: 'TSB' }).appShortName).toBe(
+      'TSB'
+    )
+  })
+})
+
+describe('seksi desain tiket', () => {
+  const saved = toForm(settings)
+
+  it('hanya mengirim desain, bukan seksi lain', () => {
+    const form = { ...saved, ticketDesign: 'NAVY' as const }
+    expect(dirtySections(form, saved)).toEqual(['ticket'])
+    expect(sectionPayload('ticket', form)).toEqual({ ticketDesign: 'NAVY' })
+  })
+
+  it('kembali ke desain tersimpan saat direset', () => {
+    const form = { ...saved, ticketDesign: 'MINIMAL' as const }
+    expect(restoreSection(form, saved, 'ticket').ticketDesign).toBe('CLASSIC')
+  })
+
+  it('tidak punya isian yang bisa salah', () => {
+    // Pilihannya tertutup (tiga tombol), jadi seksi ini tidak pernah menghalangi
+    // penyimpanan dengan pesan galat.
+    expect(sectionError('ticket', saved, tId)).toBeNull()
   })
 })
 
@@ -217,9 +249,9 @@ describe('validasi seksi', () => {
   })
 
   it('menolak field angka yang dikosongkan, bukan membacanya sebagai nol', () => {
-    expect(sectionError('window', { ...saved, bookingWindowDays: '' }, tId)).toBe(
-      'Jendela pemesanan harus 1–90 hari.'
-    )
+    expect(
+      sectionError('window', { ...saved, bookingWindowDays: '' }, tId)
+    ).toBe('Jendela pemesanan harus 1–90 hari.')
     // Masa tenggang boleh nol, tapi tetap tidak boleh kosong.
     expect(
       sectionError('arrival', { ...saved, gracePeriodMinutes: '' }, tId)
@@ -230,9 +262,9 @@ describe('validasi seksi', () => {
   })
 
   it('menolak nama gudang kosong', () => {
-    expect(sectionError('identity', { ...saved, warehouseName: '  ' }, tId)).toBe(
-      'Nama gudang minimal 2 karakter.'
-    )
+    expect(
+      sectionError('identity', { ...saved, warehouseName: '  ' }, tId)
+    ).toBe('Nama gudang minimal 2 karakter.')
   })
 })
 
@@ -256,10 +288,7 @@ describe('payload seksi', () => {
 
 describe('ringkasan dampak', () => {
   it('menghitung blok per hari dari draf, bukan dari server', () => {
-    const impact = impactOf(
-      { ...toForm(settings), slotUnitMinutes: '60' },
-      tId
-    )
+    const impact = impactOf({ ...toForm(settings), slotUnitMinutes: '60' }, tId)
     expect(impact.hours).toBe('08:00–17:00')
     expect(impact.duration).toBe('9 jam')
     expect(impact.blocks).toBe('9 blok')

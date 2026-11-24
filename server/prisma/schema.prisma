@@ -69,6 +69,18 @@ enum ApprovalStatus {
   EXPIRED
 }
 
+/// Tata letak kartu tiket supir. Dipilih Admin di Pengaturan dan berlaku untuk
+/// semua tiket yang dibuka setelahnya — termasuk tautan lama yang dibuka ulang,
+/// karena desain dibaca saat tiket ditampilkan, bukan disimpan per booking.
+///
+/// `CLASSIC` adalah tata letak yang sudah dipakai sebelum pilihan ini ada, jadi
+/// nilai bawaannya supaya migrasi tidak mengubah tampilan tiket apa pun.
+enum TicketDesign {
+  CLASSIC
+  MINIMAL
+  NAVY
+}
+
 /// Perusahaan customer. Akun login (`User` ber-role CUSTOMER) menempel ke satu
 /// customer; booking dimiliki customer, bukan akun.
 model Customer {
@@ -175,6 +187,8 @@ model WarehouseSetting {
   loginCoverUrl            String? @map("login_cover_url") @db.VarChar(2048)
   /// Warna aksen halaman masuk, hex 6 digit. Null = warna bawaan tema.
   loginBrandColor          String? @map("login_brand_color") @db.VarChar(7)
+  /// Tata letak kartu tiket supir. Berlaku untuk semua tiket, layar dan PNG.
+  ticketDesign             TicketDesign @default(CLASSIC) @map("ticket_design")
   operatingStartMinute     Int    @default(480) @map("operating_start_minute")
   operatingEndMinute       Int    @default(1020) @map("operating_end_minute")
   slotUnitMinutes          Int    @default(30) @map("slot_unit_minutes")

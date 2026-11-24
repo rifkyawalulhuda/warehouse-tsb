@@ -7,10 +7,12 @@ export const brandingRouter = Router()
  * Judul aplikasi untuk halaman yang dibuka sebelum masuk.
  *
  * Halaman login harus menulis "Warehouse TSB" walau belum ada sesi, jadi ia
- * butuh sumber yang tidak memerlukan autentikasi. Yang dibuka hanya tiga nama
- * merek: tidak ada satu pun data operasional di sini. Galat database tidak
+ * butuh sumber yang tidak memerlukan autentikasi. Begitu juga halaman tiket
+ * supir: supir tidak punya akun, tetapi kartu yang ia tunjukkan di gerbang harus
+ * memakai tata letak yang dipilih Admin. Yang dibuka hanya merek dan pilihan
+ * desain: tidak ada satu pun data operasional di sini. Galat database tidak
  * dikembalikan sebagai kegagalan — layar masuk tidak boleh kosong hanya karena
- * pengaturan belum terbaca; UI memakai judul bawaannya.
+ * pengaturan belum terbaca; UI memakai judul dan desain bawaannya.
  */
 brandingRouter.get('/', async (_req, res, next) => {
   try {
@@ -24,6 +26,7 @@ brandingRouter.get('/', async (_req, res, next) => {
         loginDescription: true,
         loginCoverUrl: true,
         loginBrandColor: true,
+        ticketDesign: true,
       },
     })
 

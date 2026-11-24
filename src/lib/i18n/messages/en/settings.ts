@@ -11,8 +11,7 @@ export const settings: Record<
   'settings.dirtyCount': '{count} sections not saved',
   'settings.loading': 'Loading settings...',
   'settings.navAria': 'Settings sections',
-  'settings.navEmpty':
-    'No pending changes. Each section is saved on its own.',
+  'settings.navEmpty': 'No pending changes. Each section is saved on its own.',
   'settings.navDirty': '{count} sections changed and not sent to the server.',
   'settings.manualModeOn': 'Manual mode is on',
   'settings.unsaved': 'Not saved',
@@ -32,6 +31,7 @@ export const settings: Record<
   'settings.tab.approval': 'Booking approval',
   'settings.tab.language': 'Language',
   'settings.tab.appearance': 'Appearance',
+  'settings.tab.ticket': 'Ticket design',
 
   'settings.saved.identity': 'Warehouse identity saved',
   'settings.saved.brand': 'Brand identity saved',
@@ -40,6 +40,7 @@ export const settings: Record<
   'settings.saved.arrival': 'Arrival rules saved',
   'settings.saved.window': 'Booking window saved',
   'settings.saved.approval': 'Approval policy saved',
+  'settings.saved.ticket': 'Ticket design saved',
 
   'settings.panel.dirty': 'Changes in this section are not sent yet.',
   'settings.panel.clean': 'No changes in this section.',
@@ -188,13 +189,33 @@ export const settings: Record<
     'You can also change it from the Theme menu in the sidebar footer.',
   'settings.appearance.aria': 'Display theme',
   'settings.appearance.light': 'Light',
-  'settings.appearance.lightDesc': 'White background, comfortable in bright rooms.',
+  'settings.appearance.lightDesc':
+    'White background, comfortable in bright rooms.',
   'settings.appearance.dark': 'Dark',
   'settings.appearance.darkDesc': 'Dark background, less glare at night.',
   'settings.appearance.system': 'Follow system',
   'settings.appearance.systemDesc': 'Follows your device settings.',
   'settings.appearance.active': 'Active now {theme}',
   'settings.appearance.followSystem': ' — following the device',
+
+  'settings.ticket.title': 'Ticket design',
+  'settings.ticket.description':
+    'The look of the driver ticket card. The chosen design applies to every ticket — on screen, in print, and in the PNG sent over WhatsApp.',
+  'settings.ticket.footer':
+    'Content does not change with the design: eight values and the QR stay. Tickets reopened from an old link also follow the selected design.',
+  'settings.ticket.legend': 'Choose a ticket design',
+  'settings.ticket.preview': 'Design preview',
+  'settings.ticket.previewNote':
+    'The data above is a sample, not a real booking. The app name and logo follow the Brand identity section.',
+  'settings.ticket.classic': 'Classic Blue',
+  'settings.ticket.classicHint':
+    'Full blue with a torn seam. The most familiar for drivers used to the old ticket.',
+  'settings.ticket.minimal': 'Minimal White',
+  'settings.ticket.minimalHint':
+    'Clean white with a large date beside the QR. The most legible in black-and-white print.',
+  'settings.ticket.navy': 'Official Navy',
+  'settings.ticket.navyHint':
+    'A navy band with a prominent QR card. The boldest choice for warehouses with many documents.',
 
   'settings.summary.aria': 'Operational summary',
   'settings.summary.title': 'Used by the capacity engine',
@@ -217,7 +238,8 @@ export const settings: Record<
   'settings.unit.minutes': 'minutes',
   'settings.unit.days': 'days',
 
-  'settings.error.warehouseMin': 'Warehouse name must be at least 2 characters.',
+  'settings.error.warehouseMin':
+    'Warehouse name must be at least 2 characters.',
   'settings.error.warehouseMax':
     'Warehouse name must be at most 120 characters.',
   'settings.error.appNameRequired': 'App title is required.',
@@ -241,7 +263,8 @@ export const settings: Record<
   'settings.error.leadRange': 'Decision deadline must be 5–2880 minutes.',
   'settings.error.minDecisionRange':
     'Minimum decision window must be 5–1440 minutes.',
-  'settings.error.urgentRange': 'Urgent label threshold must be 0–14400 minutes.',
+  'settings.error.urgentRange':
+    'Urgent label threshold must be 0–14400 minutes.',
 
   'settings.note.hours':
     '{minutes} minutes at the end of operating hours fall outside any block, so they cannot be booked.',

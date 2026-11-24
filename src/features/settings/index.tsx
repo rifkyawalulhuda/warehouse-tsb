@@ -7,6 +7,7 @@ import {
   LogIn,
   Palette,
   ShieldCheck,
+  Ticket,
   Truck,
   Type,
   Warehouse,
@@ -14,10 +15,10 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { apiErrorMessage } from '@/lib/api/client'
-import { BrandLogo } from '@/components/brand-logo'
-import { tabTitle } from '@/lib/branding'
 import { fetchSettings, saveSettings } from '@/lib/api/endpoints'
 import type { Settings } from '@/lib/api/types'
+import { tabTitle } from '@/lib/branding'
+import { useT, type MessageKey } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
 import {
@@ -27,12 +28,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useT, type MessageKey } from '@/lib/i18n'
+import { BrandLogo } from '@/components/brand-logo'
 import { Main } from '@/components/layout/main'
+import { LocaleSwitch } from '@/components/locale-switch'
 import { PageHeader } from '@/components/page-header'
 import { ErrorBlock, LoadingBlock } from '@/components/query-state'
 import { AppearancePicker } from './appearance-picker'
-import { LocaleSwitch } from '@/components/locale-switch'
 import {
   dirtySections,
   hoursNote,
@@ -46,11 +47,12 @@ import {
   type FormState,
   type SectionKey,
 } from './form'
-import { OperationsSummary, PolicyFlag } from './operations-summary'
-import { FieldRow, NumberField, SectionPanel } from './section-panel'
 import { LoginPanelFields } from './login-panel-fields'
 import { LoginPreview } from './login-preview'
 import { LogoField } from './logo-field'
+import { OperationsSummary, PolicyFlag } from './operations-summary'
+import { FieldRow, NumberField, SectionPanel } from './section-panel'
+import { TicketDesignPicker } from './ticket-design-picker'
 
 type Tab = SectionKey | 'appearance' | 'language'
 
@@ -109,6 +111,12 @@ const TABS: {
     groupKey: 'settings.group.preferences',
   },
   {
+    key: 'ticket',
+    labelKey: 'settings.tab.ticket',
+    icon: Ticket,
+    groupKey: 'settings.group.preferences',
+  },
+  {
     key: 'appearance',
     labelKey: 'settings.tab.appearance',
     icon: Palette,
@@ -129,8 +137,7 @@ export function SettingsPage() {
   const t = useT()
   const settings = useQuery({ queryKey: ['settings'], queryFn: fetchSettings })
 
-  if (settings.isPending)
-    return <LoadingBlock label={t('settings.loading')} />
+  if (settings.isPending) return <LoadingBlock label={t('settings.loading')} />
   if (settings.isError)
     return (
       <ErrorBlock
@@ -297,7 +304,9 @@ function SettingsForm({ settings }: { settings: Settings }) {
                   <Input
                     id='app-name'
                     value={form.appName}
-                    onChange={(event) => setField('appName', event.target.value)}
+                    onChange={(event) =>
+                      setField('appName', event.target.value)
+                    }
                     className='w-full sm:w-72'
                     maxLength={60}
                     autoComplete='off'
@@ -467,9 +476,19 @@ function SettingsForm({ settings }: { settings: Settings }) {
                       blocks: impact.blocks,
                     })}
                   </p>
-                  {hoursNote(form.open, form.close, form.slotUnitMinutes, t) && (
+                  {hoursNote(
+                    form.open,
+                    form.close,
+                    form.slotUnitMinutes,
+                    t
+                  ) && (
                     <p className='mt-1 text-xs text-muted-foreground'>
-                      {hoursNote(form.open, form.close, form.slotUnitMinutes, t)}
+                      {hoursNote(
+                        form.open,
+                        form.close,
+                        form.slotUnitMinutes,
+                        t
+                      )}
                     </p>
                   )}
                 </div>
@@ -582,7 +601,9 @@ function SettingsForm({ settings }: { settings: Settings }) {
                         )}
                       >
                         <span className='block text-sm tabular-nums'>
-                          {t('settings.window.daysUnit', { count: preset.days })}
+                          {t('settings.window.daysUnit', {
+                            count: preset.days,
+                          })}
                         </span>
                         <span className='text-muted-foreground'>
                           {preset.label}
@@ -718,6 +739,27 @@ function SettingsForm({ settings }: { settings: Settings }) {
                 <AppearancePicker />
               </SectionPanel>
             )}
+
+            {activeTab.key === 'ticket' && (
+              <SectionPanel
+                icon={Ticket}
+                title={t('settings.ticket.title')}
+                description={t('settings.ticket.description')}
+                error={sectionError('ticket', form, t)}
+                dirty={isDirty('ticket', form, saved)}
+                pending={save.isPending && save.variables === 'ticket'}
+                onSave={() => save.mutate('ticket')}
+                onReset={() => resetSection('ticket')}
+                footerNote={t('settings.ticket.footer')}
+              >
+                <TicketDesignPicker
+                  value={form.ticketDesign}
+                  onChange={(design) => setField('ticketDesign', design)}
+                  appName={form.appName}
+                  logoUrl={form.appLogoUrl.trim() || null}
+                />
+              </SectionPanel>
+            )}
           </div>
         </div>
       </div>
@@ -789,6 +831,7 @@ const MESSAGE_BY_SECTION: Record<SectionKey, MessageKey> = {
   arrival: 'settings.saved.arrival',
   window: 'settings.saved.window',
   approval: 'settings.saved.approval',
+  ticket: 'settings.saved.ticket',
 }
 
 /**

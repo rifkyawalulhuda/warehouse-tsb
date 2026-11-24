@@ -52,6 +52,9 @@ export const updateSchema = z.object({
     .regex(/^#(?:[0-9a-fA-F]{6})$/, 'Warna harus berupa hex, misalnya #1D4ED8')
     .nullable()
     .optional(),
+  // Tata letak kartu tiket. Daftar tertutup: nilai lain akan menghasilkan
+  // tiket yang tidak punya penggambar, jadi ditolak di sini.
+  ticketDesign: z.enum(['CLASSIC', 'MINIMAL', 'NAVY']).optional(),
   operatingStartMinute: z.number().int().min(0).max(1439).optional(),
   operatingEndMinute: z.number().int().min(1).max(1440).optional(),
   slotUnitMinutes: z.number().int().min(15).max(120).optional(),

@@ -49,6 +49,7 @@ describe('nama aplikasi', () => {
       loginDescription: null,
       loginCoverUrl: null,
       loginBrandColor: null,
+      ticketDesign: 'CLASSIC',
     })
   })
 
@@ -209,5 +210,43 @@ describe('PUT /api/settings', () => {
     const response = await request(app).put('/api/settings').send({ warehouseName: 'X' })
 
     expect(response.status).toBe(401)
+  })
+})
+
+describe('desain tiket', () => {
+  it('menyimpan pilihan desain dan mengirimnya lewat /api/branding', async () => {
+    const cookie = await loginCookie(app, 'admin@test.local')
+
+    const response = await request(app)
+      .put('/api/settings')
+      .set('Cookie', cookie)
+      .send({ ticketDesign: 'NAVY' })
+
+    expect(response.status).toBe(200)
+    expect(response.body.data.ticketDesign).toBe('NAVY')
+    // Seksi lain tidak boleh ikut berubah karena payload tanpa field-nya.
+    expect(response.body.data.warehouseName).toBe('Gudang Tes')
+
+    // Halaman tiket supir tidak punya sesi, jadi desain harus terbaca dari
+    // endpoint publik — bukan dari /api/settings yang butuh login.
+    const branding = await request(app).get('/api/branding')
+    expect(branding.body.data.ticketDesign).toBe('NAVY')
+  })
+
+  it('menolak desain di luar tiga pilihan yang punya penggambar', async () => {
+    const cookie = await loginCookie(app, 'admin@test.local')
+
+    const response = await request(app)
+      .put('/api/settings')
+      .set('Cookie', cookie)
+      .send({ ticketDesign: 'FLORAL' })
+
+    expect(response.status).toBe(400)
+    expect(response.body.error.code).toBe('VALIDATION_ERROR')
+  })
+
+  it('memakai Klasik sebagai bawaan sebelum ada yang memilih', async () => {
+    const branding = await request(app).get('/api/branding')
+    expect(branding.body.data.ticketDesign).toBe('CLASSIC')
   })
 })

@@ -39,6 +39,7 @@ export async function settingsPayload(options: { includeInternal?: boolean } = {
     loginDescription: settings.loginDescription,
     loginCoverUrl: settings.loginCoverUrl,
     loginBrandColor: settings.loginBrandColor,
+    ticketDesign: settings.ticketDesign,
     operatingStartMinute: settings.operatingStartMinute,
     operatingEndMinute: settings.operatingEndMinute,
     operatingStartLabel: minuteToLabel(settings.operatingStartMinute),

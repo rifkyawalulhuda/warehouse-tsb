@@ -29,6 +29,7 @@ import type {
   ScanResult,
   SessionUser,
   Settings,
+  TicketDesign,
   TruckType,
   TruckTypeInput,
   Warehouse,
@@ -64,6 +65,7 @@ export type Branding = Pick<
   | 'loginDescription'
   | 'loginCoverUrl'
   | 'loginBrandColor'
+  | 'ticketDesign'
 >
 
 export async function fetchBranding(): Promise<Branding | null> {
@@ -80,6 +82,7 @@ export function saveSettings(payload: {
   loginDescription?: string | null
   loginCoverUrl?: string | null
   loginBrandColor?: string | null
+  ticketDesign?: TicketDesign
   operatingStartMinute?: number
   operatingEndMinute?: number
   slotUnitMinutes?: number

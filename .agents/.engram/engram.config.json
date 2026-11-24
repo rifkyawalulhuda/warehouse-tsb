@@ -1,0 +1,78 @@
+{
+  "version": "0.0.25",
+  "enabled": true,
+  "theme": "dark",
+  "global_path": "",
+  "scope": "both",
+  "update": "auto",
+  "read": "auto",
+  "proof": "off",
+  "ignore": {
+    "source": "engramignore",
+    "gitignore_path": ".gitignore",
+    "engramignore_path": ".engramignore",
+    "global_engramignore": true,
+    "also_ignore": [
+      "*.secret",
+      "private/**"
+    ]
+  },
+  "roles": [],
+  "live_sync": {
+    "enabled": false,
+    "targets": [
+      "agents-md",
+      "claude-md",
+      "cursorrules"
+    ]
+  },
+  "global_git": {
+    "enabled": true,
+    "remote": "origin",
+    "remote_url": "",
+    "branch": "main",
+    "auto_sync": true,
+    "auto_resolve": true
+  },
+  "rule_variants": {
+    "enabled": false,
+    "active": "balanced"
+  },
+  "load": {
+    "limit": 8
+  },
+  "graph": {
+    "enabled": true,
+    "max_related": 4,
+    "min_related_score": 0.22
+  },
+  "vector": {
+    "enabled": true,
+    "provider": "sqlite-vec",
+    "auto_threshold": 100,
+    "candidate_pool": 24,
+    "dimensions": 64
+  },
+  "pattern_mining": {
+    "enabled": false,
+    "threshold": 3,
+    "lookback_sessions": 20
+  },
+  "pr_workflow": {
+    "enabled": false,
+    "target_branch": "main"
+  },
+  "encryption": {
+    "enabled": false,
+    "scope": "global",
+    "key_source": "portable-file"
+  },
+  "memory": {
+    "rule_line_target": 70,
+    "rule_line_hard_limit": 100
+  },
+  "auto_upgrade": {
+    "version": "0.0.25",
+    "checked_at": "2026-11-24T13:22:49.327Z"
+  }
+}
