@@ -56,6 +56,14 @@ export const updateSchema = z.object({
   footerCompany: z.string().trim().max(200).nullable().optional(),
   footerLocation: z.string().trim().max(120).nullable().optional(),
   footerShowLocation: z.boolean().optional(),
+  // Awalan kode booking: tepat 3 huruf/angka. Bentuk lain akan membuat kode
+  // baru tidak dikenali layar gate, jadi ditolak di sini, bukan saat dicetak.
+  bookingCodePrefix: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(/^[A-Z0-9]{3}$/, 'Awalan kode harus 3 huruf atau angka, misalnya TSB')
+    .optional(),
   // Tata letak kartu tiket. Daftar tertutup: nilai lain akan menghasilkan
   // tiket yang tidak punya penggambar, jadi ditolak di sini.
   ticketDesign: z

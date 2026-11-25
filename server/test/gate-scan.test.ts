@@ -112,6 +112,51 @@ describe('pindai tiket di gate', () => {
     expect(response.body.data.canGateIn).toBe(true)
   })
 
+  it('menerima kode dengan awalan hasil penggantian Admin', async () => {
+    await resetDatabase(prisma)
+    const seed = await seedBase(prisma)
+    const cookie = await loginCookie(app, 'gate@test.local')
+
+    // Awalan sudah diganti ke TKT di Pengaturan; tiket baru memakainya.
+    await seedBooking({
+      customerId: seed.customer.id,
+      truckTypeId: seed.truckTypes[0]!.id,
+      bookingCode: 'TKT-20261111-004',
+      qrToken: QR_TOKEN,
+      startTime: new Date(Date.now() + 5 * 60_000),
+    })
+
+    const response = await request(app)
+      .get('/api/ops/scan/TKT-20261111-004')
+      .set('Cookie', cookie)
+
+    expect(response.status).toBe(200)
+    expect(response.body.data.booking.bookingCode).toBe('TKT-20261111-004')
+  })
+
+  it('tetap menerima tiket lama berawalan TSB setelah awalan diganti', async () => {
+    await resetDatabase(prisma)
+    const seed = await seedBase(prisma)
+    const cookie = await loginCookie(app, 'gate@test.local')
+
+    // Tiket ini tercetak sebelum Admin mengganti awalan. Kalau pengenalan kode
+    // dikunci ke awalan aktif, tiket di tangan supir akan berhenti bekerja.
+    await seedBooking({
+      customerId: seed.customer.id,
+      truckTypeId: seed.truckTypes[0]!.id,
+      bookingCode: 'TSB-20261111-005',
+      qrToken: QR_TOKEN,
+      startTime: new Date(Date.now() + 5 * 60_000),
+    })
+
+    const response = await request(app)
+      .get('/api/ops/scan/TSB-20261111-005')
+      .set('Cookie', cookie)
+
+    expect(response.status).toBe(200)
+    expect(response.body.data.booking.bookingCode).toBe('TSB-20261111-005')
+  })
+
   it('tetap menerima token QR hasil pindai kamera', async () => {
     await prepare()
     const cookie = await loginCookie(app, 'gate@test.local')

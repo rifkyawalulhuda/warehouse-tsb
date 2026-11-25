@@ -182,7 +182,6 @@ export type Booking = {
 }
 
 export type SlotStatus = 'AVAILABLE' | 'FULL'
-
 export type AvailabilitySlot = {
   startMinute: number
   startLabel: string
@@ -214,6 +213,8 @@ export type Settings = {
   footerShowLocation: boolean
   /** Tata letak kartu tiket supir yang dipakai semua tiket. */
   ticketDesign: TicketDesign
+  /** Awalan kode booking (3 huruf/angka) untuk kode yang dibuat setelah ini. */
+  bookingCodePrefix: string
   operatingStartMinute: number
   operatingEndMinute: number
   operatingStartLabel: string

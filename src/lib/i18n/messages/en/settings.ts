@@ -55,6 +55,9 @@ export const settings: Record<
   'settings.identity.name': 'Warehouse name',
   'settings.identity.nameHint':
     'At least 2 characters, at most 120. Other warehouse names in Master Data must be different.',
+  'settings.identity.codePrefix': 'Booking code prefix',
+  'settings.identity.codePrefixHint':
+    'Exactly 3 letters or digits, such as TSB or TKT. Only booking codes created after this change use the new prefix; tickets already printed still scan because a code is recognised by its shape, not by its prefix.',
 
   'settings.brand.title': 'Brand identity',
   'settings.brand.description':
@@ -268,6 +271,8 @@ export const settings: Record<
     'Warehouse name must be at least 2 characters.',
   'settings.error.warehouseMax':
     'Warehouse name must be at most 120 characters.',
+  'settings.error.bookingCodePrefix':
+    'Booking code prefix must be exactly 3 letters or digits, such as TSB.',
   'settings.error.appNameRequired': 'App title is required.',
   'settings.error.appNameMax': 'App title must be at most 60 characters.',
   'settings.error.taglineMax': 'Tagline must be at most 80 characters.',

@@ -64,16 +64,64 @@ export function getBookingByQrToken(qrToken: string) {
 }
 
 /**
- * Bentuk kode booking yang dibuat `buildBookingCode`: `TSB-YYYYMMDD-NNN`.
+ * Bentuk kode booking: `ABC-YYYYMMDD-NNN`.
+ *
+ * Awalannya sengaja TIDAK dikunci ke `TSB`. Admin boleh mengganti awalan lewat
+ * Pengaturan, dan tiket yang sudah tercetak sebelum penggantian tetap harus
+ * bisa dipindai di gate. Yang penting adalah bentuknya: tiga huruf/angka,
+ * tanggal delapan digit, lalu nomor urut.
  *
  * Urutan 1–3 digit ditoleransi agar tiket lama yang tercetak tanpa nol di
  * depan (`...-92`) tetap bisa dipindai. Kode baru selalu 3 digit.
  */
-const BOOKING_CODE_PATTERN = /^TSB-\d{8}-\d{1,3}$/i
+const BOOKING_CODE_PATTERN = /^[A-Z0-9]{3}-\d{8}-\d{1,3}$/i
+
+/** Awalan bawaan, dipakai saat pengaturan belum punya nilai. */
+export const DEFAULT_BOOKING_CODE_PREFIX = 'TSB'
+
+/**
+ * Awalan sah: tepat 3 huruf/angka.
+ *
+ * Huruf besar dipaksa di skema, jadi `tkt` dan `TKT` adalah awalan yang sama.
+ * Tanda hubung tidak boleh ikut: awalan adalah bagian sebelum `-` pertama.
+ */
+const PREFIX_PATTERN = /^[A-Z0-9]{3}$/
+
+/** Rapikan awalan dari pengaturan; nilai tak sah jatuh ke bawaan. */
+export function normalizeBookingCodePrefix(value: string | null | undefined): string {
+  const prefix = (value ?? '').trim().toUpperCase()
+  return PREFIX_PATTERN.test(prefix) ? prefix : DEFAULT_BOOKING_CODE_PREFIX
+}
 
 /** Apakah masukan berbentuk kode booking (bukan token QR)? */
 export function isBookingCode(value: string): boolean {
   return BOOKING_CODE_PATTERN.test(value.trim())
+}
+
+/**
+ * Nomor urut bebas berikutnya untuk satu tanggal, mulai dari `start`.
+ *
+ * Penghitung harian bisa tertinggal dari kode yang sudah ada — misalnya setelah
+ * data lama diimpor atau penghitungnya direset. Tanpa lompatan ini, pembuatan
+ * booking berikutnya gagal karena bentrok kode unik, dan gagalnya berupa 500
+ * yang tidak bisa ditindaklanjuti dari layar.
+ */
+export async function nextFreeSequence(
+  db: Pick<typeof prisma, 'booking'>,
+  dateISO: string,
+  start: number,
+  prefix: string = DEFAULT_BOOKING_CODE_PREFIX
+): Promise<number> {
+  const codePrefix = `${normalizeBookingCodePrefix(prefix)}-${dateISO.replace(/-/g, '')}-`
+  const rows = await db.booking.findMany({
+    where: { bookingCode: { startsWith: codePrefix } },
+    select: { bookingCode: true },
+  })
+
+  const used = new Set(rows.map((row) => Number(row.bookingCode.slice(codePrefix.length))))
+  let sequence = Math.max(1, start)
+  while (used.has(sequence) && sequence < 999) sequence += 1
+  return sequence
 }
 
 /**
@@ -83,7 +131,8 @@ export function isBookingCode(value: string): boolean {
  * berbentuk kode booking, dua kolom dicari sekaligus; selain itu hanya `qrToken`.
  *
  * Hanya untuk endpoint ops yang sudah dijaga peran. Tiket publik tetap memakai
- * `getBookingByQrToken` karena kode booking mudah ditebak (`TSB-tanggal-urut`).
+ * `getBookingByQrToken` karena kode booking mudah ditebak
+ * (`ABC-tanggal-urut`).
  */
 export function scanInputWhere(input: string): Prisma.BookingWhereInput {
   const value = input.trim()
@@ -134,8 +183,12 @@ export function statusForVehicleData(
   return complete ? 'BOOKED_READY' : 'BOOKED_INCOMPLETE'
 }
 
-export function buildBookingCode(dateISO: string, sequence: number): string {
-  return `TSB-${dateISO.replace(/-/g, '')}-${String(sequence).padStart(3, '0')}`
+export function buildBookingCode(
+  dateISO: string,
+  sequence: number,
+  prefix: string = DEFAULT_BOOKING_CODE_PREFIX
+): string {
+  return `${normalizeBookingCodePrefix(prefix)}-${dateISO.replace(/-/g, '')}-${String(sequence).padStart(3, '0')}`
 }
 
 /**

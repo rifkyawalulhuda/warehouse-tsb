@@ -202,6 +202,10 @@ model WarehouseSetting {
   footerShowLocation       Boolean @default(true) @map("footer_show_location")
   /// Tata letak kartu tiket supir. Berlaku untuk semua tiket, layar dan PNG.
   ticketDesign             TicketDesign @default(CLASSIC) @map("ticket_design")
+  /// Awalan kode booking (3 huruf/angka), mis. `TSB` atau `TKT`. Hanya dipakai
+  /// saat MEMBUAT kode baru; tiket lama tetap sah karena kode dikenali dari
+  /// bentuknya, bukan dari awalannya.
+  bookingCodePrefix        String @default("TSB") @map("booking_code_prefix") @db.VarChar(3)
   operatingStartMinute     Int    @default(480) @map("operating_start_minute")
   operatingEndMinute       Int    @default(1020) @map("operating_end_minute")
   slotUnitMinutes          Int    @default(30) @map("slot_unit_minutes")

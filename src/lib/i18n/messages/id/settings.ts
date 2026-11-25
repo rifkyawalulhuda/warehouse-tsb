@@ -51,6 +51,9 @@ export const settings = {
   'settings.identity.name': 'Nama gudang',
   'settings.identity.nameHint':
     'Minimal 2 karakter, maksimal 120. Nama gudang lain di Master Data tidak boleh sama.',
+  'settings.identity.codePrefix': 'Awalan kode booking',
+  'settings.identity.codePrefixHint':
+    'Tepat 3 huruf atau angka, misalnya TSB atau TKT. Hanya kode booking yang dibuat setelah ini yang memakai awalan baru; tiket yang sudah tercetak tetap bisa dipindai karena kode dikenali dari bentuknya, bukan dari awalannya.',
 
   'settings.brand.title': 'Identitas merek',
   'settings.brand.description':
@@ -262,6 +265,8 @@ export const settings = {
 
   'settings.error.warehouseMin': 'Nama gudang minimal 2 karakter.',
   'settings.error.warehouseMax': 'Nama gudang maksimal 120 karakter.',
+  'settings.error.bookingCodePrefix':
+    'Awalan kode booking harus tepat 3 huruf atau angka, misalnya TSB.',
   'settings.error.appNameRequired': 'Judul aplikasi wajib diisi.',
   'settings.error.appNameMax': 'Judul aplikasi maksimal 60 karakter.',
   'settings.error.taglineMax': 'Subjudul maksimal 80 karakter.',

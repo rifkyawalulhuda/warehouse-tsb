@@ -43,6 +43,7 @@ export async function settingsPayload(options: { includeInternal?: boolean } = {
     footerLocation: settings.footerLocation,
     footerShowLocation: settings.footerShowLocation,
     ticketDesign: settings.ticketDesign,
+    bookingCodePrefix: settings.bookingCodePrefix,
     operatingStartMinute: settings.operatingStartMinute,
     operatingEndMinute: settings.operatingEndMinute,
     operatingStartLabel: minuteToLabel(settings.operatingStartMinute),

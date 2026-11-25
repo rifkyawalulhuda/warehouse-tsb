@@ -28,6 +28,7 @@ import {
   computeApprovalDeadline,
   getBookingById,
   needsApproval,
+  nextFreeSequence,
   statusForVehicleData,
 } from './repository'
 import { getAvailability, finalizeRelease, reserveBlocks } from './quota-service'
@@ -194,6 +195,16 @@ bookingsRouter.post('/', requireExactRole('CUSTOMER'), async (req, res, next) =>
         `
         const sequence = seqRow[0]?.last_number ?? 1
 
+        // Penghitung harian bisa tertinggal dari kode yang sudah ada (data lama
+        // hasil impor, atau penghitung yang direset). Lompati nomor terpakai
+        // supaya pembuatan booking tidak gagal karena bentrok kode unik.
+        const freeSequence = await nextFreeSequence(
+          tx,
+          body.bookingDate,
+          sequence,
+          settings.bookingCodePrefix
+        )
+
         // Angka blok yang benar-benar dikunci di sini disalin ke baris booking
         // supaya pembatalan/NO_SHOW selalu melepas tepat sejumlah itu, walau
         // admin mengubah durasi jenis truk di kemudian hari.
@@ -228,7 +239,11 @@ bookingsRouter.post('/', requireExactRole('CUSTOMER'), async (req, res, next) =>
 
         const booking = await tx.booking.create({
           data: {
-            bookingCode: buildBookingCode(body.bookingDate, sequence),
+            bookingCode: buildBookingCode(
+              body.bookingDate,
+              freeSequence,
+              settings.bookingCodePrefix
+            ),
             qrToken: generateQrToken(),
             // Dua kolom dengan arti berbeda: pemilik bisnis vs akun pembuat.
             customerId: user.customerId!,

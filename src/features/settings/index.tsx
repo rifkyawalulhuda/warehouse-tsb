@@ -36,6 +36,7 @@ import { PageHeader } from '@/components/page-header'
 import { ErrorBlock, LoadingBlock } from '@/components/query-state'
 import { AppearancePicker } from './appearance-picker'
 import {
+  bookingCodeSample,
   dirtySections,
   hoursNote,
   impactOf,
@@ -275,6 +276,37 @@ function SettingsForm({ settings }: { settings: Settings }) {
                     maxLength={120}
                     autoComplete='off'
                   />
+                </FieldRow>
+                <FieldRow
+                  label={t('settings.identity.codePrefix')}
+                  htmlFor='booking-code-prefix'
+                  hint={t('settings.identity.codePrefixHint')}
+                >
+                  <div className='flex flex-wrap items-center gap-3'>
+                    <Input
+                      id='booking-code-prefix'
+                      value={form.bookingCodePrefix}
+                      onChange={(event) =>
+                        setField(
+                          'bookingCodePrefix',
+                          event.target.value.toUpperCase()
+                        )
+                      }
+                      className='w-24 font-mono uppercase tracking-widest'
+                      maxLength={3}
+                      autoComplete='off'
+                      spellCheck={false}
+                      aria-describedby='booking-code-preview'
+                    />
+                    {/* Pratinjau memakai tanggal hari ini: Admin melihat bentuk
+                        kode yang akan terbit, bukan sekadar tiga huruf. */}
+                    <code
+                      id='booking-code-preview'
+                      className='rounded-md bg-muted px-2 py-1 font-mono text-sm text-muted-foreground'
+                    >
+                      {bookingCodeSample(form.bookingCodePrefix)}
+                    </code>
+                  </div>
                 </FieldRow>
               </SectionPanel>
             )}

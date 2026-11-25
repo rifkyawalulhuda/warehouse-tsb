@@ -1,5 +1,5 @@
 import type { Settings, TicketDesign } from '@/lib/api/types'
-import { labelToMinute } from '@/lib/format'
+import { labelToMinute, todayISO } from '@/lib/format'
 import { localeToIntl, type MessageKey, type Vars } from '@/lib/i18n'
 
 /** Bentuk fungsi terjemahan yang diterima fungsi murni di berkas ini. */
@@ -31,6 +31,8 @@ export type FormState = {
   footerShowLocation: boolean
   /** Tata letak kartu tiket supir; satu pilihan untuk semua tiket. */
   ticketDesign: TicketDesign
+  /** Awalan kode booking (3 huruf/angka), mis. TSB. Hanya untuk kode baru. */
+  bookingCodePrefix: string
   open: string
   close: string
   slotUnitMinutes: string
@@ -55,7 +57,7 @@ export type SectionKey =
   | 'ticket'
 
 export const FIELD_GROUPS = {
-  identity: ['warehouseName'],
+  identity: ['warehouseName', 'bookingCodePrefix'],
   // Merek menjawab "aplikasi ini siapa": logo, judul, subjudul, nama pendek.
   brand: [
     'appLogoUrl',
@@ -101,6 +103,7 @@ export type SettingsPayload = {
   footerLocation?: string | null
   footerShowLocation?: boolean
   ticketDesign?: TicketDesign
+  bookingCodePrefix?: string
   operatingStartMinute?: number
   operatingEndMinute?: number
   slotUnitMinutes?: number
@@ -127,6 +130,7 @@ export function toForm(settings: Settings): FormState {
     footerLocation: settings.footerLocation ?? '',
     footerShowLocation: settings.footerShowLocation,
     ticketDesign: settings.ticketDesign,
+    bookingCodePrefix: settings.bookingCodePrefix,
     open: settings.operatingStartLabel,
     close: settings.operatingEndLabel,
     slotUnitMinutes: String(settings.slotUnitMinutes),
@@ -151,7 +155,11 @@ export function restoreSection(
 ): FormState {
   switch (section) {
     case 'identity':
-      return { ...current, warehouseName: saved.warehouseName }
+      return {
+        ...current,
+        warehouseName: saved.warehouseName,
+        bookingCodePrefix: saved.bookingCodePrefix,
+      }
     case 'brand':
       return {
         ...current,
@@ -266,6 +274,11 @@ export function sectionError(
       const name = form.warehouseName.trim()
       if (name.length < 2) return t('settings.error.warehouseMin')
       if (name.length > 120) return t('settings.error.warehouseMax')
+      // Awalan yang bentuknya salah akan menghasilkan kode booking yang tidak
+      // dikenali layar gate — tiket tercetak tapi tidak bisa dipindai.
+      if (!/^[A-Za-z0-9]{3}$/.test(form.bookingCodePrefix.trim())) {
+        return t('settings.error.bookingCodePrefix')
+      }
       return null
     }
     case 'brand': {
@@ -364,7 +377,10 @@ export function sectionPayload(
 ): SettingsPayload {
   switch (section) {
     case 'identity':
-      return { warehouseName: form.warehouseName.trim() }
+      return {
+        warehouseName: form.warehouseName.trim(),
+        bookingCodePrefix: form.bookingCodePrefix.trim().toUpperCase(),
+      }
     case 'brand':
       return {
         appName: form.appName.trim(),
@@ -410,6 +426,20 @@ export function sectionPayload(
 }
 
 /* --------------------------- turunan tampilan --------------------------- */
+
+/**
+ * Contoh kode booking untuk pratinjau di Pengaturan, memakai tanggal hari ini
+ * (zona Jakarta) dan nomor urut 1. Tujuannya memperlihatkan bentuk kode yang
+ * akan terbit, bukan sekadar tiga huruf yang diketik.
+ *
+ * Awalan tidak sah ditampilkan apa adanya: Admin perlu melihat bahwa yang ia
+ * ketik belum benar, bukan melihat contoh yang tampak baik-baik saja.
+ */
+export function bookingCodeSample(prefix: string): string {
+  const clean = prefix.trim().toUpperCase()
+  const shown = clean === '' ? 'TSB' : clean
+  return `${shown}-${todayISO().replace(/-/g, '')}-001`
+}
 
 /** Nilai ringkas untuk strip dampak. Semuanya dihitung dari draf, bukan server. */
 export type Impact = {

@@ -2,6 +2,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import request from 'supertest'
 import { PrismaClient } from '@prisma/client'
 import { createApp } from '../src/app'
+import { addDaysISO, todayISO } from '../src/lib/time'
 import { loginCookie, resetDatabase, seedBase } from './helpers'
 
 const prisma = new PrismaClient()
@@ -335,5 +336,82 @@ describe('desain tiket', () => {
   it('memakai Klasik sebagai bawaan sebelum ada yang memilih', async () => {
     const branding = await request(app).get('/api/branding')
     expect(branding.body.data.ticketDesign).toBe('CLASSIC')
+  })
+})
+
+describe('awalan kode booking', () => {
+  it('menyimpan awalan baru dan memakainya untuk kode berikutnya', async () => {
+    const cookie = await loginCookie(app, 'admin@test.local')
+
+    const response = await request(app)
+      .put('/api/settings')
+      .set('Cookie', cookie)
+      .send({ bookingCodePrefix: 'tkt' })
+
+    // Huruf kecil dirapikan, bukan ditolak: Admin tidak perlu tahu bedanya.
+    expect(response.status).toBe(200)
+    expect(response.body.data.bookingCodePrefix).toBe('TKT')
+
+    // Bukti sebenarnya: kode yang terbit memakai awalan baru.
+    const customer = await loginCookie(app, 'customer1@test.local')
+    const booking = await request(app)
+      .post('/api/bookings')
+      .set('Cookie', customer)
+      .send({
+        bookingDate: addDaysISO(todayISO(), 3),
+        startMinute: 540,
+        activityType: 'UNLOADING',
+        truckTypeId: (await prisma.truckType.findFirstOrThrow()).id,
+        referenceDocNo: 'DO-PREFIX-001',
+        licensePlate: 'B 1234 TKT',
+        driverName: 'Supir Uji',
+      })
+
+    expect(booking.status).toBe(201)
+    expect(booking.body.data.bookingCode).toMatch(/^TKT-\d{8}-\d{3}$/)
+  })
+
+  it('menolak awalan yang bentuknya salah', async () => {
+    const cookie = await loginCookie(app, 'admin@test.local')
+
+    for (const bad of ['TS', 'TSBX', 'T-B', 'TS B', '']) {
+      const response = await request(app)
+        .put('/api/settings')
+        .set('Cookie', cookie)
+        .send({ bookingCodePrefix: bad })
+
+      expect(response.status, `awalan "${bad}" seharusnya ditolak`).toBe(400)
+    }
+  })
+
+  it('tidak mengubah kode yang sudah ada saat awalan diganti', async () => {
+    const cookie = await loginCookie(app, 'admin@test.local')
+
+    // Satu booking dengan awalan lama, dibuat sebelum pengaturan diubah.
+    const customer = await loginCookie(app, 'customer1@test.local')
+    const before = await request(app)
+      .post('/api/bookings')
+      .set('Cookie', customer)
+      .send({
+        bookingDate: addDaysISO(todayISO(), 4),
+        startMinute: 540,
+        activityType: 'UNLOADING',
+        truckTypeId: (await prisma.truckType.findFirstOrThrow()).id,
+        referenceDocNo: 'DO-PREFIX-002',
+        licensePlate: 'B 5678 LMA',
+        driverName: 'Supir Lama',
+      })
+    expect(before.body.data.bookingCode).toMatch(/^TSB-/)
+
+    await request(app).put('/api/settings').set('Cookie', cookie).send({
+      bookingCodePrefix: 'TKT',
+    })
+
+    // Tiket yang sudah tercetak tetap hidup: kodenya tidak ditulis ulang.
+    const after = await prisma.booking.findUniqueOrThrow({
+      where: { id: before.body.data.id },
+      select: { bookingCode: true },
+    })
+    expect(after.bookingCode).toBe(before.body.data.bookingCode)
   })
 })

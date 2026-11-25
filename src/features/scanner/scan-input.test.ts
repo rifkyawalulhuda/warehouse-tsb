@@ -26,6 +26,20 @@ describe('parseScanInput', () => {
     })
   })
 
+  it('menerima kode dengan awalan yang diganti Admin', () => {
+    // Admin boleh mengganti awalan (TSB -> TKT) di Pengaturan. Tiket yang
+    // tercetak sebelum penggantian tetap harus dipindai, jadi awalan apa pun
+    // yang berbentuk tiga huruf/angka diterima.
+    expect(parseScanInput('TKT-20261111-004')).toEqual({
+      kind: 'booking-code',
+      value: 'TKT-20261111-004',
+    })
+    expect(parseScanInput('A1B-20261111-004')).toEqual({
+      kind: 'booking-code',
+      value: 'A1B-20261111-004',
+    })
+  })
+
   it('menerima token QR apa adanya', () => {
     expect(parseScanInput(TOKEN)).toEqual({ kind: 'token', value: TOKEN })
   })

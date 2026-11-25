@@ -1,12 +1,15 @@
 /**
- * Kode booking yang tercetak di tiket: `TSB-YYYYMMDD-NNN`.
+ * Kode booking yang tercetak di tiket: `ABC-YYYYMMDD-NNN`.
  *
  * Petugas gate sering mengetik kode ini karena hurufnya besar di tiket, jadi
- * layar gate menerimanya selain token QR. Urutan 1–3 digit ditoleransi karena
- * ada tiket lama/demo yang tercetak tanpa nol di depan (`...-92`); kode baru
- * dari aplikasi selalu 3 digit.
+ * layar gate menerimanya selain token QR. Awalannya sengaja tidak dikunci ke
+ * `TSB`: Admin boleh menggantinya di Pengaturan, dan tiket yang tercetak
+ * sebelum penggantian tetap harus diterima di sini.
+ *
+ * Urutan 1–3 digit ditoleransi karena ada tiket lama/demo yang tercetak tanpa
+ * nol di depan (`...-92`); kode baru dari aplikasi selalu 3 digit.
  */
-const BOOKING_CODE = /^TSB-\d{8}-\d{1,3}$/i
+const BOOKING_CODE = /^[A-Z0-9]{3}-\d{8}-\d{1,3}$/i
 
 /**
  * Token QR dari server: 24 byte acak dalam base64url (32 karakter, tanpa

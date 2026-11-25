@@ -29,6 +29,7 @@ const settings: Settings = {
   footerLocation: null,
   footerShowLocation: true,
   ticketDesign: 'CLASSIC',
+  bookingCodePrefix: 'TSB',
   operatingStartMinute: 480,
   operatingEndMinute: 1020,
   operatingStartLabel: '08:00',
@@ -331,6 +332,22 @@ describe('validasi seksi', () => {
       sectionError('identity', { ...saved, warehouseName: '  ' }, tId)
     ).toBe('Nama gudang minimal 2 karakter.')
   })
+
+  it('menolak awalan kode booking yang bukan 3 huruf/angka', () => {
+    // Awalan salah bentuk membuat kode tidak dikenali layar gate, jadi harus
+    // ditolak di sini — bukan setelah tiket tercetak.
+    for (const bad of ['TS', 'TSBX', 'T-B', '']) {
+      expect(
+        sectionError('identity', { ...saved, bookingCodePrefix: bad }, tId)
+      ).toBe(
+        'Awalan kode booking harus tepat 3 huruf atau angka, misalnya TSB.'
+      )
+    }
+
+    expect(
+      sectionError('identity', { ...saved, bookingCodePrefix: 'tkt' }, tId)
+    ).toBeNull()
+  })
 })
 
 describe('payload seksi', () => {
@@ -347,6 +364,17 @@ describe('payload seksi', () => {
     const form = { ...toForm(settings), warehouseName: '  Gudang B  ' }
     expect(sectionPayload('identity', form)).toEqual({
       warehouseName: 'Gudang B',
+      // Awalan ikut seksi Identitas, jadi ikut terkirim setiap kali disimpan.
+      bookingCodePrefix: 'TSB',
+    })
+  })
+
+  it('menulis awalan kode dalam huruf besar', () => {
+    // Server juga memaksa huruf besar; ini menjaga draf di layar sudah sama
+    // dengan yang akan tersimpan, supaya pratinjau kode tidak menipu.
+    const form = { ...toForm(settings), bookingCodePrefix: ' tkt ' }
+    expect(sectionPayload('identity', form)).toMatchObject({
+      bookingCodePrefix: 'TKT',
     })
   })
 })
