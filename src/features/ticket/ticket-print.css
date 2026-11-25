@@ -23,6 +23,10 @@
     margin: 0 auto;
     border-radius: 0;
     box-shadow: none !important;
+    /* Tanpa ini Chrome menghapus warna latar saat mencetak, dan kartu NIGHT
+       (teks terang di atas navy) keluar sebagai teks putih di kertas putih. */
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
   }
 
   [data-ticket-card] * {

@@ -757,6 +757,7 @@ function SettingsForm({ settings }: { settings: Settings }) {
                   onChange={(design) => setField('ticketDesign', design)}
                   appName={form.appName}
                   logoUrl={form.appLogoUrl.trim() || null}
+                  brandColor={form.loginBrandColor.trim() || null}
                 />
               </SectionPanel>
             )}

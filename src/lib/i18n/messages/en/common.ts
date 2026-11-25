@@ -47,7 +47,9 @@ export const common: Record<keyof typeof idCommon, string> = {
   'error.UPLOAD_EMPTY': 'The image file is empty.',
   'error.UPLOAD_TOO_LARGE': 'Image must be 2 MB or smaller.',
   'error.UPLOAD_TYPE': 'Image must be PNG or JPG.',
-  'error.INVALID_CREDENTIALS': 'Wrong email or password',
+  'error.INVALID_CREDENTIALS':
+    'Email or password does not match. Check it again, or ask the warehouse Admin if you are sure this account is registered.',
+  'error.TOO_MANY_REQUESTS': 'Too many requests. Wait a moment, then try again.',
   'error.NETWORK': "Can't reach the server. Check your connection.",
   'error.APPROVAL_ALREADY_DECIDED':
     'This booking has already been decided or has expired.',
@@ -84,7 +86,7 @@ export const common: Record<keyof typeof idCommon, string> = {
   'error.VEHICLE_LOCKED':
     'Vehicle details cannot be changed because the truck already checked in.',
   'error.WAREHOUSE_NAME_TAKEN': 'That warehouse name is already used.',
-  'error.TOO_MANY_ATTEMPTS': 'Too many attempts. Try again in a few minutes.',
+  'error.TOO_MANY_ATTEMPTS': 'Too many sign-in attempts. Wait 15 minutes, then try again.',
   'error.TOO_EARLY': 'Too early for this action.',
   'error.ALREADY_CHECKED_OUT': 'This truck is already checked out.',
   'error.WRONG_STATUS': 'The booking status does not allow this action.',

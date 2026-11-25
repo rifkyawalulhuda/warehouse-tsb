@@ -35,6 +35,19 @@ export type TicketModel = {
   date: string
   schedule: string
   fields: TicketField[]
+  /**
+   * Nilai yang diulang di stub desain Pita Sobek. Diambil dari sumber yang sama
+   * dengan `fields`, bukan dibaca ulang dari `fields[n]`: stub yang menampilkan
+   * dock berbeda dari kartu utamanya justru membuat potongan tiket tidak bisa
+   * dicocokkan.
+   */
+  stub: {
+    date: string
+    schedule: string
+    dock: string
+    plate: string
+    driver: string
+  }
   instruction: string
   fallback: string
 }
@@ -69,28 +82,28 @@ export function buildTicketModel(
     options.t ??
     ((key: MessageKey, vars?: Vars) => translate(getLocale(), key, vars))
 
+  const date = formatDate(ticket.bookingDate)
+  const schedule = `${formatTime(ticket.startTime)}–${formatTime(ticket.endTime)}`
+  const plate = ticket.licensePlate ?? '-'
+  const driver = ticket.driverName ?? '-'
+  // Supir mencari dock lewat area, jadi area menempel pada kode docknya.
+  const dock =
+    dockWithArea({
+      dockCode: ticket.dockCode,
+      areaName: ticket.dockAreaName,
+    }) || t('ticket.noDock')
+
   const fields: TicketField[] = [
-    { label: t('ticket.fieldDate'), value: formatDate(ticket.bookingDate) },
-    {
-      label: t('ticket.fieldSchedule'),
-      value: `${formatTime(ticket.startTime)}–${formatTime(ticket.endTime)}`,
-    },
+    { label: t('ticket.fieldDate'), value: date },
+    { label: t('ticket.fieldSchedule'), value: schedule },
     {
       label: t('ticket.fieldActivity'),
       value: activityLabels[ticket.activityType],
     },
     { label: t('ticket.fieldTruck'), value: ticket.truckType.truckName },
-    { label: t('ticket.fieldPlate'), value: ticket.licensePlate ?? '-' },
-    { label: t('ticket.fieldDriver'), value: ticket.driverName ?? '-' },
-    {
-      label: t('ticket.fieldDock'),
-      // Supir mencari dock lewat area, jadi area menempel pada kode docknya.
-      value:
-        dockWithArea({
-          dockCode: ticket.dockCode,
-          areaName: ticket.dockAreaName,
-        }) || t('ticket.noDock'),
-    },
+    { label: t('ticket.fieldPlate'), value: plate },
+    { label: t('ticket.fieldDriver'), value: driver },
+    { label: t('ticket.fieldDock'), value: dock },
     { label: t('ticket.fieldDocNo'), value: ticket.referenceDocNo },
   ]
 
@@ -101,9 +114,10 @@ export function buildTicketModel(
     warehouse: ticket.warehouseName,
     appName: options.appName?.trim() || t('ticket.brandFallback'),
     badge: t('ticket.eTicket'),
-    date: fields[0]!.value,
-    schedule: fields[1]!.value,
+    date,
+    schedule,
     fields,
+    stub: { date, schedule, dock, plate, driver },
     instruction: t('ticket.cardInstruction'),
     fallback: t('ticket.cardFallback'),
   }
@@ -129,6 +143,9 @@ export function ticketFileName(code: string, locale: Locale = getLocale()) {
 export function sampleTicketModel(t: T, appName: string): TicketModel {
   const date = formatDate(new Date('2026-11-24T00:00:00.000Z'))
   const schedule = `${formatTime(new Date('2026-11-24T02:00:00.000Z'))}–${formatTime(new Date('2026-11-24T03:00:00.000Z'))}`
+  const plate = 'B 1234 XYZ'
+  const driver = 'Budi Santoso'
+  const dock = 'D-01 · Area A'
   return {
     code: 'TSB-20261124-001',
     qrToken: 'tsb-sample-preview-token-000000',
@@ -143,11 +160,12 @@ export function sampleTicketModel(t: T, appName: string): TicketModel {
       { label: t('ticket.fieldSchedule'), value: schedule },
       { label: t('ticket.fieldActivity'), value: activityLabels.LOADING },
       { label: t('ticket.fieldTruck'), value: 'CDD Box' },
-      { label: t('ticket.fieldPlate'), value: 'B 1234 XYZ' },
-      { label: t('ticket.fieldDriver'), value: 'Budi Santoso' },
-      { label: t('ticket.fieldDock'), value: 'D-01 · Area A' },
+      { label: t('ticket.fieldPlate'), value: plate },
+      { label: t('ticket.fieldDriver'), value: driver },
+      { label: t('ticket.fieldDock'), value: dock },
       { label: t('ticket.fieldDocNo'), value: 'PO-2026-0142' },
     ],
+    stub: { date, schedule, dock, plate, driver },
     instruction: t('ticket.cardInstruction'),
     fallback: t('ticket.cardFallback'),
   }

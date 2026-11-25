@@ -92,7 +92,7 @@ describe('kartu tiket', () => {
   })
 })
 
-describe('tiga desain tiket', () => {
+describe('delapan desain tiket', () => {
   const model = buildTicketModel(ticket)
 
   it('memakai Klasik saat desain tidak disebut', async () => {
@@ -107,9 +107,12 @@ describe('tiga desain tiket', () => {
   for (const design of TICKET_DESIGNS) {
     it(`tetap memuat data yang dibutuhkan gate di desain ${design}`, async () => {
       const screen = await render(<TicketCard model={model} design={design} />)
+      const text = screen.container.textContent ?? ''
 
-      // Nilai yang muncul di ketiga desain. Tanggal dan jam sengaja tidak
-      // diperiksa di sini: Minimal memecahnya jadi sorotan besar di samping QR.
+      // Diperiksa sebagai teks kartu, bukan satu elemen: desain Pita Sobek
+      // sengaja mengulang kode, plat, dan supir di stubnya, jadi `getByText`
+      // tunggal akan menemukan dua elemen dan gagal. Yang penting di sini
+      // adalah datanya ada, bukan berapa kali ia muncul.
       for (const value of [
         'TSB-20261111-003',
         'Loading (muat)',
@@ -121,7 +124,7 @@ describe('tiga desain tiket', () => {
         'PT Sinar Jaya Logistik',
         'Gudang Cikarang',
       ]) {
-        await expect.element(screen.getByText(value)).toBeInTheDocument()
+        expect(text, `${design} tidak memuat "${value}"`).toContain(value)
       }
 
       // QR tetap ada dan tetap memuat token, bukan hiasan.
@@ -137,5 +140,45 @@ describe('tiga desain tiket', () => {
     // Jam ditulis sesuai bahasa aktif ("08.30" vs "08:30"), jadi dibandingkan
     // dengan nilai model, bukan teks yang dipatok di tes.
     await expect.element(screen.getByText(model.schedule)).toBeInTheDocument()
+  })
+
+  it('mengulang kode dan dock di stub desain Pita Sobek', async () => {
+    const screen = await render(<TicketCard model={model} design='TEAROFF' />)
+    const stub = screen.container.querySelector('.bg-\\[var\\(--tk-stub\\)\\]')
+
+    // Stub dipisah petugas gate, jadi isinya harus berdiri sendiri: kode, dock,
+    // tanggal, jam, plat, dan supir tanpa bergantung pada bagian atas kartu.
+    expect(stub).not.toBeNull()
+    const text = stub!.textContent ?? ''
+    expect(text).toContain('TSB-20261111-003')
+    expect(text).toContain('L1')
+    expect(text).toContain('B 3434 TT')
+    expect(text).toContain('Udin')
+  })
+
+  it('tidak menampilkan logo dari domain lain', async () => {
+    // Kanvas tidak bisa membaca piksel domain lain, jadi logonya akan hilang di
+    // PNG. Menolaknya juga di layar membuat keduanya sama-sama tanpa logo,
+    // bukan tiket yang berubah saat diunduh.
+    const external = await render(
+      <TicketCard model={model} logoUrl='https://cdn.contoh.com/logo.png' />
+    )
+    expect(external.container.querySelector('img')).toBeNull()
+
+    const own = await render(
+      <TicketCard model={model} logoUrl='/api/uploads/logo-abc.png' />
+    )
+    expect(own.container.querySelector('img')).not.toBeNull()
+  })
+
+  it('menaruh kode booking di alas putih pada desain Malam', async () => {
+    const screen = await render(<TicketCard model={model} design='NIGHT' />)
+    const card = screen.container.querySelector('[data-ticket-card]')
+
+    // QR terbalik (modul terang di atas gelap) gagal di sebagian pemindai,
+    // jadi pembungkus QR-nya harus tetap putih walau kartunya gelap.
+    expect(card?.className).toContain('bg-[var(--tk-night)]')
+    const qrBox = screen.container.querySelector('svg')?.parentElement
+    expect(qrBox?.className).toContain('bg-white')
   })
 })

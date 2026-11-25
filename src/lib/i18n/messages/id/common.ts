@@ -45,7 +45,10 @@ export const common = {
   'error.UPLOAD_EMPTY': 'Berkas gambar kosong.',
   'error.UPLOAD_TOO_LARGE': 'Gambar maksimal 2 MB.',
   'error.UPLOAD_TYPE': 'Gambar harus PNG atau JPG.',
-  'error.INVALID_CREDENTIALS': 'Email atau kata sandi salah',
+  'error.INVALID_CREDENTIALS':
+    'Email atau kata sandi tidak cocok. Periksa kembali, atau hubungi Admin gudang kalau Anda yakin akun ini sudah terdaftar.',
+  'error.TOO_MANY_REQUESTS':
+    'Terlalu banyak permintaan. Tunggu sebentar, lalu coba lagi.',
   'error.NETWORK': 'Tidak bisa menghubungi server. Periksa koneksi Anda.',
   'error.APPROVAL_ALREADY_DECIDED':
     'Booking ini sudah diputuskan atau kedaluwarsa.',
@@ -85,7 +88,7 @@ export const common = {
     'Data kendaraan tidak bisa diubah karena truk sudah masuk gerbang.',
   'error.WAREHOUSE_NAME_TAKEN': 'Nama gudang sudah dipakai.',
   'error.TOO_MANY_ATTEMPTS':
-    'Terlalu banyak percobaan. Coba lagi beberapa menit lagi.',
+    'Terlalu banyak percobaan masuk. Tunggu 15 menit, lalu coba lagi.',
   'error.TOO_EARLY': 'Terlalu awal untuk aksi ini.',
   'error.ALREADY_CHECKED_OUT': 'Truk ini sudah tercatat keluar.',
   'error.WRONG_STATUS': 'Status booking tidak mendukung aksi ini.',

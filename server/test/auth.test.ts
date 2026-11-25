@@ -95,6 +95,19 @@ describe('sesi login', () => {
     expect(second.status).toBe(200)
   })
 
+  it('memberi kode galat yang bisa dibedakan saat login salah', async () => {
+    // Kode UNAUTHORIZED dipakai untuk sesi kedaluwarsa dan diterjemahkan klien
+    // menjadi "Sesi tidak valid atau sudah berakhir". Login yang salah tidak
+    // boleh memakai kode itu: orang yang belum pernah masuk akan diberi tahu
+    // sesinya berakhir.
+    const response = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'salah@test.local', password: 'salah-sekali' })
+
+    expect(response.status).toBe(401)
+    expect(response.body.error.code).toBe('INVALID_CREDENTIALS')
+  })
+
   it('membatasi percobaan login yang gagal', async () => {
     const attempt = () =>
       request(app)

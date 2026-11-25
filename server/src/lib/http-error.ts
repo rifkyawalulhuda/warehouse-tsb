@@ -16,6 +16,19 @@ export const badRequest = (code: string, message: string, details?: unknown) =>
 export const unauthorized = (message = 'Sesi tidak valid atau sudah berakhir') =>
   new HttpError(401, 'UNAUTHORIZED', message)
 
+/**
+ * Login gagal — email tidak dikenal, akun nonaktif, atau password salah.
+ *
+ * Kodenya sengaja BUKAN `UNAUTHORIZED`: kode itu dipakai untuk sesi yang
+ * kedaluwarsa, dan klien menerjemahkannya menjadi "Sesi tidak valid atau sudah
+ * berakhir". Dulu login yang salah memakai kode itu juga, sehingga orang yang
+ * salah mengetik password diberi tahu bahwa sesinya berakhir — padahal ia belum
+ * pernah masuk. Pesannya sendiri tetap satu untuk ketiga sebab, supaya email
+ * mana yang terdaftar tidak bisa ditebak.
+ */
+export const invalidCredentials = () =>
+  new HttpError(401, 'INVALID_CREDENTIALS', 'Email atau password salah')
+
 export const forbidden = (message = 'Anda tidak punya akses ke aksi ini') =>
   new HttpError(403, 'FORBIDDEN', message)
 

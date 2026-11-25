@@ -212,6 +212,23 @@ export const settings = {
   'settings.ticket.navy': 'Navy Resmi',
   'settings.ticket.navyHint':
     'Pita navy dan kartu QR yang menonjol. Paling tegas untuk gudang dengan banyak dokumen.',
+  'settings.ticket.groupStandard': 'Tampilan standar',
+  'settings.ticket.groupSpecial': 'Untuk kondisi tertentu',
+  'settings.ticket.thermal': 'Termal Mono',
+  'settings.ticket.thermalHint':
+    'Hitam putih tanpa warna. Untuk printer thermal dan fotokopi yang pudar.',
+  'settings.ticket.largeCode': 'Kode Besar',
+  'settings.ticket.largeCodeHint':
+    'Kode booking paling besar di kartu. Untuk petugas yang mengetik kode saat QR gagal dipindai.',
+  'settings.ticket.night': 'Malam',
+  'settings.ticket.nightHint':
+    'Kartu gelap agar tidak menyilaukan di gerbang malam. QR tetap di alas putih.',
+  'settings.ticket.tearoff': 'Pita Sobek',
+  'settings.ticket.tearoffHint':
+    'Stub bawah berisi kode, tanggal, dock, dan plat untuk disobek petugas gate.',
+  'settings.ticket.brand': 'Warna Merek',
+  'settings.ticket.brandHint':
+    'Pita atas memakai warna merek dari halaman masuk. Warna terang digelapkan agar teks tetap terbaca.',
 
   'settings.summary.aria': 'Ringkasan operasional',
   'settings.summary.title': 'Berlaku di mesin kuota',

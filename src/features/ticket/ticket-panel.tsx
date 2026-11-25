@@ -34,17 +34,23 @@ export function TicketPanel({
     model: typeof model
     design: typeof brand.ticketDesign
     logoUrl: string | null
+    brandColor: string | null
     url: string
   } | null>(null)
   // PNG hanya dipakai kalau dibuat dari isi, desain, dan logo yang sedang
   // tampil; kalau salah satunya berubah, gambar lama tidak boleh terunduh.
   const design = brand.ticketDesign
   const logoUrl = brand.appLogoUrl
+  // Hanya desain Warna Merek yang memakai ini, tapi PNG-nya ikut bergantung
+  // padanya: tanpa dibandingkan, tiket lama tetap terunduh setelah warna merek
+  // diubah Admin.
+  const brandColor = brand.loginBrandColor
   const png =
     ready &&
     ready.model === model &&
     ready.design === design &&
-    ready.logoUrl === logoUrl
+    ready.logoUrl === logoUrl &&
+    ready.brandColor === brandColor
       ? ready.url
       : null
 
@@ -68,14 +74,15 @@ export function TicketPanel({
       ready &&
       ready.model === model &&
       ready.design === design &&
-      ready.logoUrl === logoUrl
+      ready.logoUrl === logoUrl &&
+      ready.brandColor === brandColor
     ) {
       return
     }
     let cancelled = false
-    void renderTicketPng(model, 2, { design, logoUrl })
+    void renderTicketPng(model, 2, { design, logoUrl, brandColor })
       .then((url) => {
-        if (!cancelled) setReady({ model, design, logoUrl, url })
+        if (!cancelled) setReady({ model, design, logoUrl, brandColor, url })
       })
       // Gagal menyiapkan lebih awal bukan alasan mematikan tombol: klik
       // berikutnya mencoba lagi dan baru menampilkan pesan kalau ikut gagal.
@@ -83,12 +90,14 @@ export function TicketPanel({
     return () => {
       cancelled = true
     }
-  }, [model, design, logoUrl, ready])
+  }, [model, design, logoUrl, brandColor, ready])
 
   const onDownload = () => {
-    void downloadTicket(model, png, { design, logoUrl }).catch(() => {
-      toast.error(t('ticket.downloadFailed'))
-    })
+    void downloadTicket(model, png, { design, logoUrl, brandColor }).catch(
+      () => {
+        toast.error(t('ticket.downloadFailed'))
+      }
+    )
   }
 
   return (
@@ -97,6 +106,7 @@ export function TicketPanel({
         model={model}
         design={design}
         logoUrl={logoUrl}
+        brandColor={brandColor}
         label={t('ticket.cardLabel', { code: model.code })}
       />
 

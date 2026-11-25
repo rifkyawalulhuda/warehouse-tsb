@@ -54,7 +54,18 @@ export const updateSchema = z.object({
     .optional(),
   // Tata letak kartu tiket. Daftar tertutup: nilai lain akan menghasilkan
   // tiket yang tidak punya penggambar, jadi ditolak di sini.
-  ticketDesign: z.enum(['CLASSIC', 'MINIMAL', 'NAVY']).optional(),
+  ticketDesign: z
+    .enum([
+      'CLASSIC',
+      'MINIMAL',
+      'NAVY',
+      'THERMAL',
+      'LARGE_CODE',
+      'NIGHT',
+      'TEAROFF',
+      'BRAND',
+    ])
+    .optional(),
   operatingStartMinute: z.number().int().min(0).max(1439).optional(),
   operatingEndMinute: z.number().int().min(1).max(1440).optional(),
   slotUnitMinutes: z.number().int().min(15).max(120).optional(),

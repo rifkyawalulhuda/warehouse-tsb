@@ -1,8 +1,8 @@
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit'
 import type { Request } from 'express'
 
-const tooMany = (message: string) => ({
-  error: { code: 'TOO_MANY_ATTEMPTS', message },
+const tooMany = (code: string, message: string) => ({
+  error: { code, message },
 })
 
 /**
@@ -15,7 +15,12 @@ export const apiLimiter = rateLimit({
   limit: 600,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
-  message: tooMany('Terlalu banyak permintaan. Coba lagi sebentar lagi.'),
+  // Kode berbeda dari login: penjaga banjir permintaan bukan "percobaan masuk",
+  // dan klien menerjemahkan tiap kode menjadi kalimat yang berbeda.
+  message: tooMany(
+    'TOO_MANY_REQUESTS',
+    'Terlalu banyak permintaan. Coba lagi sebentar lagi.'
+  ),
 })
 
 /**
@@ -38,5 +43,8 @@ export const loginLimiter = rateLimit({
   legacyHeaders: false,
   skipSuccessfulRequests: true,
   keyGenerator: loginKey,
-  message: tooMany('Terlalu banyak percobaan masuk. Coba lagi dalam 15 menit.'),
+  message: tooMany(
+    'TOO_MANY_ATTEMPTS',
+    'Terlalu banyak percobaan masuk. Coba lagi dalam 15 menit.'
+  ),
 })

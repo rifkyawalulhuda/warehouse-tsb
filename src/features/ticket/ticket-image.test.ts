@@ -131,7 +131,7 @@ describe('gambar tiket', () => {
   })
 })
 
-describe('PNG tiga desain tiket', () => {
+describe('PNG delapan desain tiket', () => {
   afterEach(() => {
     vi.restoreAllMocks()
   })
@@ -157,11 +157,11 @@ describe('PNG tiga desain tiket', () => {
   }
 
   it('tidak pernah menghasilkan gambar yang sama untuk dua desain', async () => {
-    const [classic, minimal, navy] = await Promise.all(
+    const urls = await Promise.all(
       TICKET_DESIGNS.map((design) => renderTicketPng(model, 1, { design }))
     )
 
-    expect(new Set([classic, minimal, navy]).size).toBe(3)
+    expect(new Set(urls).size).toBe(TICKET_DESIGNS.length)
   })
 
   it('memakai desain Klasik bila tidak diminta', async () => {
@@ -171,5 +171,38 @@ describe('PNG tiga desain tiket', () => {
     ])
 
     expect(fallback).toBe(classic)
+  })
+
+  it('tidak memakai warna sama sekali di desain Termal', async () => {
+    const image = await inspect(
+      await renderTicketPng(model, 1, { design: 'THERMAL' })
+    )
+
+    // Printer thermal dan fotokopi pudar mengubah warna jadi bintik abu-abu,
+    // jadi tidak boleh ada satu piksel biru pun. Kalau ini gagal, ada warna
+    // merek yang bocor ke desain yang seharusnya hitam putih.
+    expect(image.blue).toBe(0)
+  })
+
+  it('menggambar latar gelap penuh di desain Malam', async () => {
+    const image = await inspect(
+      await renderTicketPng(model, 1, { design: 'NIGHT' })
+    )
+
+    // Kartu gelap hanya berguna kalau seluruh 360x482 gelap; latar putih yang
+    // tersisa akan menyilaukan supir sama seperti desain lain.
+    expect(image.dark).toBeGreaterThan(360 * 482 * 0.3)
+  })
+
+  it('mengikuti warna merek di desain Warna Merek', async () => {
+    const [blue, amber] = await Promise.all([
+      renderTicketPng(model, 1, { design: 'BRAND' }),
+      renderTicketPng(model, 1, { design: 'BRAND', brandColor: '#b45309' }),
+    ])
+
+    // Warna merek harus benar-benar sampai ke kanvas, bukan hanya ke DOM:
+    // kalau `brandColor` tidak diteruskan, pratinjau berwarna tapi unduhannya
+    // biru — dan itu baru ketahuan setelah tiket dikirim ke supir.
+    expect(blue).not.toBe(amber)
   })
 })

@@ -172,7 +172,7 @@ describe('seksi desain tiket', () => {
   })
 
   it('tidak punya isian yang bisa salah', () => {
-    // Pilihannya tertutup (tiga tombol), jadi seksi ini tidak pernah menghalangi
+    // Pilihannya tertutup (delapan radio), jadi seksi ini tidak pernah menghalangi
     // penyimpanan dengan pesan galat.
     expect(sectionError('ticket', saved, tId)).toBeNull()
   })

@@ -15,7 +15,7 @@ import {
 } from '../../lib/auth'
 import { env } from '../../config/env'
 import { parse } from '../../lib/validate'
-import { unauthorized } from '../../lib/http-error'
+import { invalidCredentials, unauthorized } from '../../lib/http-error'
 import { requireAuth, type RequestUser } from '../../middleware/auth'
 import { loginLimiter } from '../../middleware/rate-limit'
 
@@ -139,9 +139,9 @@ authRouter.post('/login', loginLimiter, async (req, res, next) => {
     })
 
     // Pesan sama untuk email tidak ada dan password salah, agar tidak bisa ditebak.
-    if (!user || !user.isActive) throw unauthorized('Email atau password salah')
+    if (!user || !user.isActive) throw invalidCredentials()
     const ok = await verifyPassword(body.password, user.passwordHash)
-    if (!ok) throw unauthorized('Email atau password salah')
+    if (!ok) throw invalidCredentials()
 
     await startSession(res, {
       sub: user.id,

@@ -31,7 +31,15 @@ export type ApprovalStatus =
  * Tata letak kartu tiket supir. Satu nilai global yang dipilih Admin; setiap
  * desain membawa isi yang sama, hanya komposisinya yang berbeda.
  */
-export type TicketDesign = 'CLASSIC' | 'MINIMAL' | 'NAVY'
+export type TicketDesign =
+  | 'CLASSIC'
+  | 'MINIMAL'
+  | 'NAVY'
+  | 'THERMAL'
+  | 'LARGE_CODE'
+  | 'NIGHT'
+  | 'TEAROFF'
+  | 'BRAND'
 
 export type SessionUser = {
   id: string

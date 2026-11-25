@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { render } from 'vitest-browser-react'
 import { userEvent } from 'vitest/browser'
 import type { TicketDesign } from '@/lib/api/types'
+import { TICKET_DESIGNS } from '@/features/ticket/ticket-design'
 import { TicketDesignPicker } from './ticket-design-picker'
 
 describe('pemilih desain tiket', () => {
-  it('menawarkan tiga desain sebagai satu kelompok pilihan', async () => {
+  it('menawarkan delapan desain dalam dua kelompok', async () => {
     const screen = await render(
       <TicketDesignPicker
         value='CLASSIC'
@@ -17,12 +18,43 @@ describe('pemilih desain tiket', () => {
 
     // Radio asli, bukan tombol: kelompoknya terbaca sebagai satu pertanyaan dan
     // panah keyboard bekerja tanpa penanganan tambahan.
-    expect(screen.container.querySelectorAll('input[type=radio]')).toHaveLength(
-      3
+    const radios = [
+      ...screen.container.querySelectorAll<HTMLInputElement>('input[type=radio]'),
+    ]
+    expect(radios.map((radio) => radio.value)).toEqual([...TICKET_DESIGNS])
+
+    // Diperiksa sebagai teks, bukan `getByText` per label: keterangan seperti
+    // "gerbang malam" memuat kata yang sama dengan nama desainnya.
+    const text = screen.container.textContent ?? ''
+    for (const label of [
+      'Klasik Biru',
+      'Minimal Putih',
+      'Navy Resmi',
+      'Termal Mono',
+      'Kode Besar',
+      'Malam',
+      'Pita Sobek',
+      'Warna Merek',
+    ]) {
+      expect(text, `label "${label}" tidak tampil`).toContain(label)
+    }
+  })
+
+  it('memisahkan tampilan standar dari desain untuk kondisi tertentu', async () => {
+    const screen = await render(
+      <TicketDesignPicker
+        value='CLASSIC'
+        onChange={() => undefined}
+        appName='Warehouse TSB'
+        logoUrl={null}
+      />
     )
-    await expect.element(screen.getByText('Klasik Biru')).toBeInTheDocument()
-    await expect.element(screen.getByText('Minimal Putih')).toBeInTheDocument()
-    await expect.element(screen.getByText('Navy Resmi')).toBeInTheDocument()
+
+    // Delapan kartu berderet jadi satu dinding; pengelompokan memberi tahu
+    // Admin bahwa tiga pertama adalah tampilan biasa, lima sisanya pengecualian.
+    const text = screen.container.textContent ?? ''
+    expect(text).toContain('Tampilan standar')
+    expect(text).toContain('Untuk kondisi tertentu')
   })
 
   it('melaporkan desain yang dipilih, bukan yang sedang aktif', async () => {
@@ -68,5 +100,24 @@ describe('pemilih desain tiket', () => {
     // yang bermasalah ketahuan sebelum disimpan.
     await expect.element(screen.getByText('Warehouse TSB')).toBeInTheDocument()
     await expect.element(screen.getByText('PT Contoh Nusantara')).toBeInTheDocument()
+  })
+
+  it('menurunkan warna pita pratinjau dari warna merek halaman masuk', async () => {
+    const screen = await render(
+      <TicketDesignPicker
+        value='BRAND'
+        onChange={() => undefined}
+        appName='Warehouse TSB'
+        logoUrl={null}
+        brandColor='#b45309'
+      />
+    )
+
+    // Warna merek adalah isian bebas; pratinjau harus menunjukkan hasil
+    // sesudah penjaga kontras, bukan hex mentah yang belum tentu terbaca.
+    const card = screen.container.querySelector('[data-ticket-card]') as
+      | HTMLElement
+      | null
+    expect(card?.style.getPropertyValue('--tk-band').trim()).toBe('#b45309')
   })
 })

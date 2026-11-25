@@ -6,7 +6,8 @@ import { UserAuthForm } from './user-auth-form'
 const MESSAGES = {
   emailInvalid: 'Masukkan email yang valid.',
   passwordEmpty: 'Masukkan password.',
-  badCredentials: 'Email atau password salah.',
+  badCredentials:
+    'Email atau kata sandi tidak cocok. Periksa kembali, atau hubungi Admin gudang kalau Anda yakin akun ini sudah terdaftar.',
 } as const
 
 const mocks = vi.hoisted(() => ({
@@ -156,16 +157,38 @@ describe('UserAuthForm', () => {
     )
   })
 
-  it('menampilkan pesan galat saat kredensial ditolak', async () => {
-    mocks.login.mockRejectedValue({
-      response: { data: { error: { message: MESSAGES.badCredentials } } },
-    })
+  it('menampilkan pesan galat yang terbaca saat kredensial ditolak', async () => {
+    // Server mengirim kode, bukan hanya teks, supaya pesannya ikut bahasa aktif
+    // dan bisa dibedakan dari sesi kedaluwarsa (UNAUTHORIZED).
+    // `isAxiosError` diperlukan karena itulah yang diperiksa apiErrorMessage.
+    mocks.login.mockRejectedValue(
+      Object.assign(new Error('Request failed with status code 401'), {
+        isAxiosError: true,
+        response: {
+          status: 401,
+          data: {
+            error: {
+              code: 'INVALID_CREDENTIALS',
+              message: 'Email atau password salah',
+            },
+          },
+        },
+      })
+    )
 
     await userEvent.fill(emailInput, 'admin@tsb.test')
     await userEvent.fill(passwordInput, 'salah')
     await userEvent.click(submitButton)
 
     await vi.waitFor(() => expect(mocks.login).toHaveBeenCalledOnce())
+
+    // Pesannya tetap di dalam form, bukan toast yang hilang sendiri, dan
+    // dibacakan pembaca layar lewat role alert.
+    await expect
+      .element(screen.getByRole('alert'))
+      .toHaveTextContent(MESSAGES.badCredentials)
+    await expect.element(passwordInput).toHaveFocus()
+
     expect(mocks.setUser).not.toHaveBeenCalled()
     expect(mocks.navigate).not.toHaveBeenCalled()
   })

@@ -3,7 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Loader2, LogIn } from 'lucide-react'
+import { AlertCircle, Loader2, LogIn } from 'lucide-react'
 import { toast } from 'sonner'
 import { apiErrorMessage } from '@/lib/api/client'
 import { login } from '@/lib/api/endpoints'
@@ -33,6 +33,7 @@ export function UserAuthForm({
   ...props
 }: UserAuthFormProps) {
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
   const setUser = useAuthStore((state) => state.setUser)
   const t = useT()
@@ -55,13 +56,19 @@ export function UserAuthForm({
 
   async function onSubmit(values: FormValues) {
     setIsLoading(true)
+    setError(null)
     try {
       const user = await login(values.email, values.password)
       setUser(user)
       toast.success(t('auth.welcome', { name: user.name }))
       navigate({ to: redirectTo || homeForRole(user.role), replace: true })
-    } catch (error) {
-      toast.error(apiErrorMessage(error))
+    } catch (cause) {
+      // Galat login ditulis di dalam form, bukan hanya sebagai toast: toast
+      // hilang sendiri setelah beberapa detik, sementara di sini orang perlu
+      // membaca sebabnya sambil memperbaiki isian. Fokus dipindah ke kata
+      // sandi karena itu bagian yang paling sering salah ketik.
+      setError(apiErrorMessage(cause))
+      form.setFocus('password')
     } finally {
       setIsLoading(false)
     }
@@ -123,6 +130,15 @@ export function UserAuthForm({
             </FormItem>
           )}
         />
+        {error && (
+          <p
+            role='alert'
+            className='flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-[13px] leading-snug text-destructive'
+          >
+            <AlertCircle className='mt-0.5 size-4 shrink-0' aria-hidden='true' />
+            <span>{error}</span>
+          </p>
+        )}
         <Button className='mt-1 h-11 w-full' disabled={isLoading}>
           {isLoading ? (
             <Loader2 className='animate-spin' aria-hidden='true' />

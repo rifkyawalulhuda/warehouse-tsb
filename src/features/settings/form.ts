@@ -64,7 +64,7 @@ export const FIELD_GROUPS = {
     'approvalUrgentBufferMinutes',
   ],
   // Tata letak tiket dipilih Admin; nilainya bukan teks bebas, jadi tidak ada
-  // validasi isian — hanya pilihan tertutup dari tiga desain.
+  // validasi isian — hanya pilihan tertutup dari delapan desain.
   ticket: ['ticketDesign'],
 } as const satisfies Record<SectionKey, readonly (keyof FormState)[]>
 
@@ -318,7 +318,7 @@ export function sectionError(
       return null
     }
     case 'ticket':
-      // Pilihannya tertutup (tiga tombol), jadi tidak ada isian yang bisa salah.
+      // Pilihannya tertutup (delapan radio), jadi tidak ada isian yang bisa salah.
       return null
   }
 }

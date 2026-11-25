@@ -216,6 +216,23 @@ export const settings: Record<
   'settings.ticket.navy': 'Official Navy',
   'settings.ticket.navyHint':
     'A navy band with a prominent QR card. The boldest choice for warehouses with many documents.',
+  'settings.ticket.groupStandard': 'Standard layouts',
+  'settings.ticket.groupSpecial': 'For specific situations',
+  'settings.ticket.thermal': 'Thermal Mono',
+  'settings.ticket.thermalHint':
+    'Black and white, no colour. For thermal printers and faded photocopies.',
+  'settings.ticket.largeCode': 'Large Code',
+  'settings.ticket.largeCodeHint':
+    'The booking code is the biggest thing on the card. For officers typing the code when the QR will not scan.',
+  'settings.ticket.night': 'Night',
+  'settings.ticket.nightHint':
+    'A dark card so it does not glare at the night gate. The QR stays on white.',
+  'settings.ticket.tearoff': 'Tear-off',
+  'settings.ticket.tearoffHint':
+    'A bottom stub with code, date, dock and plate for the gate officer to tear off.',
+  'settings.ticket.brand': 'Brand Colour',
+  'settings.ticket.brandHint':
+    'The top band uses the brand colour from the sign-in page. Bright colours are darkened so the text stays readable.',
 
   'settings.summary.aria': 'Operational summary',
   'settings.summary.title': 'Used by the capacity engine',

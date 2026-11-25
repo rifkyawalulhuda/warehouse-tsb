@@ -79,6 +79,11 @@ enum TicketDesign {
   CLASSIC
   MINIMAL
   NAVY
+  THERMAL
+  LARGE_CODE
+  NIGHT
+  TEAROFF
+  BRAND
 }
 
 /// Perusahaan customer. Akun login (`User` ber-role CUSTOMER) menempel ke satu
