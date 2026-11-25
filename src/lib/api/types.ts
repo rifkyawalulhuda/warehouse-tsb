@@ -201,6 +201,12 @@ export type Settings = {
   loginCoverUrl: string | null
   /** Warna aksen halaman masuk (hex) pilihan Admin; null = warna bawaan. */
   loginBrandColor: string | null
+  /** Baris pertama footer aplikasi; null = teks bawaan sesuai bahasa aktif. */
+  footerCompany: string | null
+  /** Baris kedua footer aplikasi; null = teks bawaan sesuai bahasa aktif. */
+  footerLocation: string | null
+  /** false = baris lokasi dan pemisahnya tidak dirender sama sekali. */
+  footerShowLocation: boolean
   /** Tata letak kartu tiket supir yang dipakai semua tiket. */
   ticketDesign: TicketDesign
   operatingStartMinute: number

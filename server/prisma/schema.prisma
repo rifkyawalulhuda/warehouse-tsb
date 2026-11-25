@@ -192,6 +192,12 @@ model WarehouseSetting {
   loginCoverUrl            String? @map("login_cover_url") @db.VarChar(2048)
   /// Warna aksen halaman masuk, hex 6 digit. Null = warna bawaan tema.
   loginBrandColor          String? @map("login_brand_color") @db.VarChar(7)
+  /// Baris pertama footer aplikasi. Null = teks bawaan sesuai bahasa aktif.
+  footerCompany            String? @map("footer_company") @db.VarChar(200)
+  /// Baris kedua footer aplikasi (lokasi · shift). Null = teks bawaan.
+  footerLocation           String? @map("footer_location") @db.VarChar(120)
+  /// Tampilkan baris lokasi di footer. false = baris itu dan pemisahnya hilang.
+  footerShowLocation       Boolean @default(true) @map("footer_show_location")
   /// Tata letak kartu tiket supir. Berlaku untuk semua tiket, layar dan PNG.
   ticketDesign             TicketDesign @default(CLASSIC) @map("ticket_design")
   operatingStartMinute     Int    @default(480) @map("operating_start_minute")

@@ -52,6 +52,10 @@ export const updateSchema = z.object({
     .regex(/^#(?:[0-9a-fA-F]{6})$/, 'Warna harus berupa hex, misalnya #1D4ED8')
     .nullable()
     .optional(),
+  // Baris footer; null/"" berarti teks bawaan yang mengikuti bahasa aktif.
+  footerCompany: z.string().trim().max(200).nullable().optional(),
+  footerLocation: z.string().trim().max(120).nullable().optional(),
+  footerShowLocation: z.boolean().optional(),
   // Tata letak kartu tiket. Daftar tertutup: nilai lain akan menghasilkan
   // tiket yang tidak punya penggambar, jadi ditolak di sini.
   ticketDesign: z

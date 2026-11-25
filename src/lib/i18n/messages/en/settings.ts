@@ -71,6 +71,15 @@ export const settings: Record<
   'settings.brand.shortNameHint':
     'For the browser tab title and narrow screens. Leave empty to use the app title.',
   'settings.brand.optional': 'Optional',
+  'settings.brand.footerCompany': 'Footer text · first line',
+  'settings.brand.footerCompanyHint':
+    'Shown after the current year. Leave empty to use the built-in text in the active language.',
+  'settings.brand.footerLocation': 'Footer text · second line',
+  'settings.brand.footerLocationHint':
+    'Location and shift at the end of the footer. Leave empty to use the built-in text.',
+  'settings.brand.footerShowLocation': 'Show the location line',
+  'settings.brand.footerShowLocationHint':
+    'Turn off when you already put the location on the first line, so it does not appear twice.',
   'settings.brand.preview': 'Preview',
   'settings.brand.previewNote':
     'The short name is used as the tab title; when empty, the app title is used.',
@@ -263,6 +272,10 @@ export const settings: Record<
   'settings.error.appNameMax': 'App title must be at most 60 characters.',
   'settings.error.taglineMax': 'Tagline must be at most 80 characters.',
   'settings.error.shortNameMax': 'Short name must be at most 20 characters.',
+  'settings.error.footerCompanyMax':
+    'Footer text must be at most 200 characters.',
+  'settings.error.footerLocationMax':
+    'Footer location must be at most 120 characters.',
   'settings.error.logo':
     'The logo must be a PNG or JPG uploaded here, or an https address.',
   'settings.error.loginMax': 'Welcome text must be at most {max} characters.',

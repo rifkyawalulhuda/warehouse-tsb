@@ -81,6 +81,8 @@ settingsRouter.put('/', requireAuth, requireExactRole('ADMIN'), async (req, res,
       data.loginBrandColor = emptyToNull(data.loginBrandColor)
       data.appLogoUrl = emptyToNull(data.appLogoUrl)
       data.loginDescription = emptyToNull(data.loginDescription)
+      data.footerCompany = emptyToNull(data.footerCompany)
+      data.footerLocation = emptyToNull(data.footerLocation)
 
       await tx.warehouseSetting.update({ where: { id: current.id }, data })
       if (body.warehouseName !== undefined) {

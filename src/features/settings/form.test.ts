@@ -25,6 +25,9 @@ const settings: Settings = {
   loginDescription: null,
   loginCoverUrl: null,
   loginBrandColor: null,
+  footerCompany: null,
+  footerLocation: null,
+  footerShowLocation: true,
   ticketDesign: 'CLASSIC',
   operatingStartMinute: 480,
   operatingEndMinute: 1020,
@@ -142,10 +145,72 @@ describe('seksi identitas merek', () => {
       appTagline: 'Time Slot Booking',
       appShortName: null,
       appLogoUrl: null,
+      footerCompany: null,
+      footerLocation: null,
+      footerShowLocation: true,
     })
     expect(
       sectionPayload('brand', { ...saved, appShortName: ' TSB ' })
     ).toMatchObject({ appShortName: 'TSB' })
+  })
+
+  it('memakai draf footer yang sudah dipangkas, dan null bila dikosongkan', () => {
+    expect(
+      sectionPayload('brand', {
+        ...saved,
+        footerCompany: '  PT Sankyu Indonesia  ',
+        footerLocation: '  Gudang Cikarang · Shift 2  ',
+      })
+    ).toMatchObject({
+      footerCompany: 'PT Sankyu Indonesia',
+      footerLocation: 'Gudang Cikarang · Shift 2',
+    })
+
+    // Mengosongkan isian berarti kembali ke teks bawaan per bahasa, bukan
+    // menyimpan baris kosong yang membuat footer kehilangan nama perusahaan.
+    expect(
+      sectionPayload('brand', {
+        ...saved,
+        footerCompany: '   ',
+        footerLocation: '',
+      })
+    ).toMatchObject({ footerCompany: null, footerLocation: null })
+  })
+
+  it('menolak teks footer yang lebih panjang dari kolom database', () => {
+    expect(
+      sectionError('brand', { ...saved, footerCompany: 'a'.repeat(201) }, tId)
+    ).toContain('maksimal 200')
+    expect(
+      sectionError('brand', { ...saved, footerLocation: 'a'.repeat(121) }, tId)
+    ).toContain('maksimal 120')
+    expect(
+      sectionError('brand', { ...saved, footerCompany: 'a'.repeat(200) }, tId)
+    ).toBeNull()
+  })
+
+  it('menandai draft footer sebagai perubahan yang belum disimpan', () => {
+    expect(isDirty('brand', saved, toForm(settings))).toBe(false)
+    expect(
+      isDirty('brand', { ...saved, footerLocation: 'Shift 2' }, toForm(settings))
+    ).toBe(true)
+    expect(
+      isDirty('brand', { ...saved, footerCompany: 'PT Lain' }, toForm(settings))
+    ).toBe(true)
+    expect(
+      isDirty('brand', { ...saved, footerShowLocation: false }, toForm(settings))
+    ).toBe(true)
+  })
+
+  it('mengirim sakelar baris lokasi apa adanya, termasuk false', () => {
+    // false harus ikut terkirim: `undefined` berarti "jangan ubah", jadi
+    // memakai `||` di sini akan membuat sakelar tidak bisa dimatikan.
+    expect(
+      sectionPayload('brand', { ...saved, footerShowLocation: false })
+    ).toMatchObject({ footerShowLocation: false })
+    expect(
+      sectionPayload('brand', { ...saved, footerShowLocation: true })
+    ).toMatchObject({ footerShowLocation: true })
   })
 
   it('membaca null dari server sebagai kolom kosong di form', () => {

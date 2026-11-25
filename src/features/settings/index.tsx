@@ -21,6 +21,7 @@ import { tabTitle } from '@/lib/branding'
 import { useT, type MessageKey } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
 import {
   Select,
   SelectContent,
@@ -345,6 +346,55 @@ function SettingsForm({ settings }: { settings: Settings }) {
                     maxLength={20}
                     placeholder={t('settings.brand.optional')}
                     autoComplete='off'
+                  />
+                </FieldRow>
+
+                <FieldRow
+                  label={t('settings.brand.footerCompany')}
+                  htmlFor='footer-company'
+                  hint={t('settings.brand.footerCompanyHint')}
+                >
+                  <Input
+                    id='footer-company'
+                    value={form.footerCompany}
+                    onChange={(event) =>
+                      setField('footerCompany', event.target.value)
+                    }
+                    className='w-full sm:w-96'
+                    maxLength={200}
+                    placeholder={t('footer.company')}
+                    autoComplete='off'
+                  />
+                </FieldRow>
+
+                <FieldRow
+                  label={t('settings.brand.footerLocation')}
+                  htmlFor='footer-location'
+                  hint={t('settings.brand.footerLocationHint')}
+                >
+                  <Input
+                    id='footer-location'
+                    value={form.footerLocation}
+                    onChange={(event) =>
+                      setField('footerLocation', event.target.value)
+                    }
+                    className='w-full sm:w-72'
+                    maxLength={120}
+                    placeholder={t('footer.location')}
+                    autoComplete='off'
+                  />
+                </FieldRow>
+
+                <FieldRow
+                  label={t('settings.brand.footerShowLocation')}
+                  hint={t('settings.brand.footerShowLocationHint')}
+                >
+                  <Switch
+                    checked={form.footerShowLocation}
+                    onCheckedChange={(checked) =>
+                      setField('footerShowLocation', checked)
+                    }
+                    aria-label={t('settings.brand.footerShowLocation')}
                   />
                 </FieldRow>
 

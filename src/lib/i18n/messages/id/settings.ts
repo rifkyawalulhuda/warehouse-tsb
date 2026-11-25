@@ -67,6 +67,15 @@ export const settings = {
   'settings.brand.shortNameHint':
     'Untuk judul tab peramban dan layar sempit. Kosongkan agar memakai judul aplikasi.',
   'settings.brand.optional': 'Opsional',
+  'settings.brand.footerCompany': 'Teks footer · baris pertama',
+  'settings.brand.footerCompanyHint':
+    'Tampil setelah tahun berjalan. Kosongkan agar memakai teks bawaan sesuai bahasa aktif.',
+  'settings.brand.footerLocation': 'Teks footer · baris kedua',
+  'settings.brand.footerLocationHint':
+    'Lokasi dan shift di ujung footer. Kosongkan agar memakai teks bawaan.',
+  'settings.brand.footerShowLocation': 'Tampilkan baris lokasi',
+  'settings.brand.footerShowLocationHint':
+    'Matikan bila lokasi sudah Anda tulis di baris pertama, supaya tidak tampil dua kali.',
   'settings.brand.preview': 'Pratinjau',
   'settings.brand.previewNote':
     'Nama pendek dipakai sebagai judul tab; kalau kosong, judul aplikasi yang dipakai.',
@@ -257,6 +266,8 @@ export const settings = {
   'settings.error.appNameMax': 'Judul aplikasi maksimal 60 karakter.',
   'settings.error.taglineMax': 'Subjudul maksimal 80 karakter.',
   'settings.error.shortNameMax': 'Nama pendek maksimal 20 karakter.',
+  'settings.error.footerCompanyMax': 'Teks footer maksimal 200 karakter.',
+  'settings.error.footerLocationMax': 'Lokasi footer maksimal 120 karakter.',
   'settings.error.logo':
     'Logo harus PNG atau JPG yang diunggah dari sini, atau alamat https.',
   'settings.error.loginMax': 'Teks sambutan maksimal {max} karakter.',

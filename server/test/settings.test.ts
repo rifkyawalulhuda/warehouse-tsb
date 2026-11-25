@@ -49,6 +49,9 @@ describe('nama aplikasi', () => {
       loginDescription: null,
       loginCoverUrl: null,
       loginBrandColor: null,
+      footerCompany: null,
+      footerLocation: null,
+      footerShowLocation: true,
       ticketDesign: 'CLASSIC',
     })
   })
@@ -112,6 +115,90 @@ describe('nama aplikasi', () => {
     // "pakai teks dan lencana bawaan".
     expect(response.body.data.appLogoUrl).toBeNull()
     expect(response.body.data.loginDescription).toBeNull()
+  })
+
+  it('menyimpan teks footer dan mengirimnya lewat /api/branding', async () => {
+    const cookie = await loginCookie(app, 'admin@test.local')
+
+    const saved = await request(app)
+      .put('/api/settings')
+      .set('Cookie', cookie)
+      .send({
+        footerCompany: 'TSB · Time Slot Booking — PT Contoh Indonesia',
+        footerLocation: 'Gudang Bekasi · Shift 2',
+      })
+
+    expect(saved.status).toBe(200)
+    expect(saved.body.data.footerCompany).toBe(
+      'TSB · Time Slot Booking — PT Contoh Indonesia'
+    )
+    expect(saved.body.data.footerLocation).toBe('Gudang Bekasi · Shift 2')
+
+    // Footer dirender di setiap layar yang sudah masuk; halaman tanpa sesi
+    // tidak memakainya, tetapi satu sumber data lebih sulit melenceng.
+    const branding = await request(app).get('/api/branding')
+    expect(branding.body.data.footerCompany).toBe(
+      'TSB · Time Slot Booking — PT Contoh Indonesia'
+    )
+    expect(branding.body.data.footerLocation).toBe('Gudang Bekasi · Shift 2')
+  })
+
+  it('mengosongkan teks footer kembali ke null, bukan string kosong', async () => {
+    const cookie = await loginCookie(app, 'admin@test.local')
+    await request(app)
+      .put('/api/settings')
+      .set('Cookie', cookie)
+      .send({ footerCompany: 'PT Contoh', footerLocation: 'Shift 2' })
+
+    const response = await request(app)
+      .put('/api/settings')
+      .set('Cookie', cookie)
+      .send({ footerCompany: '  ', footerLocation: '' })
+
+    expect(response.status).toBe(200)
+    // Null berarti layar memakai teks bawaan yang mengikuti bahasa aktif.
+    expect(response.body.data.footerCompany).toBeNull()
+    expect(response.body.data.footerLocation).toBeNull()
+  })
+
+  it('menolak teks footer yang melebihi lebar kolom', async () => {
+    const cookie = await loginCookie(app, 'admin@test.local')
+
+    const company = await request(app)
+      .put('/api/settings')
+      .set('Cookie', cookie)
+      .send({ footerCompany: 'a'.repeat(201) })
+    expect(company.status).toBe(400)
+    expect(company.body.error.code).toBe('VALIDATION_ERROR')
+
+    const location = await request(app)
+      .put('/api/settings')
+      .set('Cookie', cookie)
+      .send({ footerLocation: 'a'.repeat(121) })
+    expect(location.status).toBe(400)
+    expect(location.body.error.code).toBe('VALIDATION_ERROR')
+  })
+
+  it('menyimpan sakelar baris lokasi footer dan mengirimnya lewat branding', async () => {
+    const cookie = await loginCookie(app, 'admin@test.local')
+
+    const off = await request(app)
+      .put('/api/settings')
+      .set('Cookie', cookie)
+      .send({ footerShowLocation: false })
+    expect(off.status).toBe(200)
+    expect(off.body.data.footerShowLocation).toBe(false)
+
+    // Halaman tanpa sesi (footer ikut dirender di sana) membaca branding, jadi
+    // nilainya harus ikut terkirim di endpoint publik itu juga.
+    const branding = await request(app).get('/api/branding')
+    expect(branding.body.data.footerShowLocation).toBe(false)
+
+    const on = await request(app)
+      .put('/api/settings')
+      .set('Cookie', cookie)
+      .send({ footerShowLocation: true })
+    expect(on.body.data.footerShowLocation).toBe(true)
   })
 
   it('menolak logo yang bukan unggahan sendiri atau http(s)', async () => {

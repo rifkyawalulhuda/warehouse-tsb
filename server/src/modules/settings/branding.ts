@@ -26,6 +26,9 @@ brandingRouter.get('/', async (_req, res, next) => {
         loginDescription: true,
         loginCoverUrl: true,
         loginBrandColor: true,
+        footerCompany: true,
+        footerLocation: true,
+        footerShowLocation: true,
         ticketDesign: true,
       },
     })

@@ -96,6 +96,9 @@ export type Branding = Pick<
   | 'loginDescription'
   | 'loginCoverUrl'
   | 'loginBrandColor'
+  | 'footerCompany'
+  | 'footerLocation'
+  | 'footerShowLocation'
   | 'ticketDesign'
 >
 

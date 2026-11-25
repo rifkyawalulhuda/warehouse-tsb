@@ -33,6 +33,11 @@ export const DEFAULT_BRANDING: Branding = {
   loginDescription: null,
   loginCoverUrl: null,
   loginBrandColor: null,
+  // Footer kosong: komponen footer memakai teks bawaan yang mengikuti bahasa
+  // aktif, jadi cadangan di sini tidak perlu (dan tidak boleh) memilih bahasa.
+  footerCompany: null,
+  footerLocation: null,
+  footerShowLocation: true,
   // Desain tiket bawaan harus sama dengan nilai bawaan kolom di database;
   // kalau berbeda, tiket tampil beda sesaat sebelum pengaturan termuat.
   ticketDesign: DEFAULT_TICKET_DESIGN,
@@ -84,6 +89,13 @@ export function useBranding(): Branding {
     // gradien bawaan, bukan gambar kosong yang tampak rusak.
     loginCoverUrl: data.loginCoverUrl?.trim() || null,
     loginBrandColor: data.loginBrandColor?.trim() || null,
+    // Footer dibiarkan null bila kosong: teks bawaannya berbeda per bahasa,
+    // jadi yang memilih bahasa adalah komponen footer, bukan hook ini.
+    footerCompany: data.footerCompany?.trim() || null,
+    footerLocation: data.footerLocation?.trim() || null,
+    // Server versi lama tidak mengirim kolom ini; anggap baris lokasi tampil,
+    // sama dengan nilai bawaan kolom di database.
+    footerShowLocation: data.footerShowLocation ?? true,
     // Server versi lama belum mengirim desain tiket; nilai tak dikenal jatuh
     // ke Klasik supaya tiket tidak pernah gagal dirender.
     ticketDesign: isTicketDesign(data.ticketDesign)

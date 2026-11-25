@@ -23,6 +23,12 @@ export type FormState = {
   loginCoverUrl: string
   /** Warna aksen halaman masuk, hex; kosong = warna bawaan tema. */
   loginBrandColor: string
+  /** Baris pertama footer; kosong = teks bawaan sesuai bahasa aktif. */
+  footerCompany: string
+  /** Baris kedua footer (lokasi · shift); kosong = teks bawaan. */
+  footerLocation: string
+  /** Tampilkan baris lokasi di footer; false = baris dan pemisahnya hilang. */
+  footerShowLocation: boolean
   /** Tata letak kartu tiket supir; satu pilihan untuk semua tiket. */
   ticketDesign: TicketDesign
   open: string
@@ -51,7 +57,15 @@ export type SectionKey =
 export const FIELD_GROUPS = {
   identity: ['warehouseName'],
   // Merek menjawab "aplikasi ini siapa": logo, judul, subjudul, nama pendek.
-  brand: ['appLogoUrl', 'appName', 'appTagline', 'appShortName'],
+  brand: [
+    'appLogoUrl',
+    'appName',
+    'appTagline',
+    'appShortName',
+    'footerCompany',
+    'footerLocation',
+    'footerShowLocation',
+  ],
   // Halaman masuk menjawab "apa yang dilihat orang pertama kali".
   login: ['loginDescription', 'loginCoverUrl', 'loginBrandColor'],
   hours: ['open', 'close', 'slotUnitMinutes'],
@@ -83,6 +97,9 @@ export type SettingsPayload = {
   loginDescription?: string | null
   loginCoverUrl?: string | null
   loginBrandColor?: string | null
+  footerCompany?: string | null
+  footerLocation?: string | null
+  footerShowLocation?: boolean
   ticketDesign?: TicketDesign
   operatingStartMinute?: number
   operatingEndMinute?: number
@@ -106,6 +123,9 @@ export function toForm(settings: Settings): FormState {
     loginDescription: settings.loginDescription ?? '',
     loginCoverUrl: settings.loginCoverUrl ?? '',
     loginBrandColor: settings.loginBrandColor ?? '',
+    footerCompany: settings.footerCompany ?? '',
+    footerLocation: settings.footerLocation ?? '',
+    footerShowLocation: settings.footerShowLocation,
     ticketDesign: settings.ticketDesign,
     open: settings.operatingStartLabel,
     close: settings.operatingEndLabel,
@@ -139,6 +159,9 @@ export function restoreSection(
         appName: saved.appName,
         appTagline: saved.appTagline,
         appShortName: saved.appShortName,
+        footerCompany: saved.footerCompany,
+        footerLocation: saved.footerLocation,
+        footerShowLocation: saved.footerShowLocation,
       }
     case 'login':
       return {
@@ -257,6 +280,13 @@ export function sectionError(
       if (form.appShortName.trim().length > 20) {
         return t('settings.error.shortNameMax')
       }
+      // Batas ini sama dengan lebar kolom database dan skema Zod server.
+      if (form.footerCompany.trim().length > 200) {
+        return t('settings.error.footerCompanyMax')
+      }
+      if (form.footerLocation.trim().length > 120) {
+        return t('settings.error.footerLocationMax')
+      }
       const logo = form.appLogoUrl.trim()
       if (logo !== '' && !isSafeImageUrl(logo)) {
         return t('settings.error.logo')
@@ -343,6 +373,10 @@ export function sectionPayload(
         // untuk tab, bukan nama pendek sepanjang nol karakter.
         appShortName: form.appShortName.trim() || null,
         appLogoUrl: form.appLogoUrl.trim() || null,
+        // Kosong berarti "pakai teks bawaan", yang berbeda per bahasa.
+        footerCompany: form.footerCompany.trim() || null,
+        footerLocation: form.footerLocation.trim() || null,
+        footerShowLocation: form.footerShowLocation,
       }
     case 'login':
       return {
