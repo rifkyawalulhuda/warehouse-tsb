@@ -40,6 +40,9 @@ export const common = {
   'error.DATE_IN_PAST': 'Tanggal yang dipilih sudah lewat',
   'error.SLOT_IN_PAST': 'Jam tersebut sudah lewat',
   'error.EMAIL_TAKEN': 'Email sudah dipakai akun lain',
+  'error.EMAIL_UNCHANGED': 'Email baru sama dengan email sekarang.',
+  'error.INVALID_PASSWORD': 'Kata sandi saat ini tidak cocok.',
+  'error.PASSWORD_UNCHANGED': 'Kata sandi baru sama dengan yang sekarang.',
   'error.NO_CHANGES': 'Tidak ada perubahan',
   'error.CUSTOMER_INACTIVE': 'Akun customer ini sedang nonaktif.',
   'error.UPLOAD_EMPTY': 'Berkas gambar kosong.',
@@ -89,6 +92,8 @@ export const common = {
   'error.WAREHOUSE_NAME_TAKEN': 'Nama gudang sudah dipakai.',
   'error.TOO_MANY_ATTEMPTS':
     'Terlalu banyak percobaan masuk. Tunggu 15 menit, lalu coba lagi.',
+  'error.TOO_MANY_PASSWORD_ATTEMPTS':
+    'Terlalu banyak percobaan kata sandi. Tunggu 15 menit, lalu coba lagi.',
   'error.TOO_EARLY': 'Terlalu awal untuk aksi ini.',
   'error.ALREADY_CHECKED_OUT': 'Truk ini sudah tercatat keluar.',
   'error.WRONG_STATUS': 'Status booking tidak mendukung aksi ini.',

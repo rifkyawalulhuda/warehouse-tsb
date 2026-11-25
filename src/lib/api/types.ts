@@ -41,10 +41,27 @@ export type TicketDesign =
   | 'TEAROFF'
   | 'BRAND'
 
+/** Profil lengkap untuk layar Pengaturan Akun (endpoint /api/account). */
+export type AccountProfile = {
+  id: string
+  name: string
+  email: string
+  phone: string | null
+  role: Role
+  customerName: string | null
+  canApproveBooking: boolean
+  /** Tanggal akun dibuat, ISO. */
+  createdAt: string
+  /** Jumlah sesi yang masih hidup, termasuk sesi yang sedang dipakai. */
+  activeSessions: number
+}
+
 export type SessionUser = {
   id: string
   name: string
   email: string
+  /** Nomor HP dari profil; null bila belum diisi. */
+  phone: string | null
   role: Role
   customerId: string | null
   /** Nama perusahaan pemilik akun; hanya terisi untuk role CUSTOMER. */

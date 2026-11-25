@@ -1,3 +1,4 @@
+import { account } from './account'
 import { approvals } from './approvals'
 import { auth } from './auth'
 import { bookings } from './bookings'
@@ -17,6 +18,7 @@ import { users } from './users'
 export const id = {
   ...common,
   ...auth,
+  ...account,
   ...approvals,
   ...bookings,
   ...ticket,

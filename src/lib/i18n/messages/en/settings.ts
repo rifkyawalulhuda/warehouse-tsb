@@ -44,7 +44,7 @@ export const settings: Record<
 
   'settings.panel.dirty': 'Changes in this section are not sent yet.',
   'settings.panel.clean': 'No changes in this section.',
-  'settings.panel.save': 'Save section',
+  'settings.panel.save': 'Save',
   'settings.panel.reset': 'Discard',
   'settings.panel.saving': 'Saving',
   'settings.panel.unsaved': 'Not saved',

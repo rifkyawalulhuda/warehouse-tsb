@@ -7,6 +7,7 @@ import {
   putData,
 } from './client'
 import type {
+  AccountProfile,
   ActivityItem,
   ActivityType,
   ApprovalMode,
@@ -47,6 +48,36 @@ export function logout() {
 
 export function fetchMe() {
   return getData<SessionUser>('/auth/me')
+}
+
+/* ------------------------------ account ------------------------------ */
+
+export function fetchAccount() {
+  return getData<AccountProfile>('/account')
+}
+
+export function updateProfile(payload: { name?: string; phone?: string }) {
+  return patchData<AccountProfile>('/account/profile', payload)
+}
+
+export function updateAccountEmail(payload: { email: string; currentPassword: string }) {
+  return patchData<AccountProfile>('/account/email', payload)
+}
+
+export function updateAccountPassword(payload: {
+  currentPassword: string
+  newPassword: string
+}) {
+  return patchData<{ revoked: number; activeSessions: number }>(
+    '/account/password',
+    payload
+  )
+}
+
+export function revokeOtherSessions() {
+  return postData<{ revoked: number; activeSessions: number }>(
+    '/account/sessions/revoke-others'
+  )
 }
 
 /* ------------------------------ settings ----------------------------- */

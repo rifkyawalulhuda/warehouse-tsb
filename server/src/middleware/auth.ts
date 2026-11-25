@@ -12,7 +12,7 @@ import { forbidden, HttpError, unauthorized } from '../lib/http-error'
  */
 export type RequestUser = Pick<
   User,
-  'id' | 'name' | 'email' | 'role' | 'customerId' | 'canApproveBooking'
+  'id' | 'name' | 'email' | 'phone' | 'role' | 'customerId' | 'canApproveBooking'
 > & { customerName: string | null }
 
 declare global {
@@ -37,6 +37,7 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
         id: true,
         name: true,
         email: true,
+        phone: true,
         role: true,
         customerId: true,
         isActive: true,
@@ -50,6 +51,7 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
       id: user.id,
       name: user.name,
       email: user.email,
+      phone: user.phone,
       role: user.role,
       customerId: user.customerId,
       customerName: user.customer?.name ?? null,

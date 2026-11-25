@@ -4,6 +4,7 @@ import cors from 'cors'
 import helmet from 'helmet'
 import { env } from './config/env'
 import { authRouter } from './modules/auth/routes'
+import { accountRouter } from './modules/account/routes'
 import { usersRouter } from './modules/users/routes'
 import { settingsRouter } from './modules/settings/routes'
 import { brandingRouter } from './modules/settings/branding'
@@ -51,6 +52,7 @@ export function createApp() {
 
   app.use('/api', apiLimiter)
   app.use('/api/auth', authRouter)
+  app.use('/api/account', accountRouter)
   app.use('/api/users', usersRouter)
   app.use('/api/settings', settingsRouter)
   app.use('/api/branding', brandingRouter)

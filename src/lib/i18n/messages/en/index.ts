@@ -1,4 +1,5 @@
 import type { MessageKey } from '../id'
+import { account } from './account'
 import { approvals } from './approvals'
 import { auth } from './auth'
 import { bookings } from './bookings'
@@ -17,6 +18,7 @@ import { users } from './users'
 export const en: Record<MessageKey, string> = {
   ...common,
   ...auth,
+  ...account,
   ...approvals,
   ...bookings,
   ...ticket,

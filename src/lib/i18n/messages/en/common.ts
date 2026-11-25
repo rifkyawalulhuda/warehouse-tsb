@@ -42,6 +42,9 @@ export const common: Record<keyof typeof idCommon, string> = {
   'error.DATE_IN_PAST': 'That date has already passed',
   'error.SLOT_IN_PAST': 'That time has already passed',
   'error.EMAIL_TAKEN': 'This email is already used by another account',
+  'error.EMAIL_UNCHANGED': 'The new email is the same as the current one.',
+  'error.INVALID_PASSWORD': 'Your current password does not match.',
+  'error.PASSWORD_UNCHANGED': 'The new password is the same as the current one.',
   'error.NO_CHANGES': 'Nothing changed',
   'error.CUSTOMER_INACTIVE': 'This customer account is inactive.',
   'error.UPLOAD_EMPTY': 'The image file is empty.',
@@ -87,6 +90,8 @@ export const common: Record<keyof typeof idCommon, string> = {
     'Vehicle details cannot be changed because the truck already checked in.',
   'error.WAREHOUSE_NAME_TAKEN': 'That warehouse name is already used.',
   'error.TOO_MANY_ATTEMPTS': 'Too many sign-in attempts. Wait 15 minutes, then try again.',
+  'error.TOO_MANY_PASSWORD_ATTEMPTS':
+    'Too many password attempts. Wait 15 minutes, then try again.',
   'error.TOO_EARLY': 'Too early for this action.',
   'error.ALREADY_CHECKED_OUT': 'This truck is already checked out.',
   'error.WRONG_STATUS': 'The booking status does not allow this action.',

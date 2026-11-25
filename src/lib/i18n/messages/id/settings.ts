@@ -40,7 +40,7 @@ export const settings = {
 
   'settings.panel.dirty': 'Perubahan di seksi ini belum dikirim ke server.',
   'settings.panel.clean': 'Tidak ada perubahan pada seksi ini.',
-  'settings.panel.save': 'Simpan seksi',
+  'settings.panel.save': 'Simpan',
   'settings.panel.reset': 'Batalkan',
   'settings.panel.saving': 'Menyimpan',
   'settings.panel.unsaved': 'Belum disimpan',

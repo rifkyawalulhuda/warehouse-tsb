@@ -10,6 +10,7 @@ const sampleUser: SessionUser = {
   id: 'u1',
   name: 'Budi',
   email: 'budi@example.com',
+  phone: null,
   role: 'CUSTOMER',
   customerId: 'c1',
   canApproveBooking: false,

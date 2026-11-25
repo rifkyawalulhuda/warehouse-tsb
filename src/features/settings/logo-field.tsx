@@ -19,7 +19,7 @@ type Props = {
  * Unggahan logo aplikasi.
  *
  * Sama seperti gambar panel: berkas diunggah lebih dulu, lalu URL-nya masuk ke
- * draf form, sehingga tombol Simpan seksi tetap hanya mengirim teks. Kalau
+ * draf form, sehingga tombol Simpan tetap hanya mengirim teks. Kalau
  * unggahan gagal, admin tahu saat itu juga.
  *
  * Pratinjau ditampilkan pada dua ukuran yang benar-benar dipakai — kepala

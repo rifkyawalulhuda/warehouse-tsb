@@ -48,3 +48,29 @@ export const loginLimiter = rateLimit({
     'Terlalu banyak percobaan masuk. Coba lagi dalam 15 menit.'
   ),
 })
+
+/**
+ * Pembatas untuk aksi akun yang meminta ulang kata sandi (ganti email, ganti
+ * kata sandi).
+ *
+ * Kuncinya id pengguna, bukan email: orangnya sudah masuk, jadi yang perlu
+ * melambat adalah akun itu. Tanpa pembatas ini, cookie sesi yang dicuri bisa
+ * dipakai menebak kata sandi tanpa batas — dan tebakan yang berhasil justru
+ * mengunci pemilik aslinya di luar.
+ *
+ * Pesan galatnya sengaja menyebut "kata sandi", bukan "masuk": pengguna sedang
+ * di dalam aplikasi, dan kalimat "percobaan masuk" akan membingungkan.
+ */
+export const accountLimiter = rateLimit({
+  windowMs: 15 * 60_000,
+  limit: 10,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+  keyGenerator: (req: Request) =>
+    req.user?.id ? `user:${req.user.id}` : `ip:${ipKeyGenerator(req.ip ?? '')}`,
+  message: tooMany(
+    'TOO_MANY_PASSWORD_ATTEMPTS',
+    'Terlalu banyak percobaan kata sandi. Coba lagi dalam 15 menit.'
+  ),
+})

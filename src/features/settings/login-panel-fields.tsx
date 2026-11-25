@@ -22,7 +22,7 @@ type Props = {
  * Pengaturan sisi kanan halaman masuk.
  *
  * Gambar diunggah lebih dulu ke `/api/uploads/login-cover`, lalu URL-nya yang
- * masuk ke draf form. Dengan begitu tombol Simpan seksi tetap sekedar
+ * masuk ke draf form. Dengan begitu tombol Simpan tetap sekedar
  * mengirim teks: kalau unggahan gagal, admin tahu saat itu juga, bukan setelah
  * menyimpan dan menemukan panelnya kosong.
  */

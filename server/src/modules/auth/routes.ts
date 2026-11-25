@@ -118,6 +118,10 @@ function publicUser(user: RequestUser) {
     id: user.id,
     name: user.name,
     email: user.email,
+    // Nomor HP dipakai layar Pengaturan Akun. Ikut dikirim di sini supaya form
+    // profil bisa terisi tanpa endpoint tambahan; bukan data sensitif dan
+    // memang milik orang yang sedang masuk.
+    phone: user.phone,
     role: user.role,
     customerId: user.customerId,
     // Nama perusahaan milik akun customer. Layar customer memakainya untuk
@@ -155,6 +159,7 @@ authRouter.post('/login', loginLimiter, async (req, res, next) => {
         id: user.id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
         role: user.role,
         customerId: user.customerId,
         customerName: user.customer?.name ?? null,
@@ -194,6 +199,7 @@ authRouter.post('/refresh', async (req, res, next) => {
         id: user.id,
         name: user.name,
         email: user.email,
+        phone: user.phone,
         role: user.role,
         customerId: user.customerId,
         customerName: user.customer?.name ?? null,
