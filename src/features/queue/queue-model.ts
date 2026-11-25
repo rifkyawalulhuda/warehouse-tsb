@@ -224,33 +224,13 @@ function byDockCode(a: DockWithBooking, b: DockWithBooking) {
   return a.dockCode.localeCompare(b.dockCode)
 }
 
-/**
- * Dock bebas pertama yang melayani aktivitas booking ini.
- *
- * Dipakai tombol "Tugaskan" satu klik: dock dipilih menurut kode terkecil, bukan
- * urutan balasan server, supaya checker bisa menebak ke mana truk akan
- * ditempatkan dan kejutan penempatan tidak terjadi. Hasil `null` berarti tidak
- * ada dock bebas yang cocok — kartu wajib mengatakannya, bukan menyembunyikan
- * tombol.
- */
-export function firstEligibleDock(
-  booking: Pick<Booking, 'activityType'>,
-  docks: DockWithBooking[]
-): DockWithBooking | null {
-  const free = docks
-    .filter(
-      (dock) =>
-        dock.currentStatus === 'AVAILABLE' &&
-        (dock.allowedActivity === 'BOTH' ||
-          dock.allowedActivity === booking.activityType)
-    )
-    .sort(byDockCode)
-
-  return free[0] ?? null
+/** Booking yang membawa izin gudang customer-nya dari server. */
+type DockRuleSubject = Pick<Booking, 'activityType'> & {
+  customer?: { warehouseIds?: number[] } | null
 }
 
-/** Semua dock yang bisa menerima booking ini, sudah urut kode. */
-export function eligibleDocks(
+/** Dock kosong dan melayani aktivitas booking, tanpa melihat izin gudang. */
+function freeForActivity(
   booking: Pick<Booking, 'activityType'>,
   docks: DockWithBooking[]
 ): DockWithBooking[] {
@@ -265,13 +245,75 @@ export function eligibleDocks(
 }
 
 /**
+ * Dock ini berada di gudang yang boleh dipakai customer booking ini?
+ *
+ * Daftar kosong berarti tidak dibatasi — customer lama yang belum pernah diatur
+ * Admin harus tetap bisa ditugaskan ke semua gudang. Aturan yang sama dipakai
+ * server saat menolak penugasan, jadi tampilan dan penjagaan tidak bisa
+ * berbeda pendapat.
+ */
+export function dockAllowedForCustomer(
+  booking: DockRuleSubject,
+  dock: DockWithBooking
+): boolean {
+  const rule = booking.customer?.warehouseIds ?? []
+  if (rule.length === 0) return true
+  const warehouseId = dock.warehouse?.id
+  return warehouseId !== undefined && rule.includes(warehouseId)
+}
+
+/**
+ * Dock bebas yang melayani aktivitas tapi berada di gudang lain.
+ *
+ * Dipisah dari `eligibleDocks` supaya pemilih bisa menampilkannya redup
+ * beserta alasannya. Menyembunyikannya membuat checker menyangka gudang penuh.
+ */
+export function ineligibleAreaDocks(
+  booking: DockRuleSubject,
+  docks: DockWithBooking[]
+): DockWithBooking[] {
+  return freeForActivity(booking, docks).filter(
+    (dock) => !dockAllowedForCustomer(booking, dock)
+  )
+}
+
+/**
+ * Dock bebas pertama yang melayani aktivitas booking ini.
+ *
+ * Dipakai tombol "Tugaskan" satu klik: dock dipilih menurut kode terkecil, bukan
+ * urutan balasan server, supaya checker bisa menebak ke mana truk akan
+ * ditempatkan dan kejutan penempatan tidak terjadi. Hasil `null` berarti tidak
+ * ada dock bebas yang cocok — kartu wajib mengatakannya, bukan menyembunyikan
+ * tombol.
+ */
+export function firstEligibleDock(
+  booking: DockRuleSubject,
+  docks: DockWithBooking[]
+): DockWithBooking | null {
+  const allowed = freeForActivity(booking, docks).filter((dock) =>
+    dockAllowedForCustomer(booking, dock)
+  )
+  return allowed[0] ?? null
+}
+
+/** Semua dock yang bisa menerima booking ini, sudah urut kode. */
+export function eligibleDocks(
+  booking: DockRuleSubject,
+  docks: DockWithBooking[]
+): DockWithBooking[] {
+  return freeForActivity(booking, docks).filter((dock) =>
+    dockAllowedForCustomer(booking, dock)
+  )
+}
+
+/**
  * Kenapa tombol "tugaskan" tidak muncul. Halaman hanya mengirim dock yang
  * sedang kosong, jadi dua sebab yang mungkin dan keduanya perlu ditulis
  * berbeda: semua dock terpakai, atau yang kosong tidak melayani bongkar/muat
  * truk ini. Tanpa ini checker mengira aplikasinya rusak.
  */
 export function assignBlockReason(
-  booking: Booking,
+  booking: DockRuleSubject,
   availableDocks: DockWithBooking[],
   t: Translate
 ): string {
@@ -280,7 +322,12 @@ export function assignBlockReason(
     booking.activityType === 'UNLOADING'
       ? t('queue.activityUnloading')
       : t('queue.activityLoading')
-  return t('queue.blockedActivity', { activity })
+  if (freeForActivity(booking, availableDocks).length === 0) {
+    return t('queue.blockedActivity', { activity })
+  }
+  // Ada dock bebas yang melayani aktivitas, tetapi semuanya di gudang yang
+  // bukan area customer ini — sebab yang berbeda, jadi kalimatnya juga beda.
+  return t('queue.blockedWarehouse', { activity })
 }
 
 /**

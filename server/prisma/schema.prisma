@@ -115,6 +115,8 @@ model Customer {
 
   users    User[]
   bookings Booking[] @relation("CustomerBookings")
+  /// Gudang tempat customer ini boleh diberi dock. Kosong = semua gudang.
+  warehouses CustomerWarehouse[]
 
   @@map("customers")
 }
@@ -245,8 +247,29 @@ model Warehouse {
   isActive Boolean @default(true) @map("is_active")
 
   docks Dock[]
+  customers CustomerWarehouse[]
 
   @@map("warehouses")
+}
+
+/**
+ * Gudang yang boleh dipakai satu customer.
+ *
+ * TIDAK ADA baris untuk sebuah customer berarti ia bebas di semua gudang.
+ * Sengaja "daftar izin", bukan "daftar larangan": menambah gudang baru tidak
+ * diam-diam membuka akses bagi customer yang sudah dibatasi.
+ */
+model CustomerWarehouse {
+  customerId  String    @map("customer_id") @db.Uuid
+  warehouseId Int       @map("warehouse_id")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  customer  Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  @@id([customerId, warehouseId])
+  @@index([warehouseId])
+  @@map("customer_warehouses")
 }
 
 model Dock {

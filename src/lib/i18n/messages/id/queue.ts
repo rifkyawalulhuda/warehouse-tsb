@@ -81,6 +81,8 @@ export const queue = {
 
   'queue.blockedNoDock': 'Semua dock sedang terpakai',
   'queue.blockedActivity': 'Dock yang kosong tidak melayani {activity}',
+  'queue.blockedWarehouse':
+    'Dock yang kosong untuk {activity} ada di gudang yang bukan area customer ini',
   'queue.activityLoading': 'muat',
   'queue.activityUnloading': 'bongkar',
 

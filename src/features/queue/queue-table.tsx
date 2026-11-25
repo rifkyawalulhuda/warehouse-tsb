@@ -20,6 +20,7 @@ import {
 import {
   assignBlockReason,
   eligibleDocks,
+  ineligibleAreaDocks,
   laneDot,
   laneShortTitleKey,
   laneTitleKey,
@@ -308,6 +309,7 @@ export function QueueRowActions({
   }
 
   const free = eligibleDocks(booking, docks ?? [])
+  const blockedByArea = ineligibleAreaDocks(booking, docks ?? [])
   const first = free[0] ?? null
 
   if (pendingApproval) {
@@ -356,12 +358,13 @@ export function QueueRowActions({
           !inline && 'w-full justify-between sm:w-auto sm:justify-end'
         )}
       >
-        {free.length > 1 && onPickDock ? (
+        {onPickDock && (free.length > 1 || blockedByArea.length > 0) ? (
           <DockPicker
             // Pilihan direset lewat key setelah dipakai, supaya kode dock lama
             // tidak tertinggal di tombol.
             key={`${booking.id}-${assignReset}`}
             docks={free}
+            blockedDocks={blockedByArea}
             variant='ghost'
             size='sm'
             disabled={assigning}

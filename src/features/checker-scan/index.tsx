@@ -155,7 +155,25 @@ export function CheckerScanPage() {
 
   const busy = assignAndStart.isPending || start.isPending || finish.isPending
   const eligibleDocks = result?.docks.filter((dock) => dock.eligible) ?? []
-  const blockedDocks = result?.docks.filter((dock) => !dock.eligible) ?? []
+  /**
+   * Dock bebas yang melayani aktivitas tetapi bukan area customer ini. Dipisah
+   * dari blokir biasa karena alasannya berbeda: bukan rusak atau terpakai,
+   * melainkan hak akses — dan checker perlu bisa menjelaskannya ke supir.
+   */
+  const areaBlockedDocks =
+    result?.docks.filter(
+      (dock) =>
+        dock.currentStatus === 'AVAILABLE' &&
+        (dock.allowedActivity === 'BOTH' ||
+          dock.allowedActivity === result.booking.activityType) &&
+        !dock.allowedWarehouse
+    ) ?? []
+  // Sisanya benar-benar tidak bisa dipakai siapa pun sekarang (perawatan,
+  // terpakai, atau aktivitas lain) — bukan soal izin.
+  const blockedDocks =
+    result?.docks.filter(
+      (dock) => !dock.eligible && !areaBlockedDocks.some((d) => d.id === dock.id)
+    ) ?? []
   const chosenDock = eligibleDocks.find((dock) => dock.id === dockId)
 
   return (
@@ -241,13 +259,22 @@ export function CheckerScanPage() {
                   <Notice
                     tone='warning'
                     icon={AlertTriangle}
-                    title={t('ops.checker.noDockTitle')}
-                    body={t('ops.checker.noDockBody', {
-                      activity:
-                        activityLabels[
-                          result.booking.activityType
-                        ].toLowerCase(),
-                    })}
+                    title={
+                      areaBlockedDocks.length > 0
+                        ? t('ops.checker.noDockWarehouseTitle')
+                        : t('ops.checker.noDockTitle')
+                    }
+                    body={t(
+                      areaBlockedDocks.length > 0
+                        ? 'ops.checker.noDockWarehouseBody'
+                        : 'ops.checker.noDockBody',
+                      {
+                        activity:
+                          activityLabels[
+                            result.booking.activityType
+                          ].toLowerCase(),
+                      }
+                    )}
                   />
                 ) : (
                   <RadioGroup
@@ -295,6 +322,16 @@ export function CheckerScanPage() {
                                   : t('ops.checker.blockedOtherActivity')
                             })`
                         )
+                        .join(' · '),
+                    })}
+                  </p>
+                )}
+
+                {areaBlockedDocks.length > 0 && (
+                  <p className='text-xs text-muted-foreground'>
+                    {t('ops.checker.blockedWarehouse', {
+                      list: areaBlockedDocks
+                        .map((dock) => dockOptionLabel(dock))
                         .join(' · '),
                     })}
                   </p>

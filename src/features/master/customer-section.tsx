@@ -10,6 +10,7 @@ import {
   deleteCustomer,
   fetchCustomer,
   fetchCustomers,
+  fetchWarehouses,
   updateCustomer,
   updateCustomerAccount,
 } from '@/lib/api/endpoints'
@@ -35,6 +36,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { ConfirmDialog } from '@/components/confirm-dialog'
@@ -254,6 +256,8 @@ type ProfileForm = {
   note: string
   isActive: boolean
   autoApproveBooking: boolean
+  /** Gudang area; kosong = semua gudang (bawaan untuk customer lama). */
+  warehouseIds: number[]
 }
 
 function emptyProfile(): ProfileForm {
@@ -268,6 +272,7 @@ function emptyProfile(): ProfileForm {
     note: '',
     isActive: true,
     autoApproveBooking: false,
+    warehouseIds: [],
   }
 }
 
@@ -289,6 +294,14 @@ export function CustomerDialog({
     enabled: !creating,
   })
 
+  // Daftar gudang untuk memilih area customer. Jarang berubah, jadi cache-nya
+  // dipakai bersama dialog lain lewat kunci yang sama.
+  const warehouses = useQuery({
+    queryKey: ['master', 'warehouses'],
+    queryFn: fetchWarehouses,
+    staleTime: 5 * 60_000,
+  })
+
   const [form, setForm] = useState<ProfileForm>(() =>
     customer
       ? {
@@ -302,6 +315,7 @@ export function CustomerDialog({
           note: customer.note ?? '',
           isActive: customer.isActive,
           autoApproveBooking: customer.autoApproveBooking,
+          warehouseIds: (customer.warehouses ?? []).map((w) => w.id),
         }
       : emptyProfile()
   )
@@ -340,11 +354,13 @@ export function CustomerDialog({
             ...payload,
             isActive: form.isActive,
             autoApproveBooking: form.autoApproveBooking,
+            warehouseIds: form.warehouseIds,
           })
         : updateCustomer(customer!.id, {
             ...payload,
             isActive: form.isActive,
             autoApproveBooking: form.autoApproveBooking,
+            warehouseIds: form.warehouseIds,
           })
     },
     onSuccess: () => {
@@ -614,6 +630,77 @@ export function CustomerDialog({
               />
             </div>
           </div>
+
+          {/* Batas area dock. Kosong = bebas semua gudang, supaya customer
+              lama tidak tiba-tiba kehilangan akses saat fitur ini dipasang. */}
+          <fieldset className='space-y-2 rounded-md border p-3'>
+            <legend className='px-1 text-sm font-medium'>
+              {t('master.customers.warehouseArea')}
+            </legend>
+            <p className='text-xs text-muted-foreground'>
+              {t('master.customers.warehouseAreaHint')}
+            </p>
+            {warehouses.isPending ? (
+              <p className='text-sm text-muted-foreground'>
+                {t('master.customers.warehouseLoading')}
+              </p>
+            ) : warehouses.isError ? (
+              <div className='flex items-center justify-between gap-2'>
+                <p className='text-sm text-destructive'>
+                  {t('master.customers.warehouseLoadFailed')}
+                </p>
+                <Button
+                  type='button'
+                  variant='outline'
+                  size='sm'
+                  onClick={() => void warehouses.refetch()}
+                >
+                  {t('common.retry')}
+                </Button>
+              </div>
+            ) : warehouses.data.length === 0 ? (
+              <p className='text-sm text-muted-foreground'>
+                {t('master.customers.warehouseEmpty')}
+              </p>
+            ) : (
+              <div className='flex flex-wrap gap-x-5 gap-y-2'>
+                {warehouses.data.map((warehouse) => {
+                  const checked = form.warehouseIds.includes(warehouse.id)
+                  return (
+                    <Label
+                      key={warehouse.id}
+                      htmlFor={`cust-wh-${warehouse.id}`}
+                      className='flex cursor-pointer items-center gap-2 text-sm font-normal'
+                    >
+                      <Checkbox
+                        id={`cust-wh-${warehouse.id}`}
+                        checked={checked}
+                        onCheckedChange={(next) =>
+                          setForm({
+                            ...form,
+                            warehouseIds:
+                              next === true
+                                ? [...form.warehouseIds, warehouse.id]
+                                : form.warehouseIds.filter(
+                                    (id) => id !== warehouse.id
+                                  ),
+                          })
+                        }
+                      />
+                      {warehouse.name}
+                    </Label>
+                  )
+                })}
+              </div>
+            )}
+            <p className='text-xs text-muted-foreground'>
+              {form.warehouseIds.length === 0
+                ? t('master.customers.warehouseAll')
+                : t('master.customers.warehouseSelected', {
+                    count: form.warehouseIds.length,
+                  })}
+            </p>
+          </fieldset>
         </div>
 
         {!creating && (

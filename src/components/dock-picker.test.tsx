@@ -110,6 +110,47 @@ describe('DockPicker', () => {
       .element(getByText('Tidak ada dock yang cocok.'))
       .toBeInTheDocument()
   })
+
+  it('lists docks outside the customer area in their own group, dimmed', async () => {
+    const { getByRole, getByText } = await render(
+      <DockPicker
+        docks={docks.slice(0, 1)}
+        blockedDocks={docks.slice(1, 2)}
+        onSelect={vi.fn()}
+      />
+    )
+
+    await userEvent.click(getByRole('combobox', { name: 'Pilih dock' }))
+
+    // Alasan penolakan ada di judul kelompok, jadi dock-nya sendiri tetap
+    // terbaca — checker perlu bisa menyebutnya ke supir.
+    await expect
+      .element(getByText('Gudang lain — bukan area customer ini'))
+      .toBeInTheDocument()
+    await expect
+      .element(getByRole('option', { name: /D2/ }))
+      .toHaveAttribute('aria-disabled', 'true')
+  })
+
+  it('never calls back for a dock outside the customer area, even on a raw click', async () => {
+    const onSelect = vi.fn()
+    const { getByRole } = await render(
+      <DockPicker
+        docks={docks.slice(0, 1)}
+        blockedDocks={docks.slice(1, 2)}
+        onSelect={onSelect}
+      />
+    )
+
+    await userEvent.click(getByRole('combobox', { name: 'Pilih dock' }))
+
+    // Klik biasa sudah ditolak Playwright karena elemennya disabled; klik
+    // mentah ini membuktikan penjaganya ada di komponen, bukan hanya di CSS.
+    const option = getByRole('option', { name: /D2/ }).element()
+    option.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+    expect(onSelect).not.toHaveBeenCalled()
+  })
 })
 
 describe('dockOptionLabel', () => {

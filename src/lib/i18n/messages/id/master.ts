@@ -167,6 +167,18 @@ export const master = {
     'Nonaktif membuat akunnya gagal booking.',
   'master.customers.manualModeHint':
     'Saat mode Manual, booking perusahaan ini tidak antre.',
+  'master.customers.warehouseArea': 'Area gudang',
+  'master.customers.warehouseAreaHint':
+    'Batasi dock yang boleh ditugaskan ke truk customer ini. Dipakai Checker saat memilih dock di Antrean dan Scan.',
+  'master.customers.warehouseLoading': 'Memuat daftar gudang…',
+  'master.customers.warehouseLoadFailed':
+    'Gagal memuat daftar gudang. Area belum bisa diatur.',
+  'master.customers.warehouseEmpty':
+    'Belum ada gudang. Tambahkan dulu di Master → Gudang.',
+  'master.customers.warehouseAll':
+    'Tidak ada yang dipilih — customer ini boleh memakai semua gudang.',
+  'master.customers.warehouseSelected':
+    'Dibatasi ke {count} gudang yang dipilih.',
   'master.customers.loginAccounts': 'Akun login',
   'master.customers.accountsEmpty':
     'Belum ada akun. Customer tidak bisa login sebelum akun dibuat.',

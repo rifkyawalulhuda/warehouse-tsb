@@ -13,6 +13,11 @@ import { writeAudit } from '../../lib/audit'
 import { bookingSelect, ACTIVE_STATUSES, getBookingByScanInput, isBookingCode, scanInputWhere } from '../bookings/repository'
 import { finalizeRelease } from '../bookings/quota-service'
 import { transitionBooking } from '../bookings/transitions'
+import {
+  customerWarehouseRule,
+  warehouseAllowed,
+  warehouseRulesByCustomer,
+} from '../customers/warehouses'
 
 export const opsRouter = Router()
 
@@ -320,12 +325,19 @@ opsRouter.get(
           allowedActivity: true,
           currentStatus: true,
           areaName: true,
+          warehouseId: true,
+          warehouse: { select: { id: true, name: true } },
         },
       })
+      const rule = await customerWarehouseRule(booking.customer.id)
 
       res.json({
         data: {
-          booking,
+          booking: {
+            ...booking,
+            // Dibaca pemilih dock di layar ini; kosong = bebas semua gudang.
+            customer: { ...booking.customer, warehouseIds: rule },
+          },
           waitingPosition,
           waitingSince: gateInAt,
           actions: {
@@ -333,13 +345,20 @@ opsRouter.get(
             start: booking.status === 'DOCK_ASSIGNED',
             finish: booking.status === 'IN_PROGRESS',
           },
-          docks: docks.map((dock) => ({
-            ...dock,
-            eligible:
+          docks: docks.map((dock) => {
+            const allowedWarehouse = warehouseAllowed(rule, dock.warehouseId)
+            const freeAndServesActivity =
               dock.currentStatus === 'AVAILABLE' &&
               (dock.allowedActivity === 'BOTH' ||
-                dock.allowedActivity === booking.activityType),
-          })),
+                dock.allowedActivity === booking.activityType)
+            return {
+              ...dock,
+              // Alasan terpisah dari `eligible`: dock bebas yang bukan hak
+              // customer ini harus bisa dijelaskan, bukan sekadar hilang.
+              allowedWarehouse,
+              eligible: freeAndServesActivity && allowedWarehouse,
+            }
+          }),
         },
       })
     } catch (error) {
@@ -510,6 +529,21 @@ opsRouter.post(
         throw conflict(
           'DOCK_ACTIVITY_MISMATCH',
           `${dock.dockCode} tidak melayani aktivitas ${booking.activityType}`
+        )
+      }
+
+      // Penjaga terakhir: klien sudah menyembunyikan pilihan ini, tapi
+      // permintaan bisa datang langsung. Tanpa cek di sini, aturan area hanya
+      // jadi hiasan antarmuka.
+      const rule = await customerWarehouseRule(booking.customerId)
+      if (!warehouseAllowed(rule, dock.warehouseId)) {
+        const warehouse = await prisma.warehouse.findUnique({
+          where: { id: dock.warehouseId },
+          select: { name: true },
+        })
+        throw conflict(
+          'DOCK_WAREHOUSE_FORBIDDEN',
+          `${dock.dockCode} berada di ${warehouse?.name ?? 'gudang lain'} — customer ini hanya boleh di gudang area yang ditentukan Admin`
         )
       }
 
@@ -988,17 +1022,32 @@ opsRouter.get('/queue', requireRole('CHECKER'), async (req, res, next) => {
       orderBy: [{ startTime: 'asc' }],
     })
 
+    // Izin gudang ditempel ke tiap booking supaya pemilih dock di klien bisa
+    // memisahkan pilihan tanpa permintaan tambahan per kartu.
+    const rules = await warehouseRulesByCustomer(bookings.map((b) => b.customer.id))
+    const withRule = <T extends { customer: { id: string } }>(booking: T) => ({
+      ...booking,
+      customer: {
+        ...booking.customer,
+        warehouseIds: rules.get(booking.customer.id) ?? [],
+      },
+    })
+
     res.json({
       data: {
         date,
-        onTime: bookings.filter((b) => b.status === 'CHECKED_IN_ON_TIME'),
-        late: bookings.filter((b) => b.status === 'LATE_WAITING_LIST'),
-        atDock: bookings.filter((b) =>
-          ['DOCK_ASSIGNED', 'IN_PROGRESS'].includes(b.status)
-        ),
-        upcoming: bookings.filter((b) =>
-          ['BOOKED_INCOMPLETE', 'BOOKED_READY'].includes(b.status)
-        ),
+        onTime: bookings
+          .filter((b) => b.status === 'CHECKED_IN_ON_TIME')
+          .map(withRule),
+        late: bookings
+          .filter((b) => b.status === 'LATE_WAITING_LIST')
+          .map(withRule),
+        atDock: bookings
+          .filter((b) => ['DOCK_ASSIGNED', 'IN_PROGRESS'].includes(b.status))
+          .map(withRule),
+        upcoming: bookings
+          .filter((b) => ['BOOKED_INCOMPLETE', 'BOOKED_READY'].includes(b.status))
+          .map(withRule),
       },
     })
   } catch (error) {

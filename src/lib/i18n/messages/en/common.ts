@@ -99,6 +99,9 @@ export const common: Record<keyof typeof idCommon, string> = {
   'error.DOCK_MAINTENANCE': 'That dock is under maintenance.',
   'error.DOCK_ACTIVITY_MISMATCH':
     'The booking activity does not match the selected dock.',
+  'error.DOCK_WAREHOUSE_FORBIDDEN':
+    'That dock is in a warehouse outside this customer’s area. Pick a dock in the customer’s warehouse, or ask the Admin to add it.',
+  'error.WAREHOUSE_NOT_FOUND': 'The selected warehouse was not found.',
   'error.SLOT_OVERFLOW':
     'The truck duration runs past closing time. Pick another time.',
   'error.SLOT_NOT_ALIGNED': 'The start time must be a multiple of the block unit.',
@@ -231,6 +234,7 @@ export const common: Record<keyof typeof idCommon, string> = {
   'picker.selectDock': 'Pick a dock',
   'picker.searchDock': 'Search dock, area, or warehouse…',
   'picker.noDock': 'No matching dock.',
+  'picker.blockedWarehouseGroup': 'Other warehouse — outside this customer’s area',
   'picker.dockLabel': '{label}: {dock}',
 
   'signOut.title': 'Sign out',

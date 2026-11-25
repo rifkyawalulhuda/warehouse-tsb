@@ -25,6 +25,12 @@ import {
 type DockPickerProps<T extends DockOption> = {
   docks: T[]
   onSelect: (dock: T) => void
+  /**
+   * Dock yang bebas dan melayani aktivitas, tetapi bukan hak customer ini.
+   * Ditampilkan redup di kelompok terpisah — disembunyikan total membuat
+   * checker menyangka gudang penuh.
+   */
+  blockedDocks?: T[]
   disabled?: boolean
   placeholder?: string
   /** Nama aksesibel tombol, mis. "Pilih dock untuk TSB-20261111-001". */
@@ -42,6 +48,7 @@ type DockPickerProps<T extends DockOption> = {
 export function DockPicker<T extends DockOption>({
   docks,
   onSelect,
+  blockedDocks = [],
   disabled,
   placeholder,
   label,
@@ -121,6 +128,39 @@ export function DockPicker<T extends DockOption>({
                 )
               })}
             </CommandGroup>
+            {blockedDocks.length > 0 && (
+              <CommandGroup
+                heading={t('picker.blockedWarehouseGroup')}
+                aria-label={t('picker.blockedWarehouseGroup')}
+              >
+                {blockedDocks.map((dock) => {
+                  const place = dockOptionPlace(dock)
+                  return (
+                    <CommandItem
+                      key={dock.id}
+                      value={dockOptionLabel(dock)}
+                      // `disabled` milik cmdk, bukan atribut aria biasa:
+                      // hanya ini yang membuat pembaca layar dan navigasi
+                      // panah memperlakukannya sebagai tidak bisa dipilih.
+                      // Alasannya ada di judul kelompok di atasnya.
+                      disabled
+                    >
+                      <span className='size-4' aria-hidden />
+                      <span className='flex min-w-0 flex-col'>
+                        <span className='truncate font-medium line-through'>
+                          {dock.dockCode}
+                        </span>
+                        {place && (
+                          <span className='truncate text-xs text-muted-foreground'>
+                            {place}
+                          </span>
+                        )}
+                      </span>
+                    </CommandItem>
+                  )
+                })}
+              </CommandGroup>
+            )}
           </CommandList>
         </Command>
       </PopoverContent>

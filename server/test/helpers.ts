@@ -40,7 +40,14 @@ export type SeedOptions = {
     dockCode: string
     allowedActivity: 'LOADING' | 'UNLOADING' | 'BOTH'
     areaName?: string | null
+    /** Nama gudang tujuan dock; harus ada di `warehouses`. Bawaan: gudang utama. */
+    warehouseName?: string
   }[]
+  /**
+   * Gudang tambahan selain gudang utama. Diperlukan tes yang membatasi area
+   * customer: dua dock harus benar-benar berada di gudang berbeda.
+   */
+  warehouses?: string[]
   truckTypes?: { truckName: string; durationMinutes: number; blocksRequired: number }[]
   operatingStartMinute?: number
   operatingEndMinute?: number
@@ -86,6 +93,17 @@ export async function seedBase(prisma: PrismaClient, options: SeedOptions = {}) 
     data: { name: 'Gudang Tes' },
   })
 
+  // Gudang tambahan untuk tes area dock; `warehouseId` dicari lewat nama.
+  const extraWarehouses = await Promise.all(
+    (options.warehouses ?? []).map((name) =>
+      prisma.warehouse.create({ data: { name } })
+    )
+  )
+  const warehouseIdByName = new Map<string, number>([
+    [warehouse.name, warehouse.id],
+    ...extraWarehouses.map((row) => [row.name, row.id] as [string, number]),
+  ])
+
   const truckTypes = await Promise.all(
     (
       options.truckTypes ?? [
@@ -96,8 +114,16 @@ export async function seedBase(prisma: PrismaClient, options: SeedOptions = {}) 
   )
 
   const docks = await Promise.all(
-    (options.docks ?? [{ dockCode: 'D1', allowedActivity: 'UNLOADING' as const }]).map((data) =>
-      prisma.dock.create({ data: { ...data, warehouseId: warehouse.id } })
+    (options.docks ?? [{ dockCode: 'D1', allowedActivity: 'UNLOADING' as const }]).map(
+      ({ warehouseName, ...data }) =>
+        prisma.dock.create({
+          data: {
+            ...data,
+            warehouseId:
+              warehouseIdByName.get(warehouseName ?? warehouse.name) ??
+              warehouse.id,
+          },
+        })
     )
   )
 
@@ -125,6 +151,7 @@ export async function seedBase(prisma: PrismaClient, options: SeedOptions = {}) 
   return {
     truckTypes,
     docks,
+    warehouses: [warehouse, ...extraWarehouses],
     customers: { a: customerA, b: customerB },
     customerA,
     customerB,

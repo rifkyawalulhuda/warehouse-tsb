@@ -101,6 +101,9 @@ export const common = {
   'error.DOCK_MAINTENANCE': 'Dock tersebut sedang dalam perbaikan.',
   'error.DOCK_ACTIVITY_MISMATCH':
     'Aktivitas booking tidak sesuai dengan dock yang dipilih.',
+  'error.DOCK_WAREHOUSE_FORBIDDEN':
+    'Dock itu ada di gudang yang bukan area customer ini. Pilih dock di gudang area customer, atau minta Admin menambahkannya.',
+  'error.WAREHOUSE_NOT_FOUND': 'Gudang yang dipilih tidak ditemukan.',
   'error.SLOT_OVERFLOW':
     'Durasi truk melewati jam operasional. Pilih jam lain.',
   'error.SLOT_NOT_ALIGNED': 'Jam mulai harus kelipatan satuan blok.',
@@ -234,6 +237,7 @@ export const common = {
   'picker.selectDock': 'Pilih dock',
   'picker.searchDock': 'Cari dock, area, atau gudang…',
   'picker.noDock': 'Tidak ada dock yang cocok.',
+  'picker.blockedWarehouseGroup': 'Gudang lain — bukan area customer ini',
   'picker.dockLabel': '{label}: {dock}',
 
   'signOut.title': 'Keluar dari akun',

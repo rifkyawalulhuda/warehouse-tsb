@@ -81,6 +81,10 @@ export const ops: Record<Extract<MessageKey, `ops.${string}`>, string> = {
   'ops.checker.blockedMaintenance': 'maintenance',
   'ops.checker.blockedOccupied': 'occupied',
   'ops.checker.blockedOtherActivity': 'different activity',
+  'ops.checker.blockedWarehouse': 'Outside this customer’s area: {list}',
+  'ops.checker.noDockWarehouseTitle': 'No dock in this customer’s area',
+  'ops.checker.noDockWarehouseBody':
+    'The free {activity} docks are in another warehouse. Ask the Admin if this customer may use that warehouse.',
   'ops.checker.assignAndStart': 'Assign & start processing',
   'ops.checker.assignedTo': 'Already assigned to {dock}',
   'ops.checker.startBody':

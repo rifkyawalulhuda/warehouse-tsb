@@ -154,6 +154,11 @@ export type Booking = {
     id: string
     name: string
     code: string
+    /**
+     * Gudang tempat customer ini boleh diberi dock; kosong = semua gudang.
+     * Dikirim layar Antrean dan Scan Checker, tidak di endpoint publik.
+     */
+    warehouseIds?: number[]
   }
   /// Akun yang menekan tombol booking. Jejak, bukan pemilik.
   createdBy: {
@@ -273,7 +278,14 @@ export type CheckerScanResult = {
     allowedActivity: ActivityType | 'BOTH'
     currentStatus: 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE'
     areaName: string | null
-    /** Kosong dan melayani aktivitas booking ini. */
+    warehouseId: number
+    warehouse: { id: number; name: string }
+    /**
+     * Gudang dock ini termasuk area customer. `false` = dock bebas dan
+     * melayani aktivitas, tetapi bukan hak customer ini.
+     */
+    allowedWarehouse: boolean
+    /** Kosong, melayani aktivitas booking ini, dan di gudang yang boleh. */
     eligible: boolean
   }>
 }
@@ -476,6 +488,8 @@ export type Customer = {
   note: string | null
   isActive: boolean
   autoApproveBooking: boolean
+  /** Gudang yang boleh dipakai; array kosong = semua gudang. */
+  warehouses?: Array<{ id: number; name: string }>
   createdAt: string
   updatedAt: string
   _count?: { users: number; bookings: number }

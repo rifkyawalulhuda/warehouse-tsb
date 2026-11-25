@@ -61,11 +61,12 @@ customersRouter.get('/', requireExactRole('ADMIN'), async (req, res, next) => {
       },
       include: {
         _count: { select: { users: true, bookings: true } },
+        ...warehouseInclude,
       },
       orderBy: [{ isActive: 'desc' }, { name: 'asc' }],
     })
 
-    res.json({ data: customers })
+    res.json({ data: customers.map(withWarehouses) })
   } catch (error) {
     next(error)
   }
@@ -92,11 +93,12 @@ customersRouter.get('/:id', requireExactRole('ADMIN'), async (req, res, next) =>
           orderBy: { createdAt: 'asc' },
         },
         _count: { select: { bookings: true } },
+        ...warehouseInclude,
       },
     })
     if (!customer) throw notFound('Customer tidak ditemukan')
 
-    res.json({ data: customer })
+    res.json({ data: withWarehouses(customer) })
   } catch (error) {
     next(error)
   }
@@ -143,7 +145,51 @@ const profileSchema = z.object({
   note: z.string().trim().max(240).nullable().optional(),
   isActive: z.boolean().optional(),
   autoApproveBooking: z.boolean().optional(),
+  /**
+   * Gudang tempat customer boleh diberi dock. Kosong = bebas semua gudang.
+   * Dibatasi 40 karena satu baris izin per gudang; di atas itu Admin hampir
+   * pasti salah pilih, bukan punya 40 gudang.
+   */
+  warehouseIds: z.array(z.number().int().positive()).max(40).optional(),
 })
+
+/** Gudang yang boleh dipakai customer, ikut di daftar dan detail. */
+const warehouseInclude = {
+  warehouses: {
+    select: { warehouse: { select: { id: true, name: true } } },
+    orderBy: { warehouse: { name: 'asc' } },
+  },
+} satisfies Prisma.CustomerInclude
+
+type CustomerWithWarehouses = Prisma.CustomerGetPayload<{
+  include: typeof warehouseInclude
+}>
+
+/**
+ * Ratakan relasi penghubung jadi `warehouses: [{id, name}]`.
+ *
+ * Prisma mengembalikan `[{ warehouse: {id, name} }]`; bentuk bertingkat itu
+ * memaksa setiap pemanggil menulis `.warehouse` di mana-mana.
+ */
+function withWarehouses(customer: CustomerWithWarehouses) {
+  const { warehouses, ...rest } = customer
+  return { ...rest, warehouses: warehouses.map((row) => row.warehouse) }
+}
+
+/** Pastikan semua id gudang benar-benar ada, bukan sekadar angka. */
+async function assertWarehousesExist(ids: number[] | undefined): Promise<number[]> {
+  const unique = [...new Set(ids ?? [])]
+  if (unique.length === 0) return []
+
+  const found = await prisma.warehouse.findMany({
+    where: { id: { in: unique } },
+    select: { id: true },
+  })
+  if (found.length !== unique.length) {
+    throw badRequest('WAREHOUSE_NOT_FOUND', 'Ada gudang yang tidak ditemukan')
+  }
+  return unique
+}
 
 /** Nama perusahaan unik tanpa memandang huruf besar/kecil. */
 async function assertNameFree(
@@ -162,12 +208,24 @@ async function assertNameFree(
 
 customersRouter.post('/', requireExactRole('ADMIN'), async (req, res, next) => {
   try {
-    const body = parse(profileSchema, req.body, 'Data customer')
+    const { warehouseIds, ...body } = parse(profileSchema, req.body, 'Data customer')
     await assertNameFree(body.name)
+    const warehouseIdList = await assertWarehousesExist(warehouseIds)
 
     const customer = await prisma.$transaction(async (tx) => {
       const created = await tx.customer.create({
-        data: { ...body, code: await nextCustomerCode(tx) },
+        data: {
+          ...body,
+          code: await nextCustomerCode(tx),
+          ...(warehouseIdList.length > 0
+            ? {
+                warehouses: {
+                  create: warehouseIdList.map((warehouseId) => ({ warehouseId })),
+                },
+              }
+            : {}),
+        },
+        include: warehouseInclude,
       })
 
       await writeAudit(
@@ -180,10 +238,22 @@ customersRouter.post('/', requireExactRole('ADMIN'), async (req, res, next) => {
         tx
       )
 
+      if (warehouseIdList.length > 0) {
+        await writeAudit(
+          {
+            userId: req.user!.id,
+            userRole: req.user!.role,
+            action: 'CUSTOMER_WAREHOUSES_CHANGED',
+            meta: { customerId: created.id, warehouseIds: warehouseIdList },
+          },
+          tx
+        )
+      }
+
       return created
     })
 
-    res.status(201).json({ data: customer })
+    res.status(201).json({ data: withWarehouses(customer) })
   } catch (error) {
     next(error)
   }
@@ -194,14 +264,17 @@ customersRouter.patch('/:id', requireExactRole('ADMIN'), async (req, res, next) 
     const id = pathParam(req, 'id')
     if (!id) throw badRequest('INVALID_ID', 'ID customer tidak valid')
 
-    const body = parse(profileSchema.partial(), req.body, 'Data customer')
-    if (Object.keys(body).length === 0) {
+    const parsed = parse(profileSchema.partial(), req.body, 'Data customer')
+    if (Object.keys(parsed).length === 0) {
       throw badRequest('NO_CHANGES', 'Tidak ada perubahan')
     }
 
+    const { warehouseIds, ...body } = parsed
     const existing = await prisma.customer.findUnique({ where: { id } })
     if (!existing) throw notFound('Customer tidak ditemukan')
     if (body.name !== undefined) await assertNameFree(body.name, id)
+    const warehouseIdList =
+      warehouseIds === undefined ? undefined : await assertWarehousesExist(warehouseIds)
 
     const approvalChanged =
       body.autoApproveBooking !== undefined &&
@@ -209,17 +282,45 @@ customersRouter.patch('/:id', requireExactRole('ADMIN'), async (req, res, next) 
     const deactivated = body.isActive === false && existing.isActive
 
     const updated = await prisma.$transaction(async (tx) => {
-      const result = await tx.customer.update({ where: { id }, data: body })
+      const result = await tx.customer.update({
+        where: { id },
+        data: body,
+        include: warehouseInclude,
+      })
+
+      // Izin gudang diganti seluruhnya, bukan ditambal: satu permintaan
+      // membawa daftar lengkap, jadi menghapus centang cukup tanpa endpoint
+      // terpisah untuk membuang satu baris.
+      if (warehouseIdList !== undefined) {
+        await tx.customerWarehouse.deleteMany({ where: { customerId: id } })
+        if (warehouseIdList.length > 0) {
+          await tx.customerWarehouse.createMany({
+            data: warehouseIdList.map((warehouseId) => ({ customerId: id, warehouseId })),
+          })
+        }
+      }
 
       await writeAudit(
         {
           userId: req.user!.id,
           userRole: req.user!.role,
           action: deactivated ? 'CUSTOMER_DEACTIVATED' : 'CUSTOMER_UPDATED',
-          meta: { customerId: id, fields: Object.keys(body) },
+          meta: { customerId: id, fields: Object.keys(parsed) },
         },
         tx
       )
+
+      if (warehouseIdList !== undefined) {
+        await writeAudit(
+          {
+            userId: req.user!.id,
+            userRole: req.user!.role,
+            action: 'CUSTOMER_WAREHOUSES_CHANGED',
+            meta: { customerId: id, warehouseIds: warehouseIdList },
+          },
+          tx
+        )
+      }
 
       if (approvalChanged) {
         await writeAudit(
@@ -236,7 +337,7 @@ customersRouter.patch('/:id', requireExactRole('ADMIN'), async (req, res, next) 
       return result
     })
 
-    res.json({ data: updated })
+    res.json({ data: withWarehouses(updated) })
   } catch (error) {
     next(error)
   }

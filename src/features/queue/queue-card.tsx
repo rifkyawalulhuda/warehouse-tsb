@@ -14,6 +14,7 @@ import {
   WAIT_LONG_MINUTES,
   assignBlockReason,
   eligibleDocks,
+  ineligibleAreaDocks,
   waitClock,
   waitLabel,
   type QueueLaneKey,
@@ -79,6 +80,7 @@ export function QueueCard({
   const t = useT()
   const pendingApproval = booking.approvalStatus === 'PENDING'
   const free = eligibleDocks(booking, docks ?? [])
+  const blockedByArea = ineligibleAreaDocks(booking, docks ?? [])
   const first = free[0] ?? null
 
   const waitPercent = clock
@@ -214,14 +216,16 @@ export function QueueCard({
 
             {/* Aksi sekunder diberi garis pemisah: "No-show" membuang slot,
                 jadi ia tidak boleh menempel di bawah tombol utama. */}
-            {((free.length > 1 && onPickDock) || onNoShow) && (
+            {(((free.length > 1 || blockedByArea.length > 0) && onPickDock) ||
+              onNoShow) && (
               <div className='mt-3 flex items-center justify-between gap-2 border-t pt-1'>
-                {free.length > 1 && onPickDock ? (
+                {onPickDock && (free.length > 1 || blockedByArea.length > 0) ? (
                   <DockPicker
                     // Pilihan direset lewat key setelah dipakai, supaya kode
                     // dock lama tidak tertinggal di tombol.
                     key={`${booking.id}-${assignReset}`}
                     docks={free}
+                    blockedDocks={blockedByArea}
                     variant='ghost'
                     size='sm'
                     disabled={assigning}

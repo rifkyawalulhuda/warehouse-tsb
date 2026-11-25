@@ -466,6 +466,8 @@ export type CustomerProfileInput = {
   note?: string | null
   isActive?: boolean
   autoApproveBooking?: boolean
+  /** Daftar lengkap gudang yang diizinkan; kosong = semua gudang. */
+  warehouseIds?: number[]
 }
 
 export function createCustomer(payload: CustomerProfileInput) {

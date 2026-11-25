@@ -6,6 +6,7 @@ import {
   defaultLaneKey,
   eligibleDocks,
   firstEligibleDock,
+  ineligibleAreaDocks,
   oldestWait,
   queueLanes,
   queueTotals,
@@ -236,6 +237,73 @@ describe('eligibleDocks', () => {
     expect(
       firstEligibleDock({ activityType: 'LOADING' }, [
         makeDock({ allowedActivity: 'UNLOADING' }),
+      ])
+    ).toBeNull()
+  })
+})
+
+describe('area gudang per customer', () => {
+  function makeDock(overrides: Partial<DockWithBooking> = {}): DockWithBooking {
+    return {
+      id: 1,
+      dockCode: 'D1',
+      allowedActivity: 'BOTH',
+      currentStatus: 'AVAILABLE',
+      areaName: null,
+      warehouse: { id: 1, name: 'Gudang WH1' },
+      currentBooking: null,
+      ...overrides,
+    }
+  }
+
+  const wh1 = makeDock({ id: 1, dockCode: 'D1', warehouse: { id: 1, name: 'Gudang WH1' } })
+  const wh2 = makeDock({ id: 2, dockCode: 'D2', warehouse: { id: 2, name: 'Gudang WH2' } })
+
+  it('customer tanpa batasan boleh memakai semua gudang', () => {
+    const booking = makeBooking({
+      customer: { id: 'cust-1', name: 'PT Alpha', code: 'ALPHA' },
+    })
+
+    expect(
+      eligibleDocks(booking, [wh1, wh2]).map((dock) => dock.dockCode)
+    ).toEqual(['D1', 'D2'])
+    expect(ineligibleAreaDocks(booking, [wh1, wh2])).toEqual([])
+  })
+
+  it('customer terbatas hanya ditawari dock di gudangnya', () => {
+    const booking = makeBooking({
+      customer: { id: 'cust-1', name: 'CV Mitra Niaga', code: 'MITRA', warehouseIds: [2] },
+    })
+
+    expect(
+      eligibleDocks(booking, [wh1, wh2]).map((dock) => dock.dockCode)
+    ).toEqual(['D2'])
+    expect(
+      firstEligibleDock(booking, [wh1, wh2])?.dockCode
+    ).toBe('D2')
+  })
+
+  it('dock di luar area dipisah, bukan dibuang, agar checker bisa menjelaskan', () => {
+    const booking = makeBooking({
+      customer: { id: 'cust-1', name: 'CV Mitra Niaga', code: 'MITRA', warehouseIds: [2] },
+    })
+
+    // Dock WH1 tetap muncul — hanya di daftar terpisah.
+    expect(
+      ineligibleAreaDocks(booking, [wh1, wh2]).map((dock) => dock.dockCode)
+    ).toEqual(['D1'])
+  })
+
+  it('dock di luar area tidak ikut dihitung saat mencari dock bebas pertama', () => {
+    const booking = makeBooking({
+      customer: { id: 'cust-1', name: 'CV Mitra Niaga', code: 'MITRA', warehouseIds: [1] },
+    })
+
+    // WH1 sedang dipakai; D2 bebas tetapi bukan areanya, jadi tidak ada pilihan.
+    expect(
+      firstEligibleDock(booking, [
+        { ...wh1, currentStatus: 'OCCUPIED' },
+        wh2,
       ])
     ).toBeNull()
   })

@@ -79,6 +79,11 @@ export const ops = {
   'ops.checker.blockedMaintenance': 'perawatan',
   'ops.checker.blockedOccupied': 'terpakai',
   'ops.checker.blockedOtherActivity': 'aktivitas berbeda',
+  'ops.checker.blockedWarehouse':
+    'Bukan area customer ini: {list}',
+  'ops.checker.noDockWarehouseTitle': 'Tidak ada dock di area customer ini',
+  'ops.checker.noDockWarehouseBody':
+    'Dock {activity} yang kosong ada di gudang lain. Hubungi Admin kalau customer ini memang boleh memakai gudang tersebut.',
   'ops.checker.assignAndStart': 'Tugaskan & mulai proses',
   'ops.checker.assignedTo': 'Sudah ditugaskan ke {dock}',
   'ops.checker.startBody':

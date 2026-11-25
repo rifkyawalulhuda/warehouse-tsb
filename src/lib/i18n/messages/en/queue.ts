@@ -83,6 +83,8 @@ export const queue: Record<Extract<MessageKey, `queue.${string}`>, string> = {
 
   'queue.blockedNoDock': 'Every dock is in use',
   'queue.blockedActivity': 'Free docks do not handle {activity}',
+  'queue.blockedWarehouse':
+    'The free docks for {activity} are in a warehouse outside this customer’s area',
   'queue.activityLoading': 'loading',
   'queue.activityUnloading': 'unloading',
 

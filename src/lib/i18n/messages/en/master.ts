@@ -168,6 +168,18 @@ export const master = {
     'Inactive companies cannot book.',
   'master.customers.manualModeHint':
     'In manual mode, this company books without queueing.',
+  'master.customers.warehouseArea': 'Warehouse area',
+  'master.customers.warehouseAreaHint':
+    'Limit which docks can be assigned to this customer’s trucks. Used by the Checker when picking a dock in the Queue and Scan screens.',
+  'master.customers.warehouseLoading': 'Loading warehouses…',
+  'master.customers.warehouseLoadFailed':
+    'Could not load the warehouse list. The area cannot be set right now.',
+  'master.customers.warehouseEmpty':
+    'No warehouses yet. Add one in Master → Warehouses first.',
+  'master.customers.warehouseAll':
+    'Nothing selected — this customer may use every warehouse.',
+  'master.customers.warehouseSelected':
+    'Restricted to the {count} selected warehouses.',
   'master.customers.loginAccounts': 'Login accounts',
   'master.customers.accountsEmpty':
     'No account yet. Customers cannot sign in before an account is created.',
