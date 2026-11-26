@@ -87,6 +87,7 @@ export const queue: Record<Extract<MessageKey, `queue.${string}`>, string> = {
     'The free docks for {activity} are in a warehouse outside this customer’s area',
   'queue.activityLoading': 'loading',
   'queue.activityUnloading': 'unloading',
+  'queue.processType': '{name} · +{minutes} min',
 
   'queue.waitShort': '{minutes} min',
   'queue.waitHour': '{hours} h',

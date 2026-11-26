@@ -6,6 +6,7 @@ export const MASTER_TABS = [
   'docks',
   'warehouses',
   'truck-types',
+  'process-types',
   'customers',
   'users',
 ] as const

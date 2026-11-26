@@ -107,6 +107,7 @@ export const bookings = {
   'bookings.detail.vehicleComplete': 'Data kendaraan lengkap',
   'bookings.detail.gateIn': 'Masuk gate',
   'bookings.detail.dockAssigned': 'Dapat dock',
+  'bookings.detail.process': 'Jenis proses',
   'bookings.detail.processStart': 'Mulai proses',
   'bookings.detail.processDone': 'Selesai proses',
   'bookings.detail.gateOut': 'Keluar gate',
@@ -196,4 +197,10 @@ export const bookings = {
   'bookings.create.full': 'Penuh',
   'bookings.create.loadSettings': 'Memuat pengaturan...',
   'bookings.create.docNoRequired': 'Nomor dokumen wajib diisi',
+
+  'bookings.create.processType': 'Jenis proses',
+  'bookings.create.processTypePlaceholder': 'Pilih jenis proses',
+  'bookings.create.processTypeHint':
+    'Menambah waktu proses di dock. Total = durasi jenis truk + tambahan jenis proses.',
+  'bookings.create.processTypeRequired': 'Pilih jenis proses',
 }

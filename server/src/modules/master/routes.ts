@@ -5,6 +5,7 @@ import { parse } from '../../lib/validate'
 import { conflict, notFound } from '../../lib/http-error'
 import { requireAuth, requireExactRole } from '../../middleware/auth'
 import { capacityMap, getSettings } from '../../lib/settings'
+import { blocksForDuration as blocksForDurationMinutes } from '../../lib/blocks'
 
 export const masterRouter = Router()
 
@@ -212,7 +213,7 @@ const truckTypeInputSchema = z.object({
  */
 async function blocksForDuration(durationMinutes: number): Promise<number> {
   const settings = await getSettings()
-  return Math.max(1, Math.ceil(durationMinutes / settings.slotUnitMinutes))
+  return blocksForDurationMinutes(durationMinutes, settings.slotUnitMinutes)
 }
 
 masterRouter.post('/truck-types', requireExactRole('ADMIN'), async (req, res, next) => {
@@ -247,6 +248,60 @@ masterRouter.patch('/truck-types/:id', requireExactRole('ADMIN'), async (req, re
       where: { id },
       data: { ...body, blocksRequired },
     })
+    res.json({ data: updated })
+  } catch (error) {
+    next(error)
+  }
+})
+
+/* -------------------------- Process types ----------------------- */
+
+/**
+ * "Jenis Proses" (cara penanganan barang di dock), mis. Curah 30 menit atau
+ * Palletize 15 menit.
+ *
+ * Durasi di sini **menambah** durasi jenis truk, tidak menggantinya. Karena itu
+ * batas bawahnya 1 menit, bukan 30 seperti jenis truk: ini angka tambahan, dan
+ * contoh nyata Palletize (15 menit) berada di bawah batas jenis truk.
+ */
+masterRouter.get('/process-types', async (_req, res, next) => {
+  try {
+    const processTypes = await prisma.processType.findMany({
+      orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+    })
+    res.json({ data: processTypes })
+  } catch (error) {
+    next(error)
+  }
+})
+
+const processTypeInputSchema = z.object({
+  name: z.string().trim().min(2, 'Nama jenis proses wajib diisi').max(80),
+  durationMinutes: z.coerce.number().int().min(1).max(480),
+  sortOrder: z.coerce.number().int().min(0).max(99).default(0),
+  isActive: z.boolean().default(true),
+})
+
+masterRouter.post('/process-types', requireExactRole('ADMIN'), async (req, res, next) => {
+  try {
+    const body = parse(processTypeInputSchema, req.body, 'Jenis proses')
+    const processType = await prisma.processType.create({ data: body })
+    res.status(201).json({ data: processType })
+  } catch (error) {
+    next(error)
+  }
+})
+
+masterRouter.patch('/process-types/:id', requireExactRole('ADMIN'), async (req, res, next) => {
+  try {
+    const body = parse(processTypeInputSchema.partial(), req.body, 'Jenis proses')
+    const id = Number(req.params.id)
+    if (!Number.isInteger(id)) throw notFound('Jenis proses tidak ditemukan')
+
+    const existing = await prisma.processType.findUnique({ where: { id } })
+    if (!existing) throw notFound('Jenis proses tidak ditemukan')
+
+    const updated = await prisma.processType.update({ where: { id }, data: body })
     res.json({ data: updated })
   } catch (error) {
     next(error)

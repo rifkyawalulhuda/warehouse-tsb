@@ -8,6 +8,7 @@ import {
   firstEligibleDock,
   ineligibleAreaDocks,
   oldestWait,
+  processLabel,
   queueLanes,
   queueTotals,
   waitClock,
@@ -36,6 +37,9 @@ function makeBooking(overrides: Partial<Booking> = {}): Booking {
     status: 'LATE_WAITING_LIST',
     lateMinutes: 0,
     blocksLocked: 2,
+    processTypeId: null,
+    processName: null,
+    processExtraMinutes: 0,
     approvalStatus: 'NOT_REQUIRED',
     approvalDeadline: null,
     approvedAt: null,
@@ -342,6 +346,23 @@ describe('oldestWait', () => {
     )
 
     expect(oldestWait(lanes[3]!, NOW)).toBeNull()
+  })
+})
+
+describe('processLabel', () => {
+  it('menulis nama jenis proses beserta tambahan menitnya', () => {
+    expect(
+      processLabel(
+        { processName: 'Curah', processExtraMinutes: 30 },
+        t
+      )
+    ).toBe('Curah · +30 mnt')
+  })
+
+  it('tidak menampilkan apa pun untuk booking lama tanpa jenis proses', () => {
+    expect(
+      processLabel({ processName: null, processExtraMinutes: 0 }, t)
+    ).toBeNull()
   })
 })
 

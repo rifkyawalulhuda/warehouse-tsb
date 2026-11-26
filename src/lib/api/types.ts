@@ -90,6 +90,30 @@ export type TruckTypeInput = {
   isActive?: boolean
 }
 
+/**
+ * "Jenis Proses": cara penanganan barang di dock yang dipilih customer saat
+ * membuat booking, mis. Curah 30 menit atau Palletize 15 menit.
+ *
+ * `durationMinutes` di sini MENAMBAH durasi jenis truk, tidak menggantinya.
+ * Tidak ada `blocksRequired`: jumlah blok bergantung pada pasangan truk +
+ * proses, jadi server menghitungnya dan menyalinnya ke booking.
+ */
+export type ProcessType = {
+  id: number
+  name: string
+  durationMinutes: number
+  isActive: boolean
+  sortOrder: number
+}
+
+/** Input membuat/mengedit jenis proses. Blok tidak ikut, sama seperti jenis truk. */
+export type ProcessTypeInput = {
+  name: string
+  durationMinutes: number
+  sortOrder?: number
+  isActive?: boolean
+}
+
 export type Dock = {
   id: number
   dockCode: string
@@ -171,6 +195,15 @@ export type Booking = {
     durationMinutes: number
     blocksRequired: number
   }
+  /**
+   * Jenis proses yang dipilih customer. `processName` dan `processExtraMinutes`
+   * adalah SALINAN saat booking dibuat, bukan pembacaan ulang master — jadi
+   * tiket lama tetap menampilkan angka yang berlaku saat itu.
+   * Null untuk booking sebelum fitur ini ada.
+   */
+  processTypeId: number | null
+  processName: string | null
+  processExtraMinutes: number
   assignedDock: {
     id: number
     dockCode: string
@@ -235,6 +268,12 @@ export type Settings = {
   capacity?: Record<ActivityType, number>
   blocksPerDay?: number
   truckTypes: TruckType[]
+  /**
+   * Pilihan "Jenis Proses" untuk form booking customer. Dikirim bersama
+   * pengaturan karena customer tidak boleh membuka Master Data; hanya yang
+   * aktif yang dikirim server.
+   */
+  processTypes: ProcessType[]
 }
 
 export type QueueResponse = {

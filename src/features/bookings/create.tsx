@@ -58,11 +58,17 @@ import { Main } from '@/components/layout/main'
 import { PageHeader } from '@/components/page-header'
 import { ErrorBlock, LoadingBlock } from '@/components/query-state'
 
-const makeFormSchema = (t: Translate) =>
+const makeFormSchema = (t: Translate, requireProcessType: boolean) =>
   z.object({
     bookingDate: z.string().min(1, t('bookings.create.dateRequired')),
     activityType: z.enum(['LOADING', 'UNLOADING']),
     truckTypeId: z.string().min(1, t('bookings.create.truckTypeRequired')),
+    // Wajib hanya bila Master Data berisi jenis proses aktif. Kalau gudang
+    // belum mengisi satu pun, kolom ini tidak ditampilkan dan tidak boleh
+    // memblokir booking — server memakai aturan yang sama.
+    processTypeId: requireProcessType
+      ? z.string().min(1, t('bookings.create.processTypeRequired'))
+      : z.string(),
     startMinute: z.string().min(1, t('bookings.create.arrivalRequired')),
     referenceDocNo: z
       .string()
@@ -84,7 +90,13 @@ export function CreateBooking() {
 
   const settings = useQuery({ queryKey: ['settings'], queryFn: fetchSettings })
 
-  const schema = useMemo(() => makeFormSchema(t), [t])
+  const processTypes = settings.data?.processTypes ?? []
+  const requireProcessType = processTypes.length > 0
+
+  const schema = useMemo(
+    () => makeFormSchema(t, requireProcessType),
+    [t, requireProcessType]
+  )
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -92,6 +104,7 @@ export function CreateBooking() {
       bookingDate: todayISO(),
       activityType: 'UNLOADING',
       truckTypeId: '',
+      processTypeId: '',
       startMinute: '',
       referenceDocNo: '',
       licensePlate: '',
@@ -109,12 +122,16 @@ export function CreateBooking() {
       values.bookingDate,
       values.activityType,
       values.truckTypeId,
+      values.processTypeId,
     ],
     queryFn: () =>
       fetchAvailability({
         date: values.bookingDate,
         activity: values.activityType,
         truckTypeId: Number(values.truckTypeId),
+        processTypeId: values.processTypeId
+          ? Number(values.processTypeId)
+          : undefined,
       }),
     enabled: Boolean(values.bookingDate && values.truckTypeId),
   })
@@ -124,12 +141,24 @@ export function CreateBooking() {
     (t) => String(t.id) === values.truckTypeId
   )
 
+  const selectedProcess = processTypes.find(
+    (p) => String(p.id) === values.processTypeId
+  )
+  // Durasi total = jenis truk + jenis proses. Angka yang benar-benar dikunci
+  // dihitung server dan dikirim lewat `availability.blocksRequired`.
+  const totalMinutes = selectedTruck
+    ? selectedTruck.durationMinutes + (selectedProcess?.durationMinutes ?? 0)
+    : undefined
+
   const submit = useMutation({
     mutationFn: (payload: FormValues) =>
       createBooking({
         bookingDate: payload.bookingDate,
         activityType: payload.activityType as ActivityType,
         truckTypeId: Number(payload.truckTypeId),
+        processTypeId: payload.processTypeId
+          ? Number(payload.processTypeId)
+          : undefined,
         startMinute: Number(payload.startMinute),
         referenceDocNo: payload.referenceDocNo,
         licensePlate: payload.licensePlate || undefined,
@@ -255,6 +284,54 @@ export function CreateBooking() {
                     </FormItem>
                   )}
                 />
+
+                {requireProcessType && (
+                  <FormField
+                    control={form.control}
+                    name='processTypeId'
+                    render={({ field }) => (
+                      <FormItem className='sm:col-span-2'>
+                        <FormLabel>
+                          {t('bookings.create.processType')}
+                        </FormLabel>
+                        <Select
+                          value={field.value}
+                          onValueChange={(value) => {
+                            field.onChange(value)
+                            // Durasi total berubah, jadi slot yang muat pun
+                            // berubah — pilihan jam lama bisa jadi tidak sah.
+                            form.setValue('startMinute', '')
+                          }}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue
+                                placeholder={t(
+                                  'bookings.create.processTypePlaceholder'
+                                )}
+                              />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {processTypes.map((process) => (
+                              <SelectItem
+                                key={process.id}
+                                value={String(process.id)}
+                              >
+                                {process.name} ·{' '}
+                                {durationLabel(process.durationMinutes)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          {t('bookings.create.processTypeHint')}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </CardContent>
             </Card>
 
@@ -440,13 +517,15 @@ export function CreateBooking() {
                   label={t('bookings.create.truckType')}
                   value={selectedTruck?.truckName ?? '-'}
                 />
+                {requireProcessType && (
+                  <SummaryRow
+                    label={t('bookings.create.processType')}
+                    value={selectedProcess?.name ?? '-'}
+                  />
+                )}
                 <SummaryRow
                   label={t('bookings.duration')}
-                  value={
-                    selectedTruck
-                      ? durationLabel(selectedTruck.durationMinutes)
-                      : '-'
-                  }
+                  value={totalMinutes ? durationLabel(totalMinutes) : '-'}
                 />
                 <Separator />
                 <SummaryRow
@@ -470,7 +549,11 @@ export function CreateBooking() {
                 {selectedTruck && values.startMinute && (
                   <div className='rounded-md bg-muted p-3 text-xs text-muted-foreground'>
                     {t('bookings.create.slotsUsed', {
-                      count: selectedTruck.blocksRequired,
+                      // Angka server, karena penjumlahan truk + proses bisa
+                      // melewati batas blok (2 → 3).
+                      count:
+                        availability.data?.blocksRequired ??
+                        selectedTruck.blocksRequired,
                     })}
                   </div>
                 )}

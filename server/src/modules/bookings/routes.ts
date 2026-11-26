@@ -35,10 +35,54 @@ import { getAvailability, finalizeRelease, reserveBlocks } from './quota-service
 import { transitionBooking } from './transitions'
 import { assertActiveCustomer } from '../customers/routes'
 import { generateQrToken } from '../../lib/auth'
+import { blocksForDuration } from '../../lib/blocks'
 
 export const bookingsRouter = Router()
 
 bookingsRouter.use(requireAuth)
+
+/**
+ * Durasi tambahan dari jenis proses, dan namanya untuk disalin ke booking.
+ *
+ * Dilempar sebagai 404 (bukan 400) karena yang salah adalah rujukan id, sama
+ * seperti jenis truk di atas. Yang nonaktif juga ditolak: menonaktifkan jenis
+ * proses berarti "jangan dipakai lagi", bukan "boleh untuk yang sudah membuka
+ * form sebelum dinonaktifkan".
+ */
+async function resolveProcessType(id: number) {
+  const processType = await prisma.processType.findUnique({ where: { id } })
+  if (!processType || !processType.isActive) {
+    throw notFound('Jenis proses tidak ditemukan')
+  }
+  return processType
+}
+
+/**
+ * Durasi tambahan dari jenis proses untuk perhitungan ketersediaan.
+ *
+ * Memakai `resolveProcessType` yang sama dengan pembuatan booking supaya layar
+ * ketersediaan dan penyimpanan tidak pernah memakai angka berbeda: kalau jenis
+ * proses tidak dikenal atau nonaktif, keduanya sama-sama menolak.
+ */
+async function processTypeExtraMinutes(id: number) {
+  const processType = await resolveProcessType(id)
+  return processType.durationMinutes
+}
+
+/**
+ * Jenis proses wajib untuk booking baru — kecuali master-nya belum berisi satu
+ * pun. Tanpa pengecualian itu, memasang versi ini pada gudang yang belum mengisi
+ * Master Data akan menghentikan SEMUA pemesanan, bukan menegakkan aturan.
+ */
+async function requireProcessTypeId(processTypeId: number | undefined) {
+  if (processTypeId !== undefined) return processTypeId
+  const active = await prisma.processType.count({ where: { isActive: true } })
+  if (active === 0) return undefined
+  throw badRequest(
+    'PROCESS_TYPE_REQUIRED',
+    'Jenis proses wajib dipilih. Hubungi Admin kalau daftarnya kosong.'
+  )
+}
 
 /* ------------------------------------------------------------------ */
 /* Ketersediaan jam                                                    */
@@ -48,6 +92,8 @@ const availabilitySchema = z.object({
   date: dateISOSchema,
   activity: activitySchema,
   truckTypeId: z.coerce.number().int().positive(),
+  // Opsional agar layar lama tetap jalan; kalau diisi, durasinya ikut dihitung.
+  processTypeId: z.coerce.number().int().positive().optional(),
 })
 
 bookingsRouter.get('/slots/availability', async (req, res, next) => {
@@ -73,6 +119,17 @@ bookingsRouter.get('/slots/availability', async (req, res, next) => {
       throw notFound('Jenis truk tidak ditemukan')
     }
 
+    // Durasi proses MENAMBAH durasi truk. Blok dihitung ulang dari total itu,
+    // bukan sekadar `truckType.blocksRequired`, karena 60 menit + 30 menit bisa
+    // melewati batas blok berikutnya (2 → 3).
+    const processExtra = query.processTypeId
+      ? await processTypeExtraMinutes(query.processTypeId)
+      : 0
+    const blocksRequired = blocksForDuration(
+      truckType.durationMinutes + processExtra,
+      settings.slotUnitMinutes
+    )
+
     const capacity = await capacityForActivity(query.activity)
     const slots = await getAvailability(
       {
@@ -81,7 +138,7 @@ bookingsRouter.get('/slots/availability', async (req, res, next) => {
         window,
         capacity,
       },
-      truckType.blocksRequired
+      blocksRequired
     )
 
     // Jam yang sudah lewat hari ini tidak bisa dipesan.
@@ -93,6 +150,7 @@ bookingsRouter.get('/slots/availability', async (req, res, next) => {
         date: query.date,
         activity: query.activity,
         truckType,
+        blocksRequired,
         // Tanpa `capacity`: angka itu kapasitas gudang per blok, milik staf.
         // Customer cukup tahu berapa slot yang masih bisa ia ambil.
         slots: slots.map(({ capacity: _capacity, ...slot }) =>
@@ -115,6 +173,9 @@ const createSchema = z.object({
   bookingDate: dateISOSchema,
   activityType: activitySchema,
   truckTypeId: z.coerce.number().int().positive(),
+  // Wajib bila Master Data sudah berisi jenis proses aktif; lihat
+  // `requireProcessTypeId()` untuk alasan pengecualiannya.
+  processTypeId: z.coerce.number().int().positive().optional(),
   startMinute: z.coerce.number().int().min(0).max(1439),
   referenceDocNo: z.string().trim().min(2, 'Nomor dokumen wajib diisi').max(80),
   licensePlate: plateSchema.optional().or(z.literal('')),
@@ -146,6 +207,14 @@ bookingsRouter.post('/', requireExactRole('CUSTOMER'), async (req, res, next) =>
 
     const truckType = await prisma.truckType.findUnique({ where: { id: body.truckTypeId } })
     if (!truckType || !truckType.isActive) throw notFound('Jenis truk tidak ditemukan')
+
+    // Jenis proses MENAMBAH durasi jenis truk: truk 60 menit + Curah 30 menit =
+    // 90 menit, sehingga kuota yang terpakai 3 blok, bukan 2. Nilainya disalin
+    // ke booking di bawah agar mengubah master tidak menggeser riwayat.
+    const processTypeId = await requireProcessTypeId(body.processTypeId)
+    const processType = processTypeId ? await resolveProcessType(processTypeId) : null
+    const processExtraMinutes = processType?.durationMinutes ?? 0
+    const totalMinutes = truckType.durationMinutes + processExtraMinutes
 
     const capacity = await capacityForActivity(body.activityType)
     if (capacity <= 0) {
@@ -207,8 +276,9 @@ bookingsRouter.post('/', requireExactRole('CUSTOMER'), async (req, res, next) =>
 
         // Angka blok yang benar-benar dikunci di sini disalin ke baris booking
         // supaya pembatalan/NO_SHOW selalu melepas tepat sejumlah itu, walau
-        // admin mengubah durasi jenis truk di kemudian hari.
-        const blocksLocked = truckType.blocksRequired
+        // admin mengubah durasi jenis truk di kemudian hari. Dihitung dari
+        // truk + proses, karena penjumlahannya bisa melewati batas blok (2 → 3).
+        const blocksLocked = blocksForDuration(totalMinutes, settings.slotUnitMinutes)
 
         await reserveBlocks(
           tx,
@@ -223,7 +293,7 @@ bookingsRouter.post('/', requireExactRole('CUSTOMER'), async (req, res, next) =>
         )
 
         const startTime = jakartaInstant(body.bookingDate, body.startMinute)
-        const endTime = new Date(startTime.getTime() + truckType.durationMinutes * 60_000)
+        const endTime = new Date(startTime.getTime() + totalMinutes * 60_000)
 
         // `createdAt` dipakai bersama oleh kolom dan perhitungan tenggat supaya
         // keduanya tidak beda beberapa milidetik.
@@ -250,6 +320,9 @@ bookingsRouter.post('/', requireExactRole('CUSTOMER'), async (req, res, next) =>
             createdById: user.id,
             activityType: body.activityType,
             truckTypeId: truckType.id,
+            processTypeId: processType?.id ?? null,
+            processExtraMinutes,
+            processName: processType?.name ?? null,
             bookingDate: new Date(`${body.bookingDate}T00:00:00.000Z`),
             startTime,
             endTime,
@@ -281,6 +354,8 @@ bookingsRouter.post('/', requireExactRole('CUSTOMER'), async (req, res, next) =>
               bookingCode: booking.bookingCode,
               startMinute: body.startMinute,
               blocksRequired: blocksLocked,
+              processName: processType?.name ?? null,
+              processExtraMinutes,
               approvalStatus: booking.approvalStatus,
             },
           },

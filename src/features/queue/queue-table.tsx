@@ -24,6 +24,7 @@ import {
   laneDot,
   laneShortTitleKey,
   laneTitleKey,
+  processLabel,
   waitClock,
   waitLabel,
   type QueueLaneKey,
@@ -112,6 +113,7 @@ function QueueTableRow({
   const { booking, laneKey } = row
   const pendingApproval = booking.approvalStatus === 'PENDING'
   const t = useT()
+  const process = processLabel(booking, t)
 
   return (
     <>
@@ -123,6 +125,12 @@ function QueueTableRow({
         <p className='text-sm font-semibold'>
           {booking.licensePlate ?? t('queue.plateEmpty')}
         </p>
+        {/* Jenis proses diletakkan di sini, bukan di kolom Jadwal: kolom itu
+            dilepas di bawah 1024 px, sedangkan informasi ini dibutuhkan saat
+            memilih dock — jadi ia harus ikut di setiap lebar layar. */}
+        {process && (
+          <p className='text-xs text-muted-foreground'>{process}</p>
+        )}
         {/* Ringkasan yang hilang bersama kolomnya di layar sempit. */}
         <p className='text-xs text-muted-foreground tabular-nums md:hidden'>
           <span className='font-medium'>{t(laneShortTitleKey[laneKey])}</span>

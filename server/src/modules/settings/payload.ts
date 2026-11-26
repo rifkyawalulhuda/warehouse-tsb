@@ -20,8 +20,14 @@ import { listBlockStarts, minuteToLabel } from '../../lib/quota'
 export async function settingsPayload(options: { includeInternal?: boolean } = {}) {
   const { includeInternal = true } = options
   const settings = await getSettings()
-  const [truckTypes, capacities] = await Promise.all([
+  const [truckTypes, processTypes, capacities] = await Promise.all([
     prisma.truckType.findMany({
+      where: { isActive: true },
+      orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
+    }),
+    // Jenis proses ikut dikirim karena customer wajib memilihnya saat membuat
+    // booking, dan hanya yang aktif yang boleh muncul di pemilih.
+    prisma.processType.findMany({
       where: { isActive: true },
       orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
     }),
@@ -60,5 +66,6 @@ export async function settingsPayload(options: { includeInternal?: boolean } = {
       ? { capacity: capacities, blocksPerDay: listBlockStarts(window).length }
       : {}),
     truckTypes,
+    processTypes,
   }
 }

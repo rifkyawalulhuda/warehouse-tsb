@@ -33,6 +33,8 @@ import type {
   TicketDesign,
   TruckType,
   TruckTypeInput,
+  ProcessType,
+  ProcessTypeInput,
   Warehouse,
 } from './types'
 
@@ -196,12 +198,30 @@ export function updateTruckType(id: number, payload: Partial<TruckTypeInput>) {
   return patchData<TruckType>(`/master/truck-types/${id}`, payload)
 }
 
+export function fetchProcessTypes() {
+  return getData<ProcessType[]>('/master/process-types')
+}
+
+export function createProcessType(payload: ProcessTypeInput) {
+  return postData<ProcessType>('/master/process-types', payload)
+}
+
+export function updateProcessType(id: number, payload: Partial<ProcessTypeInput>) {
+  return patchData<ProcessType>(`/master/process-types/${id}`, payload)
+}
+
 /* ------------------------------- slots ------------------------------- */
 
 export type AvailabilityResponse = {
   date: string
   activity: ActivityType
   truckType: TruckType
+  /**
+   * Jumlah blok yang akan dikunci bila booking dibuat dengan pilihan ini —
+   * sudah termasuk tambahan durasi jenis proses. Dihitung server supaya angka
+   * yang dilihat customer sama dengan yang disimpan.
+   */
+  blocksRequired: number
   slots: AvailabilitySlot[]
 }
 
@@ -209,6 +229,8 @@ export function fetchAvailability(params: {
   date: string
   activity: ActivityType
   truckTypeId: number
+  /** Bila kosong, tambahan durasi dianggap 0. */
+  processTypeId?: number
 }) {
   return getData<AvailabilityResponse>('/bookings/slots/availability', {
     params,
@@ -221,6 +243,8 @@ export type CreateBookingPayload = {
   bookingDate: string
   activityType: ActivityType
   truckTypeId: number
+  /** Wajib selama Master Data berisi jenis proses aktif. */
+  processTypeId?: number
   startMinute: number
   referenceDocNo: string
   licensePlate?: string

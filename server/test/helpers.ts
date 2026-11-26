@@ -28,6 +28,7 @@ export async function resetDatabase(prisma: PrismaClient) {
       docks,
       warehouses,
       truck_types,
+      process_types,
       users,
       customers,
       warehouse_settings
@@ -49,6 +50,8 @@ export type SeedOptions = {
    */
   warehouses?: string[]
   truckTypes?: { truckName: string; durationMinutes: number; blocksRequired: number }[]
+  /** Master "Jenis Proses"; kosong berarti gudang belum punya jenis proses. */
+  processTypes?: { name: string; durationMinutes: number; isActive?: boolean }[]
   operatingStartMinute?: number
   operatingEndMinute?: number
   slotUnitMinutes?: number
@@ -113,6 +116,12 @@ export async function seedBase(prisma: PrismaClient, options: SeedOptions = {}) 
     ).map((data) => prisma.truckType.create({ data }))
   )
 
+  const processTypes = await Promise.all(
+    (options.processTypes ?? []).map((data) =>
+      prisma.processType.create({ data })
+    )
+  )
+
   const docks = await Promise.all(
     (options.docks ?? [{ dockCode: 'D1', allowedActivity: 'UNLOADING' as const }]).map(
       ({ warehouseName, ...data }) =>
@@ -150,6 +159,7 @@ export async function seedBase(prisma: PrismaClient, options: SeedOptions = {}) 
 
   return {
     truckTypes,
+    processTypes,
     docks,
     warehouses: [warehouse, ...extraWarehouses],
     customers: { a: customerA, b: customerB },

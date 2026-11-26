@@ -222,6 +222,11 @@ export function BookingDetail() {
             <Field label={t('bookings.detail.duration')}>
               {durationLabel(bookingDurationMinutes(booking))} ({t('bookings.detail.blocks', { count: booking.blocksLocked })})
             </Field>
+            <Field label={t('bookings.detail.process')}>
+              {booking.processName
+                ? `${booking.processName} (+${durationLabel(booking.processExtraMinutes)})`
+                : t('bookings.detail.empty')}
+            </Field>
             <Field label={t('bookings.detail.dock')}>
               {booking.assignedDock
                 ? dockWithArea(booking.assignedDock)

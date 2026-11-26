@@ -85,6 +85,9 @@ export const queue = {
     'Dock yang kosong untuk {activity} ada di gudang yang bukan area customer ini',
   'queue.activityLoading': 'muat',
   'queue.activityUnloading': 'bongkar',
+  // Jenis proses yang dipilih customer, mis. "Curah · +30 mnt". Ditampilkan di
+  // kartu dan tabel antrean supaya jam dock yang lebih panjang ada sebabnya.
+  'queue.processType': '{name} · +{minutes} mnt',
 
   'queue.waitShort': '{minutes} mnt',
   'queue.waitHour': '{hours} j',

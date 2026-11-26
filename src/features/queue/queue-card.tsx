@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { ArrowRight, Clock3, Info, Loader2, TimerReset } from 'lucide-react'
+import { ArrowRight, Boxes, Clock3, Info, Loader2, TimerReset } from 'lucide-react'
 import type { Booking, DockWithBooking } from '@/lib/api/types'
 import { activityLabels, formatTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -15,6 +15,7 @@ import {
   assignBlockReason,
   eligibleDocks,
   ineligibleAreaDocks,
+  processLabel,
   waitClock,
   waitLabel,
   type QueueLaneKey,
@@ -79,6 +80,7 @@ export function QueueCard({
   const clock = waitClock(booking, now)
   const t = useT()
   const pendingApproval = booking.approvalStatus === 'PENDING'
+  const process = processLabel(booking, t)
   const free = eligibleDocks(booking, docks ?? [])
   const blockedByArea = ineligibleAreaDocks(booking, docks ?? [])
   const first = free[0] ?? null
@@ -116,6 +118,15 @@ export function QueueCard({
             {activityLabels[booking.activityType]} ·{' '}
             {formatTime(booking.startTime)}–{formatTime(booking.endTime)}
           </p>
+          {/* Jenis proses menjelaskan kenapa truk ini butuh waktu lebih lama di
+              dock. Tanpa ini checker hanya melihat jam yang lebih panjang tanpa
+              tahu sebabnya. */}
+          {process && (
+            <p className='flex items-center gap-1.5 text-xs text-muted-foreground'>
+              <Boxes className='size-3.5' aria-hidden />
+              {process}
+            </p>
+          )}
         </div>
 
         {laneKey === 'atDock' ? (

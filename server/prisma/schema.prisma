@@ -245,6 +245,27 @@ model TruckType {
  * kuota, booking, dan laporan tetap dihitung untuk satu gudang seperti sebelumnya,
  * sehingga menambah gudang baru tidak mengubah mesin kuota sama sekali.
  */
+/**
+ * Cara penanganan barang di dock ("Jenis Proses"), mis. Curah 30 menit atau
+ * Palletize 15 menit.
+ *
+ * Menambah durasi jenis truk, TIDAK menggantinya: `truk 60 + Curah 30 = 90`.
+ * Karena itu kolom ini sengaja tanpa `blocksRequired` — jumlah blok yang
+ * dikunci bergantung pada pasangan truk + proses, jadi baru bisa dihitung saat
+ * booking dibuat lalu disalin ke `bookings.blocks_locked`.
+ */
+model ProcessType {
+  id              Int     @id @default(autoincrement())
+  name            String  @map("name") @db.VarChar(80)
+  durationMinutes Int     @map("duration_minutes")
+  isActive        Boolean @default(true) @map("is_active")
+  sortOrder       Int     @default(0) @map("sort_order")
+
+  bookings Booking[]
+
+  @@map("process_types")
+}
+
 model Warehouse {
   id       Int    @id @default(autoincrement())
   name     String @unique @db.VarChar(120)
@@ -318,7 +339,17 @@ model Booking {
   /// Snapshot jumlah blok 30 menit yang dikunci saat booking dibuat.
   /// Tanpa kolom ini, mengubah `truck_types.blocks_required` akan mengubah
   /// jumlah blok yang dilepas saat pembatalan/NO_SHOW dan membuat kuota bocor.
+  /// Jumlah blok 30 menit yang dikunci; sudah termasuk durasi jenis proses.
   blocksLocked Int @map("blocks_locked")
+
+  /// Jenis proses yang dipilih customer. NULL untuk booking sebelum fitur ini.
+  processTypeId Int?     @map("process_type_id")
+  processType   ProcessType? @relation(fields: [processTypeId], references: [id], onDelete: SetNull)
+
+  /// Salinan durasi tambahan dan nama jenis proses saat booking dibuat.
+  /// Disalin, bukan dibaca ulang, agar mengubah master tidak menggeser riwayat.
+  processExtraMinutes Int     @default(0) @map("process_extra_minutes")
+  processName         String? @map("process_name") @db.VarChar(80)
 
   assignedDockId Int?   @map("assigned_dock_id")
   status         BookingStatus

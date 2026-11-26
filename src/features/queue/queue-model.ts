@@ -307,6 +307,22 @@ export function eligibleDocks(
 }
 
 /**
+ * Jenis proses truk ini, mis. "Curah · +30 mnt". Booking lama (sebelum fitur
+ * master Jenis Proses) tidak punya nama, jadi tidak ada yang ditampilkan —
+ * bukan baris kosong bertanda "—" yang membuat checker mengira datanya hilang.
+ */
+export function processLabel(
+  booking: Pick<Booking, 'processName' | 'processExtraMinutes'>,
+  t: Translate
+): string | null {
+  if (!booking.processName) return null
+  return t('queue.processType', {
+    name: booking.processName,
+    minutes: booking.processExtraMinutes,
+  })
+}
+
+/**
  * Kenapa tombol "tugaskan" tidak muncul. Halaman hanya mengirim dock yang
  * sedang kosong, jadi dua sebab yang mungkin dan keduanya perlu ditulis
  * berbeda: semua dock terpakai, atau yang kosong tidak melayani bongkar/muat

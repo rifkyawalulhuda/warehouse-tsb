@@ -45,6 +45,7 @@ const settings: Settings = {
   capacity: { LOADING: 3, UNLOADING: 2 },
   blocksPerDay: 18,
   truckTypes: [],
+  processTypes: [],
 }
 
 describe('toForm', () => {

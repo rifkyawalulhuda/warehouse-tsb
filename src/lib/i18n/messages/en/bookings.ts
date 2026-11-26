@@ -106,6 +106,7 @@ export const bookings = {
   'bookings.detail.vehicleComplete': 'Vehicle data complete',
   'bookings.detail.gateIn': 'Gate in',
   'bookings.detail.dockAssigned': 'Dock assigned',
+  'bookings.detail.process': 'Process type',
   'bookings.detail.processStart': 'Process started',
   'bookings.detail.processDone': 'Process finished',
   'bookings.detail.gateOut': 'Gate out',
@@ -192,4 +193,10 @@ export const bookings = {
   'bookings.create.full': 'Full',
   'bookings.create.loadSettings': 'Loading settings…',
   'bookings.create.docNoRequired': 'Document number is required',
+
+  'bookings.create.processType': 'Process type',
+  'bookings.create.processTypePlaceholder': 'Choose a process type',
+  'bookings.create.processTypeHint':
+    'Adds dock process time. Total = truck type duration + process type extra.',
+  'bookings.create.processTypeRequired': 'Choose a process type',
 }

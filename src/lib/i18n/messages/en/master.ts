@@ -306,4 +306,35 @@ export const master = {
   'master.trucks.editHint': 'Changes only apply to future bookings. Existing bookings keep the blocks locked when they were created.',
   'master.warehouses.title': 'Warehouses',
   'master.docks.allActivities': 'All activities',
+
+  'master.tabProcessTypes': 'Process types',
+  'master.addProcess': 'Add process type',
+  'master.process.title': 'Process types',
+  'master.process.description':
+    'How goods are handled at the dock, e.g. Bulk or Palletize. This duration ADDS to the truck type duration, it does not replace it.',
+  'master.process.search': 'Search process types',
+  'master.process.name': 'Name',
+  'master.process.duration': 'Extra duration',
+  'master.process.empty': 'No process types yet.',
+  'master.process.noMatch': 'No process types match your search.',
+  'master.process.loading': 'Loading process types...',
+  'master.process.onlyActive': 'Show active only',
+  'master.process.noneActive':
+    'No process type is active yet. Customers can still book without choosing a process type until you activate one.',
+  'master.process.newTitle': 'Add process type',
+  'master.process.editTitle': 'Edit process type {name}',
+  'master.process.newDescription':
+    'This duration is added to the truck type duration when calculating locked slots.',
+  'master.process.nameLabel': 'Process type name',
+  'master.process.namePlaceholder': 'Bulk',
+  'master.process.durationLabel': 'Extra duration (minutes)',
+  'master.process.durationHint':
+    '1–480 minutes. Example: Palletize 15 minutes, Bulk 30 minutes.',
+  'master.process.sortLabel': 'Display order',
+  'master.process.activeLabel': 'Active',
+  'master.process.created': 'Process type added',
+  'master.process.updated': 'Process type updated',
+  'master.process.minDurationHint': 'Enter an extra duration of at least 1 minute.',
+  'master.process.editHint':
+    'Changes only apply to future bookings. Existing bookings keep the duration copied when they were created.',
 }

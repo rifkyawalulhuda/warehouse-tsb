@@ -304,4 +304,35 @@ export const master = {
   'master.trucks.editHint': 'Perubahan hanya berlaku untuk booking berikutnya. Booking yang sudah ada tetap memakai jumlah blok yang dikunci saat dibuat.',
   'master.warehouses.title': 'Gudang',
   'master.docks.allActivities': 'Semua aktivitas',
+
+  'master.tabProcessTypes': 'Jenis Proses',
+  'master.addProcess': 'Tambah jenis proses',
+  'master.process.title': 'Jenis proses',
+  'master.process.description':
+    'Cara penanganan barang di dock, mis. Curah atau Palletize. Durasi di sini MENAMBAH durasi jenis truk, tidak menggantinya.',
+  'master.process.search': 'Cari jenis proses',
+  'master.process.name': 'Nama',
+  'master.process.duration': 'Tambahan durasi',
+  'master.process.empty': 'Belum ada jenis proses.',
+  'master.process.noMatch': 'Tidak ada jenis proses yang cocok dengan pencarian.',
+  'master.process.loading': 'Memuat jenis proses...',
+  'master.process.onlyActive': 'Hanya tampilkan yang aktif',
+  'master.process.noneActive':
+    'Belum ada jenis proses yang aktif. Customer tetap bisa membuat booking tanpa memilih jenis proses sampai Anda mengaktifkan salah satu.',
+  'master.process.newTitle': 'Tambah jenis proses',
+  'master.process.editTitle': 'Ubah jenis proses {name}',
+  'master.process.newDescription':
+    'Durasi ini ditambahkan ke durasi jenis truk saat menghitung slot yang dikunci.',
+  'master.process.nameLabel': 'Nama jenis proses',
+  'master.process.namePlaceholder': 'Curah',
+  'master.process.durationLabel': 'Tambahan durasi (menit)',
+  'master.process.durationHint':
+    '1–480 menit. Contoh: Palletize 15 menit, Curah 30 menit.',
+  'master.process.sortLabel': 'Urutan tampil',
+  'master.process.activeLabel': 'Aktif',
+  'master.process.created': 'Jenis proses ditambahkan',
+  'master.process.updated': 'Jenis proses diperbarui',
+  'master.process.minDurationHint': 'Isi tambahan durasi minimal 1 menit.',
+  'master.process.editHint':
+    'Perubahan hanya berlaku untuk booking berikutnya. Booking yang sudah ada tetap memakai durasi yang disalin saat dibuat.',
 }
