@@ -132,6 +132,7 @@ describe('konkurensi aksi ops', () => {
       )
     )
 
+    if (!first || !second) throw new Error('butuh dua dock untuk tes ini')
     expect([first.status, second.status].sort()).toEqual([200, 409])
 
     const docks = await prisma.dock.findMany({ orderBy: { id: 'asc' } })

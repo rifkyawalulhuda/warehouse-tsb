@@ -11,6 +11,7 @@ import {
   resetDatabase,
   seedBase,
 } from './helpers'
+import { loadWorkbook } from './xlsx'
 
 const prisma = new PrismaClient()
 const app = createApp()
@@ -358,7 +359,7 @@ describe('ekspor Excel laporan customer', () => {
     )
 
     const workbook = new ExcelJS.Workbook()
-    await workbook.xlsx.load(response.body as Buffer)
+    await loadWorkbook(workbook, response.body)
 
     expect(workbook.worksheets.map((sheet) => sheet.name)).toEqual([
       'Ringkasan',
@@ -390,7 +391,7 @@ describe('ekspor Excel laporan customer', () => {
     )
 
     const workbook = new ExcelJS.Workbook()
-    await workbook.xlsx.load(response.body as Buffer)
+    await loadWorkbook(workbook, response.body)
 
     expect(workbook.worksheets.map((sheet) => sheet.name)).toEqual([
       'Summary',

@@ -9,11 +9,33 @@
  *   bukan angka manual di settings.
  */
 
+import { minuteOfDayJakarta, minuteToLabel } from './time'
+
+/**
+ * Format jam dari menit. Satu implementasi saja: dulu fungsi ini ada di
+ * `time.ts` dan di sini, dan dua salinan berarti dua tempat untuk salah.
+ */
+export { minuteToLabel }
+
 export type OperatingWindow = {
   startMinute: number
   endMinute: number
   unitMinutes: number
 }
+
+/**
+ * Sebab sebuah slot tidak bisa dipilih.
+ *
+ * KODE, bukan kalimat. Antarmuka punya dua bahasa, dan kalimat Indonesia yang
+ * dikirim server muncul apa adanya di layar berbahasa Inggris. Data yang
+ * dibutuhkan penerjemah (label blok yang penuh) ikut di sini supaya klien tidak
+ * perlu menebak dari teks.
+ */
+export type SlotLimit =
+  | { code: 'PAST_START' }
+  | { code: 'NO_DOCK' }
+  | { code: 'CLOSING_SOON' }
+  | { code: 'BLOCK_FULL'; blockLabel: string }
 
 export type SlotAvailability = {
   startMinute: number
@@ -23,7 +45,7 @@ export type SlotAvailability = {
   remaining: number
   capacity: number
   status: 'AVAILABLE' | 'FULL'
-  limitReason: string | null
+  limit: SlotLimit | null
 }
 
 export type BlockUsage = ReadonlyMap<number, number>
@@ -42,12 +64,6 @@ export class SlotRangeError extends Error {
   }
 }
 
-export function minuteToLabel(minute: number): string {
-  const h = Math.floor(minute / 60)
-  const m = minute % 60
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
-}
-
 /** Semua jam mulai yang mungkin, yaitu blok yang masih utuh di dalam jam operasional. */
 export function listBlockStarts(window: OperatingWindow): number[] {
   const starts: number[] = []
@@ -59,6 +75,34 @@ export function listBlockStarts(window: OperatingWindow): number[] {
     starts.push(minute)
   }
   return starts
+}
+
+/**
+ * Blok grid yang ditempati satu rentang waktu.
+ *
+ * Dipakai saat pengaturan jam buka atau satuan blok berubah setelah booking
+ * dibuat. Blok tersimpan (`bookings.block_starts`) memakai grid lama, sedangkan
+ * baris `slot_allocations` disusun ulang di grid baru. Menghitung dari jam
+ * nyata booking — bukan dari snapshot lama — membuat penempatan dan pelepasan
+ * kuota sepakat tanpa bergantung pada pengaturan yang berlaku saat booking
+ * dibuat.
+ *
+ * Blok dianggap terpakai bila irisannya dengan rentang tidak kosong, sehingga
+ * booking lama yang jamnya tidak sejajar grid baru tetap menempati blok yang
+ * benar dan kuota tidak dilepas ke truk lain.
+ */
+export function blocksCoveredBy(
+  window: OperatingWindow,
+  startTime: Date,
+  endTime: Date
+): number[] {
+  const spanMinutes = Math.round((endTime.getTime() - startTime.getTime()) / 60000)
+  if (!Number.isFinite(spanMinutes) || spanMinutes <= 0) return []
+  const startMinute = minuteOfDayJakarta(startTime)
+  const endMinute = startMinute + spanMinutes
+  return listBlockStarts(window).filter(
+    (block) => block < endMinute && block + window.unitMinutes > startMinute
+  )
 }
 
 /**
@@ -132,7 +176,7 @@ export function computeAvailability(opts: {
         endLabel: minuteToLabel(window.endMinute),
         remaining: 0,
         status: 'FULL',
-        limitReason: 'Tidak cukup waktu sebelum jam tutup',
+        limit: { code: 'CLOSING_SOON' },
       })
       continue
     }
@@ -153,15 +197,18 @@ export function computeAvailability(opts: {
         ...base,
         remaining: 0,
         status: 'FULL',
-        limitReason:
+        limit:
           capacity <= 0
-            ? 'Tidak ada dock aktif untuk aktivitas ini'
-            : `Kuota blok ${minuteToLabel(limitingBlock ?? startMinute)} habis`,
+            ? { code: 'NO_DOCK' }
+            : {
+                code: 'BLOCK_FULL',
+                blockLabel: minuteToLabel(limitingBlock ?? startMinute),
+              },
       })
       continue
     }
 
-    slots.push({ ...base, remaining, status: 'AVAILABLE', limitReason: null })
+    slots.push({ ...base, remaining, status: 'AVAILABLE', limit: null })
   }
 
   return slots

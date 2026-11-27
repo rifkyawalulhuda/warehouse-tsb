@@ -39,9 +39,16 @@ function importedPackages(): Set<string> {
     const source = readFileSync(file, 'utf8')
     for (const match of source.matchAll(pattern)) {
       const specifier = match[1]
+      // `noUncheckedIndexedAccess` membuat hasil grup tangkapan bertipe
+      // `string | undefined`; grup pertama selalu ada bila regex cocok.
+      if (!specifier) continue
       if (specifier.startsWith('.') || specifier.startsWith('node:')) continue
       packages.add(
-        specifier.startsWith('@') ? specifier.split('/').slice(0, 2).join('/') : specifier.split('/')[0]
+        specifier.startsWith('@')
+          ? specifier.split('/').slice(0, 2).join('/')
+          : // `[0]` bisa `undefined` menurut `noUncheckedIndexedAccess`; nama
+            // paket itu sendiri adalah jawaban yang benar bila split kosong.
+            (specifier.split('/')[0] ?? specifier)
       )
     }
   }

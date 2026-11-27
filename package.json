@@ -9,6 +9,7 @@
     "dev:api": "tsx watch server/src/server.ts",
     "build": "tsc -p tsconfig.app.json --noEmit && vite build",
     "build:api": "tsc -p server/tsconfig.json",
+    "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p server/tsconfig.json --noEmit && tsc -p server/tsconfig.test.json",
     "preview": "vite preview",
     "db:generate": "prisma generate --schema server/prisma/schema.prisma",
     "db:migrate": "prisma migrate dev --schema server/prisma/schema.prisma",
@@ -19,6 +20,8 @@
     "test": "vitest run --browser.headless",
     "test:watch": "vitest --browser.headless",
     "test:api": "vitest run --config server/vitest.config.mts",
+    "coverage": "vitest run --browser.headless --coverage",
+    "coverage:api": "vitest run --config server/vitest.config.mts --coverage.enabled --coverage.include=server/src/**",
     "lint": "eslint .",
     "format:check": "prettier --check .",
     "format": "prettier --write ."

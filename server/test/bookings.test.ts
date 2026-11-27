@@ -2,7 +2,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import request from 'supertest'
 import { PrismaClient } from '@prisma/client'
 import { createApp } from '../src/app'
-import { addDaysISO, todayISO } from '../src/lib/time'
+import { addDaysISO, dateOnlyToUtc, todayISO } from '../src/lib/time'
 import {
   activityDocks,
   loginCookie,
@@ -145,6 +145,48 @@ describe('kuota per blok', () => {
     expect(response.body.error.code).toBe('QUOTA_FULL')
   })
 
+  it('tidak meninggalkan sisa tulisan saat booking ditolak di tengah transaksi', async () => {
+    // Tanggal dihitung SEKALI: `TOMORROW()` yang dipanggil ulang saat assertion
+    // bisa berpindah hari bila tes melewati tengah malam Jakarta, dan tesnya
+    // lalu gagal karena alasan yang tidak ada hubungannya dengan transaksi.
+    const bookingDate = TOMORROW()
+    const payload = (referenceDocNo: string) =>
+      createPayload({ startMinute: 10 * 60, referenceDocNo, bookingDate })
+
+    // Kapasitas 2 diisi penuh lebih dulu, lalu satu percobaan ditolak.
+    for (const index of [1, 2]) {
+      const ok = await request(app)
+        .post('/api/bookings')
+        .set('Cookie', index === 1 ? cookie : cookie2)
+        .send(payload(`DO-FULL-${index}`))
+      expect(ok.status).toBe(201)
+    }
+
+    const rejected = await request(app)
+      .post('/api/bookings')
+      .set('Cookie', cookie)
+      .send(createPayload({ startMinute: 9 * 60 + 30, referenceDocNo: 'DO-DITOLAK', bookingDate }))
+    expect(rejected.status).toBe(409)
+
+    // Urutan di dalam transaksi: penghitung harian dinaikkan, lalu kuota
+    // dikunci. Kalau penghitung tidak ikut di-rollback, nomor urut terpakai
+    // tanpa booking — dan kode booking jadi bolong tanpa penjelasan.
+    expect(await prisma.booking.count()).toBe(2)
+
+    const sequence = await prisma.bookingDaySequence.findUnique({
+      where: { bookingDate: dateOnlyToUtc(bookingDate) },
+    })
+    expect(sequence?.lastNumber).toBe(2)
+
+    const slots = await prisma.slotAllocation.findMany({
+      where: { slotDate: dateOnlyToUtc(bookingDate), activity: 'UNLOADING' },
+      orderBy: { slotStartMinute: 'asc' },
+    })
+    // Blok 09:30 tidak boleh bertambah "used" walau booking-nya ditolak.
+    const nineThirty = slots.find((slot) => slot.slotStartMinute === 9 * 60 + 30)
+    expect(nineThirty?.used ?? 0).toBe(0)
+  })
+
   it('tetap mengizinkan jam yang tidak menyentuh blok penuh', async () => {
     for (const index of [1, 2]) {
       await request(app)
@@ -191,6 +233,65 @@ describe('kuota per blok', () => {
       .set('Cookie', cookie2)
 
     expect(response.status).toBe(403)
+  })
+
+  /**
+   * Admin boleh mengubah jam buka dan satuan blok kapan saja, sedangkan booking
+   * yang sudah ada tetap memakai blok yang dipesan saat itu. Tanpa snapshot
+   * `block_starts`, pelepasan kuota menghitung ulang posisi blok dari pengaturan
+   * yang berlaku sekarang, gagal `SLOT_NOT_ALIGNED`, dan customer tidak bisa
+   * membatalkan booking-nya sama sekali.
+   */
+  it('tetap bisa membatalkan setelah jam buka diubah sehingga blok lama tidak lagi sejajar', async () => {
+    const created = await request(app)
+      .post('/api/bookings')
+      .set('Cookie', cookie)
+      .send(createPayload({ startMinute: 9 * 60 }))
+    expect(created.status).toBe(201)
+
+    // 09:00 sekarang jatuh 15 menit setelah jam buka: bukan kelipatan 30.
+    await prisma.warehouseSetting.update({
+      where: { id: 1 },
+      data: { operatingStartMinute: 8 * 60 + 15 },
+    })
+
+    const cancel = await request(app)
+      .post(`/api/bookings/${created.body.data.id}/cancel`)
+      .set('Cookie', cookie)
+
+    expect(cancel.status).toBe(200)
+    expect(cancel.body.data.status).toBe('CANCELLED')
+
+    const slots = await prisma.slotAllocation.findMany({
+      where: { slotDate: new Date(`${TOMORROW()}T00:00:00.000Z`), activity: 'UNLOADING' },
+    })
+    expect(slots.every((slot) => slot.used === 0)).toBe(true)
+  })
+
+  it('memesan blok yang sama saat dibatalkan, bukan blok hasil pengaturan baru', async () => {
+    const created = await request(app)
+      .post('/api/bookings')
+      .set('Cookie', cookie)
+      .send(createPayload({ startMinute: 9 * 60, truckTypeId: truckTypeId }))
+    expect(created.status).toBe(201)
+
+    // Satuan blok digandakan: 09:00 masih sejajar, tetapi blok yang dipesan
+    // dulu (09:00 & 09:30) berbeda dari hitungan baru (09:00 & 10:00).
+    await prisma.warehouseSetting.update({
+      where: { id: 1 },
+      data: { slotUnitMinutes: 60 },
+    })
+
+    const cancel = await request(app)
+      .post(`/api/bookings/${created.body.data.id}/cancel`)
+      .set('Cookie', cookie)
+    expect(cancel.status).toBe(200)
+
+    const slots = await prisma.slotAllocation.findMany({
+      where: { slotDate: new Date(`${TOMORROW()}T00:00:00.000Z`), activity: 'UNLOADING' },
+    })
+    // Semua blok kembali nol: tidak ada sisa "used" yang tertinggal di 09:00.
+    expect(slots.every((slot) => slot.used === 0)).toBe(true)
   })
 })
 
@@ -316,7 +417,16 @@ describe('GET /api/bookings/slots/availability', () => {
       startMinute: number
       remaining: number
       status: string
+      limit: unknown
     }>
+
+    // Alasan penuh dikirim sebagai KODE, bukan kalimat. Kalimat Indonesia dari
+    // server muncul apa adanya di layar berbahasa Inggris; klien yang
+    // menerjemahkan `limit.code`.
+    for (const slot of slots) {
+      expect(slot).toHaveProperty('limit')
+      expect(slot).not.toHaveProperty('limitReason')
+    }
 
     // 09:00 dan 09:30 sudah terpakai satu, kapasitas 2 -> sisa 1.
     expect(slots.find((slot) => slot.startMinute === 540)?.remaining).toBe(1)

@@ -342,6 +342,16 @@ model Booking {
   /// Jumlah blok 30 menit yang dikunci; sudah termasuk durasi jenis proses.
   blocksLocked Int @map("blocks_locked")
 
+  /// Blok yang benar-benar dikunci, sebagai menit mulai tiap blok
+  /// (mis. [510, 540, 570] untuk 08:30 selama 90 menit).
+  ///
+  /// `blocksLocked` saja tidak cukup: pelepasan kuota dulu menghitung ulang
+  /// posisi blok dari pengaturan yang BERLAKU SEKARANG, sehingga Admin yang
+  /// mengubah jam buka atau satuan blok membuat pembatalan booking lama gagal
+  /// (SLOT_NOT_ALIGNED) atau — lebih buruk — mengurangi baris slot yang salah.
+  /// Larik kosong berarti booking lama sebelum kolom ini ada.
+  blockStarts Int[] @default([]) @map("block_starts")
+
   /// Jenis proses yang dipilih customer. NULL untuk booking sebelum fitur ini.
   processTypeId Int?     @map("process_type_id")
   processType   ProcessType? @relation(fields: [processTypeId], references: [id], onDelete: SetNull)

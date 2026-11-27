@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Booking } from '@/lib/api/types'
+import type { Booking, SlotLimit } from '@/lib/api/types'
 import {
   bookingUrgency,
   dockLabel,
@@ -10,6 +10,7 @@ import {
   needsAction,
   parseViewMode,
   pickNextBooking,
+  slotLimitLabel,
 } from './booking-view'
 
 function booking(partial: Partial<Booking> & Pick<Booking, 'bookingCode'>): Booking {
@@ -253,6 +254,30 @@ describe('bookingUrgency', () => {
 
   it('marks a finished booking as overdue', () => {
     expect(bookingUrgency(target, at('2026-11-10T04:00:00.000Z')).key).toBe('overdue')
+  })
+})
+
+describe('slotLimitLabel', () => {
+  it('translates a full-block reason into the active language', () => {
+    const limit = { code: 'BLOCK_FULL' as const, blockLabel: '09:30' }
+    expect(slotLimitLabel(limit, 'id')).toBe('Kuota blok 09:30 habis')
+    expect(slotLimitLabel(limit, 'en')).toBe('The 09:30 block is fully booked')
+  })
+
+  it('never returns Indonesian text in the English interface', () => {
+    const reasons: SlotLimit[] = [
+      { code: 'PAST_START' },
+      { code: 'NO_DOCK' },
+      { code: 'CLOSING_SOON' },
+    ]
+    for (const reason of reasons) {
+      expect(slotLimitLabel(reason, 'en')).not.toMatch(/Tidak|Belum|Jam sudah|Kuota/)
+    }
+  })
+
+  it('falls back to the generic word when the reason is unknown', () => {
+    expect(slotLimitLabel(null, 'id')).toBe('Penuh')
+    expect(slotLimitLabel(null, 'en')).toBe('Full')
   })
 })
 

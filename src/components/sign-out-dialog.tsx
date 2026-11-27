@@ -1,9 +1,10 @@
-import { useNavigate, useLocation } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
+import { useNavigate, useLocation } from '@tanstack/react-router'
 import { toast } from 'sonner'
+import { useAuthStore } from '@/stores/auth-store'
 import { logout } from '@/lib/api/endpoints'
 import { useT } from '@/lib/i18n'
-import { useAuthStore } from '@/stores/auth-store'
+import { closeSocket } from '@/lib/socket'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 
 interface SignOutDialogProps {
@@ -24,6 +25,11 @@ export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
     } catch {
       toast.warning(t('signOut.warning'))
     }
+    // Putuskan socket SEBELUM mengosongkan sesi lokal. Kalau tidak, koneksi
+    // tetap memegang room pengguna ini dan (di komputer bersama) penerima
+    // berikutnya masih menerima notifikasi booking miliknya sampai server
+    // memeriksa ulang identitas 5 menit kemudian.
+    closeSocket()
     reset()
     queryClient.clear()
     onOpenChange(false)

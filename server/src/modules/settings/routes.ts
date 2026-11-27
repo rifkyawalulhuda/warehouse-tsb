@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { prisma, type Tx } from '../../lib/prisma'
 import { parse } from '../../lib/validate'
 import { requireAuth, requireExactRole } from '../../middleware/auth'
-import { getSettings } from '../../lib/settings'
+import { getSettings, rebuildFutureAllocations } from '../../lib/settings'
 import { badRequest, conflict } from '../../lib/http-error'
 import { writeAudit } from '../../lib/audit'
 import { settingsPayload } from './payload'
@@ -70,6 +70,18 @@ settingsRouter.put('/', requireAuth, requireExactRole('ADMIN'), async (req, res,
       if (taken) throw conflict('WAREHOUSE_NAME_TAKEN', 'Nama gudang sudah dipakai')
     }
 
+    // Mengubah jam buka atau satuan blok berarti grid slot berubah. Baris
+    // `slot_allocations` di hari yang belum lewat harus ikut disusun ulang,
+    // kalau tidak pemakaian booking lama hilang dari hitungan dan kuota
+    // tampak kosong.
+    const gridChanged =
+      (body.operatingStartMinute ?? current.operatingStartMinute) !==
+        current.operatingStartMinute ||
+      (body.operatingEndMinute ?? current.operatingEndMinute) !==
+        current.operatingEndMinute ||
+      unit !== current.slotUnitMinutes
+    const nextWindow = { startMinute, endMinute, unitMinutes: unit }
+
     // Dalam satu transaksi: kalau penamaan gudang gagal, pengaturan tidak
     // boleh ikut berubah supaya kedua tempat tidak berakhir beda nama.
     await prisma.$transaction(async (tx) => {
@@ -85,6 +97,9 @@ settingsRouter.put('/', requireAuth, requireExactRole('ADMIN'), async (req, res,
       data.footerLocation = emptyToNull(data.footerLocation)
 
       await tx.warehouseSetting.update({ where: { id: current.id }, data })
+      if (gridChanged) {
+        await rebuildFutureAllocations(tx, nextWindow)
+      }
       if (body.warehouseName !== undefined) {
         await tx.warehouse.updateMany({
           where: { id: DEFAULT_WAREHOUSE_ID },

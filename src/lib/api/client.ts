@@ -1,10 +1,7 @@
 import axios, { type AxiosError, type AxiosRequestConfig } from 'axios'
+import { useAuthStore } from '@/stores/auth-store'
 import { getLocale } from '@/lib/i18n/locale'
-import {
-  hasMessage,
-  translate,
-  type MessageKey,
-} from '@/lib/i18n/translate'
+import { hasMessage, translate, type MessageKey } from '@/lib/i18n/translate'
 
 /** Semua respons API dibungkus `{ data: ... }`. */
 type Envelope<T> = { data: T }
@@ -90,7 +87,15 @@ api.interceptors.response.use(
 
     config._retried = true
     const ok = await refreshSession()
-    if (!ok) return Promise.reject(error)
+    if (!ok) {
+      // Sesi benar-benar berakhir (refresh ditolak). Dulu tiap pemanggil hanya
+      // mendapat galat dan menampilkan toast sendiri, sehingga halaman tetap
+      // terbuka dengan data basi dan tombol yang tidak pernah berhasil. Dengan
+      // mengosongkan profil di sini, `RequireAuth` melihat `user === null` dan
+      // mengarahkan ke halaman masuk sekali untuk semua permintaan sekaligus.
+      useAuthStore.getState().reset()
+      return Promise.reject(error)
+    }
     return api.request(config)
   }
 )

@@ -4,18 +4,21 @@
  */
 export const bookings = {
   'bookings.title': 'Jadwal Saya',
-  'bookings.subtitle': 'Semua booking truk Anda, lengkap dengan jam, status, dan tiketnya.',
+  'bookings.subtitle':
+    'Semua booking truk Anda, lengkap dengan jam, status, dan tiketnya.',
   'bookings.new': 'Booking Baru',
   'bookings.tabActive': 'Aktif',
   'bookings.tabPast': 'Riwayat',
   'bookings.searchPlaceholder': 'Cari kode booking, plat, atau nomor dokumen',
   'bookings.searchLabel': 'Cari booking',
-  'bookings.noMatch': 'Tidak ada booking yang cocok dengan filter atau kata kunci ini.',
+  'bookings.noMatch':
+    'Tidak ada booking yang cocok dengan filter atau kata kunci ini.',
   'bookings.count': '{count} booking',
   'bookings.loading': 'Memuat booking...',
   'bookings.emptyActiveTitle': 'Belum ada booking aktif',
   'bookings.emptyPastTitle': 'Belum ada riwayat booking',
-  'bookings.emptyActiveHint': 'Buat booking untuk mengunci slot jam bongkar muat.',
+  'bookings.emptyActiveHint':
+    'Buat booking untuk mengunci slot jam bongkar muat.',
   'bookings.emptyPastHint': 'Booking yang sudah selesai akan muncul di sini.',
   'bookings.emptyCreate': 'Buat booking pertama',
 
@@ -51,7 +54,8 @@ export const bookings = {
   'bookings.nextTitle': 'Jadwal berikutnya',
   'bookings.next.startingNow': 'Segera mulai',
   'bookings.next.startsIn': 'Mulai dalam {time}',
-  'bookings.next.hint': 'Datang 15 menit sebelum jam ini dan tunjukkan tiket ke pos gate.',
+  'bookings.next.hint':
+    'Datang 15 menit sebelum jam ini dan tunjukkan tiket ke pos gate.',
   'bookings.next.openTicket': 'Tiket',
 
   'bookings.card.ticket': 'Tiket',
@@ -63,7 +67,8 @@ export const bookings = {
   'bookings.ticket': 'Tiket',
   'bookings.cancel': 'Batalkan',
   'bookings.cancelTitle': 'Batalkan booking?',
-  'bookings.cancelBody': 'Booking {code} akan dibatalkan dan slot jamnya dikembalikan.',
+  'bookings.cancelBody':
+    'Booking {code} akan dibatalkan dan slot jamnya dikembalikan.',
   'bookings.cancelConfirm': 'Ya, batalkan',
   'bookings.cancelled': 'Dibatalkan',
   'bookings.completeVehicle': 'Lengkapi kendaraan',
@@ -120,8 +125,10 @@ export const bookings = {
   'bookings.detail.approvalQrInactive': 'QR baru aktif setelah disetujui.',
   'bookings.detail.approvalApproved': 'Disetujui.',
   'bookings.detail.approvalApprovedAt': 'Disetujui pada {time}.',
-  'bookings.detail.approvalQrActive': 'QR sudah aktif bila data kendaraan lengkap.',
-  'bookings.detail.approvalRejected': 'Alasan: {reason}. Silakan buat booking baru.',
+  'bookings.detail.approvalQrActive':
+    'QR sudah aktif bila data kendaraan lengkap.',
+  'bookings.detail.approvalRejected':
+    'Alasan: {reason}. Silakan buat booking baru.',
   'bookings.detail.approvalExpired':
     'Booking kedaluwarsa karena tidak diputuskan sampai tenggat. Silakan buat booking baru.',
   'bookings.detail.notRecorded': 'tidak dicatat',
@@ -151,11 +158,16 @@ export const bookings = {
   'bookings.create.dateRequired': 'Pilih tanggal',
   'bookings.create.truckType': 'Jenis truk',
   'bookings.create.truckTypeRequired': 'Pilih jenis truk',
-  'bookings.create.truckTypeFirst': 'Pilih jenis truk dulu untuk melihat ketersediaan.',
+  'bookings.create.truckTypeFirst':
+    'Pilih jenis truk dulu untuk melihat ketersediaan.',
+  'bookings.create.processTypeFirst':
+    'Pilih jenis proses dulu — durasinya menambah slot yang dipakai.',
+  'bookings.create.awaitProcessType': 'Menunggu pilihan jenis proses.',
   'bookings.create.arrival': 'Jam kedatangan',
   'bookings.create.arrivalRequired': 'Pilih jam kedatangan',
   'bookings.create.docNo': 'Nomor dokumen',
-  'bookings.create.docNoHint': 'Nomor DO, SJ, atau surat jalan yang dibawa supir.',
+  'bookings.create.docNoHint':
+    'Nomor DO, SJ, atau surat jalan yang dibawa supir.',
   'bookings.create.submit': 'Buat booking',
   'bookings.create.submitting': 'Membuat booking...',
   'bookings.create.success': 'Booking dibuat',
@@ -163,13 +175,14 @@ export const bookings = {
   'bookings.create.driver': 'Nama supir',
   'bookings.create.phone': 'Nomor HP supir',
   'bookings.create.notes': 'Catatan',
-  'bookings.create.notesPlaceholder': 'Misalnya jumlah koli atau alat bantu yang dibawa',
+  'bookings.create.notesPlaceholder':
+    'Misalnya jumlah koli atau alat bantu yang dibawa',
   'bookings.create.title': 'Buat Booking',
   'bookings.create.back': 'Kembali',
   'bookings.create.activity': 'Aktivitas',
   'bookings.create.stepActivity': '1. Aktivitas & truk',
   'bookings.create.stepActivityDesc':
-    'Durasi tiap jenis truk menentukan berapa slot 30 menit yang dipakai.',
+    'Durasi tiap jenis truk menentukan berapa slot {minutes} menit yang dipakai.',
   'bookings.create.stepDate': '2. Tanggal kedatangan',
   'bookings.create.windowHint': 'Pemesanan dibuka sampai {days} hari ke depan.',
   'bookings.create.stepTime': '3. Jam kedatangan',
@@ -188,13 +201,17 @@ export const bookings = {
   'bookings.create.phonePlaceholder': '0812xxxxxxx',
   'bookings.create.phoneHint': 'Untuk kirim link tiket via WhatsApp.',
   'bookings.create.summary': 'Ringkasan',
-  'bookings.create.slotsUsed': 'Truk memakai {count} slot × 30 menit.',
+  'bookings.create.slotsUsed': 'Truk memakai {count} slot × {minutes} menit.',
   'bookings.create.confirm': 'Konfirmasi booking',
   'bookings.create.noSlots': 'Tidak ada slot pada tanggal ini.',
   'bookings.create.successBody': 'Booking {code} berhasil dibuat',
   'bookings.create.driverPlaceholder': 'Nama supir',
   'bookings.create.slotsRemaining': '{count} slot tersisa',
   'bookings.create.full': 'Penuh',
+  'bookings.create.limit.noDock': 'Belum ada dock untuk aktivitas ini',
+  'bookings.create.limit.closingSoon': 'Tidak cukup waktu sebelum jam tutup',
+  'bookings.create.limit.blockFull': 'Kuota blok {time} habis',
+  'bookings.create.limit.pastStart': 'Jam sudah lewat',
   'bookings.create.loadSettings': 'Memuat pengaturan...',
   'bookings.create.docNoRequired': 'Nomor dokumen wajib diisi',
 

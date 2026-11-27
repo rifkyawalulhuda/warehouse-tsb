@@ -2,15 +2,32 @@ import { Router } from 'express'
 import { z } from 'zod'
 import { prisma } from '../../lib/prisma'
 import { parse, phoneSchema, plateSchema } from '../../lib/validate'
-import { badRequest, conflict, notFound } from '../../lib/http-error'
+import { conflict, notFound } from '../../lib/http-error'
 import { pathParam } from '../../lib/params'
 import { getSettings, toWindow } from '../../lib/settings'
 import { utcToDateOnly, minuteOfDayJakarta } from '../../lib/time'
 import { emitBookingUpdated } from '../../realtime'
 import { writeAudit } from '../../lib/audit'
+import { publicTicketWriteLimiter } from '../../middleware/rate-limit'
 import { bookingSelect, getBookingByQrToken, statusForVehicleData } from '../bookings/repository'
 
 export const publicTicketRouter = Router()
+
+/**
+ * Token dari jalur, atau 404 bila bentuknya jelas bukan token kita.
+ *
+ * Satu tempat untuk aturan ini: dulu dua rute memeriksa `length < 16` sendiri
+ * dan rute ketiga lupa, sehingga panjang minimum bergantung pada rute mana yang
+ * dipanggil. Pesannya 404, bukan 400: halaman publik tidak perlu memberi tahu
+ * penebak bahwa tokennya "hampir benar".
+ */
+function qrTokenParam(req: Parameters<typeof pathParam>[0]): string {
+  const qrToken = pathParam(req, 'qrToken')
+  if (!qrToken || qrToken.length < 16 || qrToken.length > 128) {
+    throw notFound('Tiket tidak ditemukan')
+  }
+  return qrToken
+}
 
 /**
  * Halaman tiket supir. Tanpa login: qr_token adalah kredensialnya.
@@ -19,8 +36,7 @@ export const publicTicketRouter = Router()
  */
 publicTicketRouter.get('/:qrToken', async (req, res, next) => {
   try {
-    const qrToken = pathParam(req, 'qrToken')
-    if (!qrToken || qrToken.length < 16) throw notFound('Tiket tidak ditemukan')
+    const qrToken = qrTokenParam(req)
 
     const booking = await getBookingByQrToken(qrToken)
     if (!booking) throw notFound('Tiket tidak ditemukan')
@@ -61,10 +77,9 @@ publicTicketRouter.get('/:qrToken', async (req, res, next) => {
  * Supir boleh melengkapi plat nomor & nama sendiri dari halaman tiket
  * (keputusan grilling: data kendaraan menyusul).
  */
-publicTicketRouter.patch('/:qrToken/vehicle-info', async (req, res, next) => {
+publicTicketRouter.patch('/:qrToken/vehicle-info', publicTicketWriteLimiter, async (req, res, next) => {
   try {
-    const qrToken = pathParam(req, 'qrToken')
-    if (!qrToken || qrToken.length < 16) throw notFound('Tiket tidak ditemukan')
+    const qrToken = qrTokenParam(req)
 
     const body = parse(
       z.object({
@@ -94,14 +109,33 @@ publicTicketRouter.patch('/:qrToken/vehicle-info', async (req, res, next) => {
     const complete = Boolean(plate && driverName)
 
     const updated = await prisma.$transaction(async (tx) => {
-      const result = await tx.booking.update({
-        where: { id: booking.id },
+      // Compare-and-set, bukan `update` biasa. Pemeriksaan status di atas
+      // berjalan di luar transaksi, dan truk bisa dipindai masuk gerbang di
+      // sela itu. Tanpa syarat status di sini, penyimpanan data kendaraan
+      // menimpa CHECKED_IN_* kembali menjadi BOOKED_READY — truk yang sudah di
+      // dalam tercatat belum datang.
+      const applied = await tx.booking.updateMany({
+        where: {
+          id: booking.id,
+          status: { in: ['BOOKED_INCOMPLETE', 'BOOKED_READY'] },
+        },
         data: {
           licensePlate: plate,
           driverName,
           driverPhone: body.driverPhone?.trim() ? body.driverPhone : booking.driverPhone,
           status: statusForVehicleData(booking.status, complete),
         },
+      })
+
+      if (applied.count === 0) {
+        throw conflict(
+          'VEHICLE_LOCKED',
+          'Data kendaraan tidak bisa diubah karena truk sudah masuk gerbang'
+        )
+      }
+
+      const result = await tx.booking.findUniqueOrThrow({
+        where: { id: booking.id },
         select: bookingSelect,
       })
 
@@ -118,13 +152,23 @@ publicTicketRouter.patch('/:qrToken/vehicle-info', async (req, res, next) => {
         },
       })
 
+      // Nilai lama ikut dicatat. QR ini tercetak dan bisa difoto siapa saja di
+      // lokasi, jadi "plat berubah dari A ke B" harus bisa ditelusuri — bukan
+      // sekadar "ada yang mengubah".
       await writeAudit(
         {
           userId: null,
           userRole: 'CUSTOMER',
           action: 'VEHICLE_INFO_UPDATED_BY_DRIVER',
           bookingId: booking.id,
-          meta: { complete },
+          meta: {
+            complete,
+            previous: {
+              licensePlate: booking.licensePlate,
+              driverName: booking.driverName,
+              driverPhone: booking.driverPhone,
+            },
+          },
         },
         tx
       )
@@ -148,7 +192,7 @@ publicTicketRouter.patch('/:qrToken/vehicle-info', async (req, res, next) => {
 /** Dipakai halaman tiket untuk memastikan jam operasional masih relevan. */
 publicTicketRouter.get('/:qrToken/context', async (req, res, next) => {
   try {
-    const qrToken = pathParam(req, 'qrToken')
+    const qrToken = qrTokenParam(req)
     const booking = await prisma.booking.findUnique({ where: { qrToken } })
     if (!booking) throw notFound('Tiket tidak ditemukan')
 
@@ -165,10 +209,3 @@ publicTicketRouter.get('/:qrToken/context', async (req, res, next) => {
     next(error)
   }
 })
-
-export function assertQrToken(value: unknown): string {
-  if (typeof value !== 'string' || value.length < 16) {
-    throw badRequest('INVALID_QR', 'QR Code tidak dikenali')
-  }
-  return value
-}

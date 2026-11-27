@@ -33,54 +33,66 @@ export async function expirePendingApprovals(now: Date = new Date()): Promise<nu
       status: { in: ['BOOKED_INCOMPLETE', 'BOOKED_READY'] },
       approvalDeadline: { lte: now },
     },
+    // Tenggat terlama lebih dulu: antrean yang macet tidak boleh membuat
+    // booking lain tidak pernah diproses hanya karena `take` memotong batch.
+    orderBy: { approvalDeadline: 'asc' },
     take: 200,
   })
 
   let expired = 0
 
   for (const booking of candidates) {
-    const expiredNow = await prisma.$transaction(async (tx) => {
-      // Compare-and-set DULU, baru lepas kuota. Urutan sebaliknya berbahaya:
-      // bila Admin menyetujui di detik yang sama, approve memenangkan status
-      // tetapi kuota sudah terlanjur dilepas untuk booking yang sah.
-      const updated = await tx.$queryRaw<Array<{ id: string }>>`
-        UPDATE bookings
-        SET status = 'CANCELLED',
-            approval_status = 'EXPIRED'
-        WHERE id = ${booking.id}::uuid
-          AND approval_status = 'PENDING'
-        RETURNING id
-      `
+    try {
+      const expiredNow = await prisma.$transaction(async (tx) => {
+        // Compare-and-set DULU, baru lepas kuota. Urutan sebaliknya berbahaya:
+        // bila Admin menyetujui di detik yang sama, approve memenangkan status
+        // tetapi kuota sudah terlanjur dilepas untuk booking yang sah.
+        const updated = await tx.$queryRaw<Array<{ id: string }>>`
+          UPDATE bookings
+          SET status = 'CANCELLED',
+              approval_status = 'EXPIRED'
+          WHERE id = ${booking.id}::uuid
+            AND approval_status = 'PENDING'
+          RETURNING id
+        `
 
-      if (updated.length === 0) return false
+        if (updated.length === 0) return false
 
-      await finalizeRelease(tx, {
-        bookingId: booking.id,
-        date: utcToDateOnly(booking.bookingDate),
-        activity: booking.activityType,
-        startMinute: minuteOfDayJakarta(booking.startTime),
-        blocksRequired: booking.blocksLocked,
-        window,
+        await finalizeRelease(tx, {
+          bookingId: booking.id,
+          date: utcToDateOnly(booking.bookingDate),
+          activity: booking.activityType,
+          startMinute: minuteOfDayJakarta(booking.startTime),
+          blocksRequired: booking.blocksLocked,
+          window,
+        })
+
+        await writeAudit(
+          {
+            userId: null,
+            userRole: 'ADMIN',
+            action: 'BOOKING_APPROVAL_EXPIRED',
+            bookingId: booking.id,
+            meta: {
+              detectedAt: now.toISOString(),
+              deadline: booking.approvalDeadline?.toISOString() ?? null,
+            },
+          },
+          tx
+        )
+
+        return true
       })
 
-      await writeAudit(
-        {
-          userId: null,
-          userRole: 'ADMIN',
-          action: 'BOOKING_APPROVAL_EXPIRED',
-          bookingId: booking.id,
-          meta: {
-            detectedAt: now.toISOString(),
-            deadline: booking.approvalDeadline?.toISOString() ?? null,
-          },
-        },
-        tx
-      )
-
-      return true
-    })
-
-    if (!expiredNow) continue
+      if (!expiredNow) continue
+    } catch (error) {
+      // Satu booking yang selalu gagal tidak boleh membekukan antrean. Tanpa
+      // isolasi ini, baris tersebut kembali di batch berikutnya dan tidak ada
+      // booking lain yang pernah kedaluwarsa.
+      // eslint-disable-next-line no-console
+      console.error('[job] approval expiry gagal untuk booking', booking.id, error)
+      continue
+    }
 
     emitBookingUpdated({
       bookingId: booking.id,

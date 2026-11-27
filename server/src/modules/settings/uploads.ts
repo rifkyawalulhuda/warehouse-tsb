@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { mkdir, unlink, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { Router, type NextFunction, type Request, type Response } from 'express'
+import express, { Router, type NextFunction, type Request, type Response } from 'express'
 import { requireAuth, requireExactRole } from '../../middleware/auth'
 import { badRequest } from '../../lib/http-error'
 import { env } from '../../config/env'
@@ -106,6 +106,16 @@ function ensureUploadsDir(): Promise<void> {
 export const uploadsRouter = Router()
 
 /**
+ * Parser badan biner untuk satu rute unggahan.
+ *
+ * Dipasang SESUDAH `requireAuth`, bukan di `app.ts` untuk semua permintaan:
+ * dengan begitu permintaan tanpa sesi ditolak sebelum 3 MB badan dibaca. Batas
+ * parser (3 MB) sengaja di atas `MAX_BYTES` (2 MB) supaya berkas yang kebesaran
+ * tetap mendapat pesan `UPLOAD_TOO_LARGE` yang jelas, bukan galat parser.
+ */
+const rawImage = express.raw({ type: () => true, limit: '3mb' })
+
+/**
  * Satu penangan untuk semua unggahan gambar: yang berbeda hanya awalan nama
  * berkas, supaya gambar panel dan logo tidak pernah tertukar di folder disk.
  */
@@ -141,13 +151,14 @@ function handleUpload(prefix: string) {
  * Admin mengunggah satu gambar; nama berkas dibuat acak sehingga tidak ada
  * nama dari klien yang pernah menyentuh jalur disk.
  *
- * Rute ini memakai parser binernya sendiri di app.ts, di depan body JSON,
- * karena berkas gambar bukan JSON.
+ * Rute ini memasang parser binernya sendiri (`rawImage`) sesudah otentikasi,
+ * karena berkas gambar bukan JSON dan tidak boleh dibaca sebelum sesi diperiksa.
  */
 uploadsRouter.put(
   '/login-cover',
   requireAuth,
   requireExactRole('ADMIN'),
+  rawImage,
   handleUpload('login-cover')
 )
 
@@ -160,5 +171,6 @@ uploadsRouter.put(
   '/logo',
   requireAuth,
   requireExactRole('ADMIN'),
+  rawImage,
   handleUpload('app-logo')
 )

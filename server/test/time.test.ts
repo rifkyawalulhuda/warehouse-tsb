@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   addDaysISO,
   dateOnlyToUtc,
+  isDateISO,
   jakartaInstant,
   minuteOfDayJakarta,
   minuteToLabel,
@@ -41,6 +42,28 @@ describe('tanggal operasional', () => {
   it('addDaysISO melewati batas bulan dan tahun', () => {
     expect(addDaysISO('2026-11-30', 1)).toBe('2026-12-01')
     expect(addDaysISO('2026-12-31', 1)).toBe('2027-01-01')
+  })
+})
+
+describe('isDateISO', () => {
+  it('menerima tanggal yang benar-benar ada', () => {
+    for (const value of ['2026-11-07', '2026-02-28', '2024-02-29', '2026-12-31']) {
+      expect(isDateISO(value), value).toBe(true)
+    }
+  })
+
+  it('menolak tanggal mustahil, bukan menormalkannya ke bulan berikutnya', () => {
+    // `new Date('2026-02-31')` menjadi 3 Maret tanpa galat: booking akan
+    // tercatat di hari yang salah dan customer baru tahu saat di gerbang.
+    for (const value of ['2026-02-31', '2026-04-31', '2025-02-29', '2026-13-01', '2026-00-10']) {
+      expect(isDateISO(value), value).toBe(false)
+    }
+  })
+
+  it('menolak bentuk selain YYYY-MM-DD', () => {
+    for (const value of ['2026-1-07', '07-11-2026', '2026/11/07', '2026-11-07T00:00', '']) {
+      expect(isDateISO(value), value).toBe(false)
+    }
   })
 })
 

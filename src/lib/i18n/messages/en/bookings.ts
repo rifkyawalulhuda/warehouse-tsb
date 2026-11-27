@@ -3,18 +3,21 @@
  */
 export const bookings = {
   'bookings.title': 'My Schedule',
-  'bookings.subtitle': 'Every truck booking you have, with its time, status, and ticket.',
+  'bookings.subtitle':
+    'Every truck booking you have, with its time, status, and ticket.',
   'bookings.new': 'New Booking',
   'bookings.tabActive': 'Active',
   'bookings.tabPast': 'History',
-  'bookings.searchPlaceholder': 'Search booking code, plate, or document number',
+  'bookings.searchPlaceholder':
+    'Search booking code, plate, or document number',
   'bookings.searchLabel': 'Search bookings',
   'bookings.noMatch': 'No booking matches this filter or keyword.',
   'bookings.count': '{count} bookings',
   'bookings.loading': 'Loading bookings…',
   'bookings.emptyActiveTitle': 'No active booking yet',
   'bookings.emptyPastTitle': 'No booking history yet',
-  'bookings.emptyActiveHint': 'Create a booking to lock a loading or unloading slot.',
+  'bookings.emptyActiveHint':
+    'Create a booking to lock a loading or unloading slot.',
   'bookings.emptyPastHint': 'Bookings that are finished will appear here.',
   'bookings.emptyCreate': 'Create your first booking',
 
@@ -50,7 +53,8 @@ export const bookings = {
   'bookings.nextTitle': 'Next up',
   'bookings.next.startingNow': 'Starting now',
   'bookings.next.startsIn': 'Starts in {time}',
-  'bookings.next.hint': 'Arrive 15 minutes early and show this ticket at the gate.',
+  'bookings.next.hint':
+    'Arrive 15 minutes early and show this ticket at the gate.',
   'bookings.next.openTicket': 'Ticket',
 
   'bookings.card.ticket': 'Ticket',
@@ -62,7 +66,8 @@ export const bookings = {
   'bookings.ticket': 'Ticket',
   'bookings.cancel': 'Cancel',
   'bookings.cancelTitle': 'Cancel this booking?',
-  'bookings.cancelBody': 'Booking {code} will be cancelled and its slot released.',
+  'bookings.cancelBody':
+    'Booking {code} will be cancelled and its slot released.',
   'bookings.cancelConfirm': 'Yes, cancel',
   'bookings.cancelled': 'Cancelled',
   'bookings.completeVehicle': 'Complete vehicle',
@@ -111,22 +116,26 @@ export const bookings = {
   'bookings.detail.processDone': 'Process finished',
   'bookings.detail.gateOut': 'Gate out',
   'bookings.detail.cancelTitle': 'Cancel this booking?',
-  'bookings.detail.cancelBody': 'Booking {code} will be cancelled and its slot released.',
+  'bookings.detail.cancelBody':
+    'Booking {code} will be cancelled and its slot released.',
   'bookings.detail.cancelConfirm': 'Yes, cancel',
   'bookings.detail.approvalPending': 'Waiting for warehouse admin approval.',
   'bookings.detail.approvalDeadline': 'Deadline {date} {time}.',
   'bookings.detail.approvalQrInactive': 'The QR code activates once approved.',
   'bookings.detail.approvalApproved': 'Approved.',
   'bookings.detail.approvalApprovedAt': 'Approved at {time}.',
-  'bookings.detail.approvalQrActive': 'The QR code is active when vehicle data is complete.',
-  'bookings.detail.approvalRejected': 'Reason: {reason}. Please create a new booking.',
+  'bookings.detail.approvalQrActive':
+    'The QR code is active when vehicle data is complete.',
+  'bookings.detail.approvalRejected':
+    'Reason: {reason}. Please create a new booking.',
   'bookings.detail.approvalExpired':
     'This booking expired because it was not decided before the deadline. Please create a new booking.',
   'bookings.detail.notRecorded': 'not recorded',
 
   'bookings.vehicle': 'Vehicle',
   'bookings.vehicle.title': 'Vehicle data',
-  'bookings.vehicle.desc': 'Plate and driver appear on the ticket and are checked at the gate.',
+  'bookings.vehicle.desc':
+    'Plate and driver appear on the ticket and are checked at the gate.',
   'bookings.vehicle.plate': 'Plate number',
   'bookings.vehicle.plateRequired': 'Plate number is required',
   'bookings.vehicle.driver': 'Driver name',
@@ -141,17 +150,23 @@ export const bookings = {
   'bookings.vehicle.phoneHint': 'Used to send the ticket link.',
 
   'bookings.create.pageTitle': 'New Booking',
-  'bookings.create.subtitle': 'Pick your truck arrival time. Full slots cannot be selected.',
+  'bookings.create.subtitle':
+    'Pick your truck arrival time. Full slots cannot be selected.',
   'bookings.create.loading': 'Loading settings…',
   'bookings.create.date': 'Date',
   'bookings.create.dateRequired': 'Pick a date',
   'bookings.create.truckType': 'Truck type',
   'bookings.create.truckTypeRequired': 'Pick a truck type',
-  'bookings.create.truckTypeFirst': 'Pick a truck type first to see availability.',
+  'bookings.create.truckTypeFirst':
+    'Pick a truck type first to see availability.',
+  'bookings.create.processTypeFirst':
+    'Pick a process type first — its duration adds slots.',
+  'bookings.create.awaitProcessType': 'Waiting for a process type.',
   'bookings.create.arrival': 'Arrival time',
   'bookings.create.arrivalRequired': 'Pick an arrival time',
   'bookings.create.docNo': 'Document number',
-  'bookings.create.docNoHint': 'The DO, delivery note, or road letter the driver carries.',
+  'bookings.create.docNoHint':
+    'The DO, delivery note, or road letter the driver carries.',
   'bookings.create.submit': 'Create booking',
   'bookings.create.submitting': 'Creating booking…',
   'bookings.create.success': 'Booking created',
@@ -159,13 +174,14 @@ export const bookings = {
   'bookings.create.driver': 'Driver name',
   'bookings.create.phone': 'Driver phone',
   'bookings.create.notes': 'Notes',
-  'bookings.create.notesPlaceholder': 'For example parcel count or equipment carried',
+  'bookings.create.notesPlaceholder':
+    'For example parcel count or equipment carried',
   'bookings.create.title': 'Create Booking',
   'bookings.create.back': 'Back',
   'bookings.create.activity': 'Activity',
   'bookings.create.stepActivity': '1. Activity & truck',
   'bookings.create.stepActivityDesc':
-    'Each truck type duration decides how many 30-minute slots it takes.',
+    'Each truck type duration decides how many {minutes}-minute slots it takes.',
   'bookings.create.stepDate': '2. Arrival date',
   'bookings.create.windowHint': 'Bookings open up to {days} days ahead.',
   'bookings.create.stepTime': '3. Arrival time',
@@ -184,13 +200,18 @@ export const bookings = {
   'bookings.create.phonePlaceholder': '0812xxxxxxx',
   'bookings.create.phoneHint': 'Used to send the ticket link over WhatsApp.',
   'bookings.create.summary': 'Summary',
-  'bookings.create.slotsUsed': 'This truck takes {count} slots of 30 minutes.',
+  'bookings.create.slotsUsed':
+    'This truck takes {count} slots of {minutes} minutes.',
   'bookings.create.confirm': 'Confirm booking',
   'bookings.create.noSlots': 'No slots on this date.',
   'bookings.create.successBody': 'Booking {code} created',
   'bookings.create.driverPlaceholder': 'Driver name',
   'bookings.create.slotsRemaining': '{count} slots left',
   'bookings.create.full': 'Full',
+  'bookings.create.limit.noDock': 'No dock serves this activity yet',
+  'bookings.create.limit.closingSoon': 'Not enough time before closing',
+  'bookings.create.limit.blockFull': 'The {time} block is fully booked',
+  'bookings.create.limit.pastStart': 'Time has passed',
   'bookings.create.loadSettings': 'Loading settings…',
   'bookings.create.docNoRequired': 'Document number is required',
 

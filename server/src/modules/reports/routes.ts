@@ -302,14 +302,20 @@ reportsRouter.get('/export.xlsx', staffOnly, async (req, res, next) => {
     sheet.autoFilter = { from: 'A1', to: 'P1' }
 
     const fileName = `${reportFilePrefix(lang)}-tsb-${query.from}-${query.to}.xlsx`
+
+    // Dirakit ke buffer DULU, baru dikirim. Dengan `workbook.xlsx.write(res)`
+    // header sudah terkirim sebelum byte pertama ditulis, sehingga galat di
+    // tengah penulisan tidak bisa lagi dijawab JSON oleh `errorHandler` — klien
+    // menerima berkas terpotong tanpa penjelasan. Jumlah baris dibatasi
+    // MAX_REPORT_RANGE_DAYS, jadi buffernya tetap kecil.
+    const buffer = await workbook.xlsx.writeBuffer()
     res.setHeader(
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`)
-
-    await workbook.xlsx.write(res)
-    res.end()
+    res.setHeader('Content-Length', String(buffer.byteLength))
+    res.end(Buffer.from(buffer))
   } catch (error) {
     next(error)
   }
@@ -642,14 +648,16 @@ reportsRouter.get('/my/export.xlsx', customerOnly, async (req, res, next) => {
     daily.autoFilter = { from: 'A1', to: 'H1' }
 
     const fileName = `${reportFilePrefix(lang)}-${report.customer.code}-${query.from}-${query.to}.xlsx`
+
+    // Alasan sama dengan ekspor staf: buffer dulu, kirim kemudian.
+    const buffer = await workbook.xlsx.writeBuffer()
     res.setHeader(
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
     res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`)
-
-    await workbook.xlsx.write(res)
-    res.end()
+    res.setHeader('Content-Length', String(buffer.byteLength))
+    res.end(Buffer.from(buffer))
   } catch (error) {
     next(error)
   }

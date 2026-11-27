@@ -22,10 +22,8 @@ import {
   minuteToLabel,
   todayISO,
 } from '@/lib/format'
+import { useT, useLocale, type MessageKey, type Vars } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
-import { useT, type MessageKey, type Vars } from '@/lib/i18n'
-
-type Translate = (key: MessageKey, vars?: Vars) => string
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -57,6 +55,9 @@ import { DatePicker } from '@/components/date-picker'
 import { Main } from '@/components/layout/main'
 import { PageHeader } from '@/components/page-header'
 import { ErrorBlock, LoadingBlock } from '@/components/query-state'
+import { slotLimitLabel } from './booking-view'
+
+type Translate = (key: MessageKey, vars?: Vars) => string
 
 const makeFormSchema = (t: Translate, requireProcessType: boolean) =>
   z.object({
@@ -116,6 +117,12 @@ export function CreateBooking() {
   const values = form.watch()
   const maxDate = addDaysISO(todayISO(), settings.data?.bookingWindowDays ?? 7)
 
+  // Jenis proses MENAMBAH durasi truk, jadi ketersediaan tanpa `processTypeId`
+  // dihitung untuk truk yang lebih pendek. Menampilkan jam itu membuat customer
+  // memilih slot yang ternyata tidak muat lalu ditolak saat menyimpan, karena
+  // itu daftar jam baru diambil setelah jenis proses dipilih.
+  const needsProcessType = requireProcessType && !values.processTypeId
+
   const availability = useQuery({
     queryKey: [
       'availability',
@@ -133,7 +140,8 @@ export function CreateBooking() {
           ? Number(values.processTypeId)
           : undefined,
       }),
-    enabled: Boolean(values.bookingDate && values.truckTypeId),
+    enabled:
+      Boolean(values.bookingDate && values.truckTypeId) && !needsProcessType,
   })
 
   const truckTypes = settings.data?.truckTypes ?? []
@@ -167,7 +175,9 @@ export function CreateBooking() {
       }),
     onSuccess: (booking) => {
       void queryClient.invalidateQueries({ queryKey: ['bookings'] })
-      toast.success(t('bookings.create.successBody', { code: booking.bookingCode }))
+      toast.success(
+        t('bookings.create.successBody', { code: booking.bookingCode })
+      )
       void navigate({ to: '/bookings' })
     },
     onError: (error) => toast.error(apiErrorMessage(error)),
@@ -220,7 +230,9 @@ export function CreateBooking() {
                   {t('bookings.create.stepActivity')}
                 </CardTitle>
                 <CardDescription>
-                  {t('bookings.create.stepActivityDesc')}
+                  {t('bookings.create.stepActivityDesc', {
+                    minutes: settings.data?.slotUnitMinutes ?? 30,
+                  })}
                 </CardDescription>
               </CardHeader>
               <CardContent className='grid gap-4 sm:grid-cols-2'>
@@ -379,11 +391,13 @@ export function CreateBooking() {
                   {t('bookings.create.stepTime')}
                 </CardTitle>
                 <CardDescription>
-                  {values.truckTypeId
-                    ? t('bookings.create.slotsAvailable', {
-                        count: availableCount,
-                      })
-                    : t('bookings.create.truckTypeFirst')}
+                  {!values.truckTypeId
+                    ? t('bookings.create.truckTypeFirst')
+                    : needsProcessType
+                      ? t('bookings.create.processTypeFirst')
+                      : t('bookings.create.slotsAvailable', {
+                          count: availableCount,
+                        })}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -396,6 +410,10 @@ export function CreateBooking() {
                         {!values.truckTypeId ? (
                           <p className='py-6 text-center text-sm text-muted-foreground'>
                             {t('bookings.create.awaitTruckType')}
+                          </p>
+                        ) : needsProcessType ? (
+                          <p className='py-6 text-center text-sm text-muted-foreground'>
+                            {t('bookings.create.awaitProcessType')}
                           </p>
                         ) : availability.isPending ? (
                           <LoadingBlock label={t('bookings.create.checking')} />
@@ -450,7 +468,9 @@ export function CreateBooking() {
                   name='licensePlate'
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t('bookings.create.plateOptional')}</FormLabel>
+                      <FormLabel>
+                        {t('bookings.create.plateOptional')}
+                      </FormLabel>
                       <FormControl>
                         <Input
                           placeholder={t('bookings.create.platePlaceholder')}
@@ -467,7 +487,9 @@ export function CreateBooking() {
                   name='driverName'
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t('bookings.create.driverOptional')}</FormLabel>
+                      <FormLabel>
+                        {t('bookings.create.driverOptional')}
+                      </FormLabel>
                       <FormControl>
                         <Input
                           placeholder={t('bookings.create.driverPlaceholder')}
@@ -483,7 +505,9 @@ export function CreateBooking() {
                   name='driverPhone'
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t('bookings.create.phoneOptional')}</FormLabel>
+                      <FormLabel>
+                        {t('bookings.create.phoneOptional')}
+                      </FormLabel>
                       <FormControl>
                         <Input
                           placeholder={t('bookings.create.phonePlaceholder')}
@@ -554,6 +578,9 @@ export function CreateBooking() {
                       count:
                         availability.data?.blocksRequired ??
                         selectedTruck.blocksRequired,
+                      // Panjang blok bisa diubah Admin (15–120 menit); angka 30
+                      // yang ditulis di kamus akan berbohong setelah diubah.
+                      minutes: settings.data?.slotUnitMinutes ?? 30,
                     })}
                   </div>
                 )}
@@ -605,6 +632,7 @@ function SlotGrid({
   onChange: (value: string) => void
 }) {
   const t = useT()
+  const locale = useLocale()
 
   if (slots.length === 0) {
     return (
@@ -638,7 +666,7 @@ function SlotGrid({
             </span>
             {full ? (
               <span className='mt-1 block text-xs text-muted-foreground'>
-                {slot.limitReason ?? t('bookings.create.full')}
+                {slotLimitLabel(slot.limit, locale)}
               </span>
             ) : (
               <Badge variant='outline' className='mt-1 text-xs'>

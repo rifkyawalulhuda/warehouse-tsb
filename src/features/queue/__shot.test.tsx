@@ -1,7 +1,7 @@
 ﻿import '@/styles/index.css'
 import { describe, it } from 'vitest'
-import { page } from 'vitest/browser'
 import { render } from 'vitest-browser-react'
+import { page } from 'vitest/browser'
 import type { Booking, DockWithBooking } from '@/lib/api/types'
 import { QueueCard } from './queue-card'
 import { QueueTable } from './queue-table'
@@ -49,13 +49,23 @@ const docks: DockWithBooking[] = [
   } as unknown as DockWithBooking,
 ]
 
-describe('tangkapan antrean', () => {
+/**
+ * Skrip tangkapan layar untuk meninjau tampilan antrean secara manual.
+ *
+ * Ini BUKAN tes: tidak ada satu pun assertion, dan satu-satunya hasilnya berkas
+ * PNG di `__shots/`. Dulu ia ikut berjalan di setiap `npm test` sehingga
+ * menghabiskan waktu peramban tanpa memeriksa apa pun. Jalankan dengan
+ * `VITE_SHOTS=1` bila memang ingin melihat tangkapannya.
+ */
+const shots = import.meta.env.VITE_SHOTS === '1' ? describe : describe.skip
+
+shots('tangkapan antrean', () => {
   it('kartu', async () => {
     const screen = await render(
       <div className='w-[320px] p-4'>
         <QueueCard
           booking={booking}
-          laneKey='waiting'
+          laneKey='late'
           now={new Date('2026-11-26T01:40:00.000Z')}
           docks={docks}
           onQuickAssign={() => {}}
@@ -72,7 +82,7 @@ describe('tangkapan antrean', () => {
     await render(
       <div className='w-[860px] p-4'>
         <QueueTable
-          rows={[{ booking, laneKey: 'waiting' } as never]}
+          rows={[{ booking, laneKey: 'late' } as never]}
           now={new Date('2026-11-26T01:40:00.000Z')}
           docks={docks}
           onQuickAssign={() => {}}
@@ -80,8 +90,8 @@ describe('tangkapan antrean', () => {
         />
       </div>
     )
-    await page.screenshot({ path: 'src/features/queue/__shots/queue-table.png' })
+    await page.screenshot({
+      path: 'src/features/queue/__shots/queue-table.png',
+    })
   })
 })
-
-

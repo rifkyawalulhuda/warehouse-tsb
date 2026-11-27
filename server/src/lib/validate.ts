@@ -1,5 +1,6 @@
 import { z, type ZodType } from 'zod'
 import { badRequest } from './http-error'
+import { isDateISO } from './time'
 
 /** Validasi body/query dengan pesan error yang bisa langsung ditampilkan di UI. */
 export function parse<T>(schema: ZodType<T>, value: unknown, label = 'Data'): T {
@@ -14,7 +15,7 @@ export function parse<T>(schema: ZodType<T>, value: unknown, label = 'Data'): T 
 
 export const dateISOSchema = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Format tanggal harus YYYY-MM-DD')
+  .refine(isDateISO, 'Format tanggal harus YYYY-MM-DD dan tanggalnya harus ada')
 
 export const activitySchema = z.enum(['LOADING', 'UNLOADING'])
 

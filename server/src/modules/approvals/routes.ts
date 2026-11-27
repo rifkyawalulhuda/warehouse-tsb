@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { z } from 'zod'
 import type { ApprovalStatus } from '@prisma/client'
 import { prisma, type Tx } from '../../lib/prisma'
-import { parse } from '../../lib/validate'
+import { dateISOSchema, parse } from '../../lib/validate'
 import { requireAuth, requireApprover } from '../../middleware/auth'
 import { badRequest, conflict } from '../../lib/http-error'
 import { pathParam } from '../../lib/params'
@@ -26,33 +26,36 @@ approvalsRouter.get('/', async (req, res, next) => {
     const query = parse(
       z.object({
         status: z.enum(['PENDING', 'APPROVED', 'REJECTED', 'EXPIRED']).default('PENDING'),
-        date: z
-          .string()
-          .regex(/^\d{4}-\d{2}-\d{2}$/)
-          .optional(),
+        date: dateISOSchema.optional(),
         limit: z.coerce.number().int().min(1).max(500).default(200),
       }),
       req.query,
       'Filter persetujuan'
     )
 
-    const bookings = await prisma.booking.findMany({
-      where: {
-        approvalStatus: query.status as ApprovalStatus,
-        ...(query.date
-          ? { bookingDate: new Date(`${query.date}T00:00:00.000Z`) }
-          : {}),
-      },
-      select: bookingSelect,
-      // Tenggat paling dekat lebih dulu: antrean ini adalah daftar kerja, bukan arsip.
-      orderBy: [{ approvalDeadline: 'asc' }, { startTime: 'asc' }],
-      take: query.limit,
-    })
+    const where = {
+      approvalStatus: query.status as ApprovalStatus,
+      ...(query.date ? { bookingDate: new Date(`${query.date}T00:00:00.000Z`) } : {}),
+    }
+
+    // `total` adalah jumlah sebenarnya, bukan panjang halaman. Daftar dipotong
+    // di `limit` (bawaan 200); melaporkan panjang halaman membuat layar
+    // mengatakan "200" padahal antreannya jauh lebih panjang.
+    const [bookings, total] = await Promise.all([
+      prisma.booking.findMany({
+        where,
+        select: bookingSelect,
+        // Tenggat paling dekat lebih dulu: antrean ini adalah daftar kerja, bukan arsip.
+        orderBy: [{ approvalDeadline: 'asc' }, { startTime: 'asc' }],
+        take: query.limit,
+      }),
+      prisma.booking.count({ where }),
+    ])
 
     res.json({
       data: {
         status: query.status,
-        total: bookings.length,
+        total,
         bookings,
       },
     })

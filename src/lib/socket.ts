@@ -3,6 +3,8 @@ import { refreshSession } from '@/lib/api/client'
 
 let socket: Socket | null = null
 let ticketSocket: Socket | null = null
+/** Id pengguna yang terakhir melakukan handshake, untuk mendeteksi ganti akun. */
+let socketUserId: string | null = null
 
 const URL = import.meta.env.VITE_SOCKET_URL ?? window.location.origin
 
@@ -35,6 +37,43 @@ export function getSocket(): Socket {
     })
   }
   return socket
+}
+
+/**
+ * Menyambung ulang socket sebagai pengguna tertentu.
+ *
+ * Dipanggil saat identitas berubah. Tanpa ini socket yang sudah tersambung
+ * tetap memegang room pengguna LAMA: `socket.connect()` pada socket yang
+ * tersambung tidak melakukan apa pun, sedangkan server baru memeriksa ulang
+ * identitas tiap 5 menit — jadi di komputer bersama, pengguna baru sempat
+ * menerima notifikasi booking milik pengguna sebelumnya.
+ *
+ * @returns true bila koneksi benar-benar dibuat ulang (identitas berubah).
+ */
+export function connectSocketAs(userId: string): boolean {
+  const socket = getSocket()
+  if (socketUserId === userId) {
+    if (!socket.connected) socket.connect()
+    return false
+  }
+
+  socketUserId = userId
+  if (socket.connected) socket.disconnect()
+  socket.connect()
+  return true
+}
+
+/**
+ * Memutus koneksi dan melupakan identitasnya. Wajib dipanggil saat keluar:
+ * kalau tidak, socket pengguna lama tetap hidup dan room-nya tetap berlangganan
+ * data miliknya sampai server memutusnya pada pemeriksaan 5 menit berikutnya.
+ */
+export function closeSocket() {
+  socketUserId = null
+  if (!socket) return
+  socket.removeAllListeners()
+  socket.disconnect()
+  socket = null
 }
 
 /**

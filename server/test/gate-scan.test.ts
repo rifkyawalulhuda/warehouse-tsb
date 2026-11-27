@@ -78,6 +78,30 @@ describe('pindai tiket di gate', () => {
     expect(response.body.data.canGateIn).toBe(true)
   })
 
+  it('tidak menawarkan gate-in bila data kendaraan belum lengkap', async () => {
+    await prepare()
+    const cookie = await loginCookie(app, 'gate@test.local')
+
+    // Plat ada, nama supir belum. Server `/gate-in` menolak kasus ini, jadi
+    // layar pindai tidak boleh menampilkan tombol yang pasti gagal.
+    await prisma.booking.updateMany({
+      where: { bookingCode: BOOKING_CODE },
+      data: { driverName: null, status: 'BOOKED_INCOMPLETE' },
+    })
+
+    const response = await request(app)
+      .get(`/api/ops/scan/${BOOKING_CODE}?record=1`)
+      .set('Cookie', cookie)
+
+    expect(response.status).toBe(200)
+    expect(response.body.data.canGateIn).toBe(false)
+    expect(response.body.data.vehicleIncomplete).toBe(true)
+
+    const attempts = await prisma.scanAttempt.findMany()
+    expect(attempts).toHaveLength(1)
+    expect(attempts[0]).toMatchObject({ reason: 'VEHICLE_INCOMPLETE' })
+  })
+
   it('menerima kode booking yang diketik dengan huruf kecil', async () => {
     await prepare()
     const cookie = await loginCookie(app, 'gate@test.local')

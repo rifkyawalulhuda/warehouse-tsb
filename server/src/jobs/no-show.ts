@@ -39,6 +39,11 @@ export async function markNoShowBookings(now: Date = new Date()): Promise<number
       bookingDate: { lte: dateOnlyToUtc(todayISO()) },
     },
     include: { truckType: true },
+    // Tanpa urutan, `take` mengambil baris sembarang: bila 200 baris pertama
+    // semuanya booking hari ini yang belum tutup (lalu di-`continue`), booking
+    // kemarin yang benar-benar terlantar tidak pernah masuk batch — dan
+    // himpunannya stabil, jadi job tidak pernah maju sampai tengah malam.
+    orderBy: [{ bookingDate: 'asc' }, { startTime: 'asc' }],
     take: 200,
   })
 
@@ -47,33 +52,57 @@ export async function markNoShowBookings(now: Date = new Date()): Promise<number
     const date = utcToDateOnly(booking.bookingDate)
     if (!isOperationalDayOver(date, now, window.endMinute)) continue
 
-    await prisma.$transaction(async (tx) => {
-      await finalizeRelease(tx, {
-        bookingId: booking.id,
-        date,
-        activity: booking.activityType,
-        startMinute: minuteOfDayJakarta(booking.startTime),
-        // Snapshot: jenis truk bisa sudah diedit sejak booking dibuat.
-        blocksRequired: booking.blocksLocked,
-        window,
-      })
+    try {
+      const markedNow = await prisma.$transaction(async (tx) => {
+        // Compare-and-set DULU, baru lepas kuota — sama seperti job approval.
+        // Antara `findMany` di atas dan transaksi ini truk bisa sudah dipindai
+        // masuk gerbang. UPDATE tanpa syarat akan menimpa CHECKED_IN_* dengan
+        // NO_SHOW sekaligus mengembalikan kuota yang masih dipakai truk itu,
+        // sehingga slotnya bisa diberikan ke booking lain.
+        const updated = await tx.$queryRaw<Array<{ id: string }>>`
+          UPDATE bookings
+          SET status = 'NO_SHOW'
+          WHERE id = ${booking.id}::uuid
+            AND status IN ('BOOKED_INCOMPLETE', 'BOOKED_READY')
+            AND approval_status <> 'PENDING'
+          RETURNING id
+        `
 
-      await tx.booking.update({
-        where: { id: booking.id },
-        data: { status: 'NO_SHOW' },
-      })
+        if (updated.length === 0) return false
 
-      await writeAudit(
-        {
-          userId: null,
-          userRole: 'ADMIN',
-          action: 'AUTO_NO_SHOW',
+        await finalizeRelease(tx, {
           bookingId: booking.id,
-          meta: { detectedAt: now.toISOString(), date },
-        },
-        tx
-      )
-    })
+          date,
+          activity: booking.activityType,
+          startMinute: minuteOfDayJakarta(booking.startTime),
+          // Snapshot: jenis truk bisa sudah diedit sejak booking dibuat.
+          blocksRequired: booking.blocksLocked,
+          window,
+        })
+
+        await writeAudit(
+          {
+            userId: null,
+            userRole: 'ADMIN',
+            action: 'AUTO_NO_SHOW',
+            bookingId: booking.id,
+            meta: { detectedAt: now.toISOString(), date },
+          },
+          tx
+        )
+
+        return true
+      })
+
+      if (!markedNow) continue
+    } catch (error) {
+      // Satu booking bermasalah tidak boleh menghentikan sisanya. Tanpa ini,
+      // baris yang selalu gagal (mis. pengaturan berubah) muncul lagi di batch
+      // berikutnya dan job berhenti untuk SEMUA booking, selamanya.
+      // eslint-disable-next-line no-console
+      console.error('[job] no-show gagal untuk booking', booking.id, error)
+      continue
+    }
 
     emitBookingUpdated({
       bookingId: booking.id,

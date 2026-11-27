@@ -100,7 +100,8 @@ export const master = {
     'Teks bebas, maksimal 80 karakter. Boleh dikosongkan bila pemetaan area belum ada.',
   'master.docks.warehouseLabel': 'Warehouse',
   'master.docks.warehousePlaceholder': 'Pilih gudang',
-  'master.docks.noWarehouse': 'Belum ada gudang aktif. Tambahkan satu di tab Gudang terlebih dahulu.',
+  'master.docks.noWarehouse':
+    'Belum ada gudang aktif. Tambahkan satu di tab Gudang terlebih dahulu.',
   'master.docks.servesLabel': 'Melayani',
   'master.docks.servesHint':
     'Mengubah aktivitas mengubah kapasitas per slot; booking yang sudah ada tetap berjalan seperti semula.',
@@ -121,7 +122,7 @@ export const master = {
   'master.trucks.editTitle': 'Ubah jenis truk {name}',
   'master.trucks.newTitle': 'Tambah jenis truk',
   'master.trucks.newDescription':
-    'Slot dihitung otomatis dari durasi: tiap 30 menit adalah satu slot.',
+    'Slot dihitung otomatis dari durasi: tiap {minutes} menit adalah satu slot.',
   'master.trucks.nameLabel': 'Nama jenis truk',
   'master.trucks.namePlaceholder': 'CDD Engkel',
   'master.trucks.durationLabel': 'Durasi (menit)',
@@ -183,12 +184,12 @@ export const master = {
   'master.customers.accountsEmpty':
     'Belum ada akun. Customer tidak bisa login sebelum akun dibuat.',
   'master.customers.emailLoginPlaceholder': 'email@perusahaan.co.id',
-    'master.phoneLabel': 'No. HP',
+  'master.phoneLabel': 'No. HP',
   'master.newPasswordLabel': 'Password baru (opsional)',
   'master.customers.statusWaiting': 'Menunggu',
   'master.customers.statusScheduled': 'Terjadwal',
   'master.customers.queueLegend': 'Antre',
-'master.cancel': 'Batal',
+  'master.cancel': 'Batal',
   'master.users.title': 'Pengguna',
   'master.users.add': 'Tambah pengguna',
   'master.users.description':
@@ -219,7 +220,8 @@ export const master = {
   'master.summary.loadingCap': 'Kapasitas loading',
   'master.summary.loadingCapHint': 'Jumlah dock aktif yang melayani loading',
   'master.summary.unloadingCap': 'Kapasitas unloading',
-  'master.summary.unloadingCapHint': 'Jumlah dock aktif yang melayani unloading',
+  'master.summary.unloadingCapHint':
+    'Jumlah dock aktif yang melayani unloading',
   'master.summary.truckTypes': 'Jenis truk aktif',
   'master.summary.noTruckType':
     'Customer tidak bisa booking sampai satu jenis diaktifkan',
@@ -259,7 +261,8 @@ export const master = {
   'master.activity.loading': 'Memuat',
   'master.activity.unloading': 'Unloading',
   'master.activity.both': 'Loading & unloading',
-  'master.users.hint': 'Kolom Aktif dan Boleh menyetujui diubah lewat tombol Ubah.',
+  'master.users.hint':
+    'Kolom Aktif dan Boleh menyetujui diubah lewat tombol Ubah.',
   'master.field.dock': 'Dock',
   'master.docks.filterActivity': 'Filter aktivitas',
   'master.warehouses.loading': 'Memuat gudang...',
@@ -285,7 +288,8 @@ export const master = {
   'master.customers.deleteConfirm': 'Ya, hapus',
   'master.users.count': '{rows} akun ditampilkan, {active} aktif.',
   'master.users.filterRole': 'Filter peran',
-  'master.docks.areaPlaceholderEmpty': 'mis. Area B — kosongkan untuk menghapus',
+  'master.docks.areaPlaceholderEmpty':
+    'mis. Area B — kosongkan untuk menghapus',
   'master.docks.inactiveSuffix': ' (nonaktif)',
   'master.docks.pickWarehouse': 'Pilih gudang',
   'master.docks.capacity':
@@ -301,7 +305,8 @@ export const master = {
   'master.customers.accountCreated': 'Akun customer dibuat',
   'master.notFilled': 'Belum diisi',
   'master.trucks.title': 'Jenis truk',
-  'master.trucks.editHint': 'Perubahan hanya berlaku untuk booking berikutnya. Booking yang sudah ada tetap memakai jumlah blok yang dikunci saat dibuat.',
+  'master.trucks.editHint':
+    'Perubahan hanya berlaku untuk booking berikutnya. Booking yang sudah ada tetap memakai jumlah blok yang dikunci saat dibuat.',
   'master.warehouses.title': 'Gudang',
   'master.docks.allActivities': 'Semua aktivitas',
 
@@ -314,7 +319,8 @@ export const master = {
   'master.process.name': 'Nama',
   'master.process.duration': 'Tambahan durasi',
   'master.process.empty': 'Belum ada jenis proses.',
-  'master.process.noMatch': 'Tidak ada jenis proses yang cocok dengan pencarian.',
+  'master.process.noMatch':
+    'Tidak ada jenis proses yang cocok dengan pencarian.',
   'master.process.loading': 'Memuat jenis proses...',
   'master.process.onlyActive': 'Hanya tampilkan yang aktif',
   'master.process.noneActive':

@@ -5,6 +5,7 @@ import { createApp } from '../src/app'
 import { prisma } from '../src/lib/prisma'
 import { dateOnlyToUtc } from '../src/lib/time'
 import { loginCookie, resetDatabase, seedBase } from './helpers'
+import { loadWorkbook } from './xlsx'
 
 const app = createApp()
 
@@ -84,7 +85,7 @@ describe('laporan staf', () => {
     expect(response.status).toBe(200)
 
     const workbook = new ExcelJS.Workbook()
-    await workbook.xlsx.load(response.body as Buffer)
+    await loadWorkbook(workbook, response.body)
     const sheet = workbook.getWorksheet('Detail Booking')!
     // Kolom dibaca lewat nomor: kunci kolom tidak ikut tersimpan di berkas.
     const row = sheet.getRow(2)
@@ -127,7 +128,7 @@ describe('laporan staf', () => {
       })
 
     const workbook = new ExcelJS.Workbook()
-    await workbook.xlsx.load(excel.body as Buffer)
+    await loadWorkbook(workbook, excel.body)
     // Kolom 6 = Dock; area menempel supaya berkas sama dengan layar.
     const cell = workbook.getWorksheet('Detail Booking')!.getRow(2).getCell(6)
     expect(cell.value).toBe('D1 · Area B')
@@ -151,7 +152,7 @@ describe('laporan staf', () => {
     expect(response.headers['content-disposition']).toContain('report-tsb-')
 
     const workbook = new ExcelJS.Workbook()
-    await workbook.xlsx.load(response.body as Buffer)
+    await loadWorkbook(workbook, response.body)
 
     expect(workbook.worksheets.map((sheet) => sheet.name)).toEqual([
       'Summary',

@@ -116,13 +116,25 @@ export async function nextFreeSequence(
   prefix: string = DEFAULT_BOOKING_CODE_PREFIX
 ): Promise<number> {
   const codePrefix = `${normalizeBookingCodePrefix(prefix)}-${dateISO.replace(/-/g, '')}-`
+  const first = Math.max(1, Math.min(start, 999))
+
+  // Hanya kode mulai dari nomor yang dicari. Tanpa `gte`, setiap pembuatan
+  // booking membaca SELURUH kode pada tanggal itu — dan pembacaan itu berjalan
+  // di dalam transaksi yang sudah memegang kunci penghitung harian, jadi biayanya
+  // tumbuh seiring jumlah booking hari itu. Urutan leksikografis aman karena
+  // nomor selalu tiga digit dengan nol di depan.
   const rows = await db.booking.findMany({
-    where: { bookingCode: { startsWith: codePrefix } },
+    where: {
+      bookingCode: {
+        startsWith: codePrefix,
+        gte: `${codePrefix}${String(first).padStart(3, '0')}`,
+      },
+    },
     select: { bookingCode: true },
   })
 
   const used = new Set(rows.map((row) => Number(row.bookingCode.slice(codePrefix.length))))
-  let sequence = Math.max(1, start)
+  let sequence = first
   while (used.has(sequence) && sequence < 999) sequence += 1
   return sequence
 }

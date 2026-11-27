@@ -1,0 +1,88 @@
+﻿name: CI
+
+# Sebelum ini hanya ada `stale.yml`: tidak ada yang menjalankan lint, cek tipe,
+# atau tes pada push/PR. Akibatnya `npm run lint`, `typecheck`, dan ratusan tes
+# hanya berjalan bila seseorang mengingatnya di mesin lokal.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Push berturut-turut ke cabang yang sama membatalkan run sebelumnya.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    services:
+      # Tes API memakai Postgres sungguhan: kunci `SELECT ... FOR UPDATE` di
+      # mesin kuota tidak bisa ditiru mock. Port dipetakan ke 5436 supaya
+      # DATABASE_URL sama dengan yang dipakai di lokal (lihat .env.example).
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: tsb
+          POSTGRES_PASSWORD: tsb
+          POSTGRES_DB: warehouse_tsb
+          TZ: Asia/Jakarta
+        ports:
+          - 5436:5432
+        options: >-
+          --health-cmd "pg_isready -U tsb -d warehouse_tsb"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://tsb:tsb@localhost:5436/warehouse_tsb?schema=public
+      NODE_ENV: test
+      APP_ORIGIN: http://localhost:5173
+      PUBLIC_APP_URL: http://localhost:5173
+      # Nilai contoh dari .env.example ditolak `requiredSecret` hanya bila
+      # NODE_ENV=production; di sini nilainya cukup panjang dan berbeda.
+      JWT_ACCESS_SECRET: ci-access-secret-00000000000000000000000000001
+      JWT_REFRESH_SECRET: ci-refresh-secret-00000000000000000000000000002
+      # String kosong membuat tes memakai Chromium bawaan Playwright, bukan
+      # Chrome sistem yang tidak terpasang di runner (lihat vite.config.ts).
+      PLAYWRIGHT_CHANNEL: ''
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npm run db:generate
+
+      - name: Lint
+        run: npm run lint
+
+      # `typecheck` ikut memeriksa `server/test/**`: `build:api` hanya
+      # mengompilasi `server/src`, sehingga galat tipe di berkas tes baru
+      # terlihat saat tes dijalankan.
+      - name: Typecheck
+        run: npm run typecheck
+
+      # Catatan: `npm run format:check` sengaja BELUM digerbangi. Repo belum
+      # bersih terhadap `.prettierrc` saat ini (184 berkas, hampir semuanya
+      # urutan impor, akibat `importOrder` yang berubah). Format sekali dalam
+      # PR tersendiri, lalu tambahkan langkah ini.
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Frontend tests
+        run: npm test
+
+      - name: API tests
+        run: npm run test:api

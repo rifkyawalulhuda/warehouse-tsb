@@ -17,7 +17,7 @@ import { publicTicketRouter } from './modules/public-ticket/routes'
 import { opsRouter } from './modules/ops/routes'
 import { reportsRouter } from './modules/reports/routes'
 import { errorHandler, notFoundHandler } from './middleware/error'
-import { apiLimiter } from './middleware/rate-limit'
+import { apiLimiter, floodLimiter } from './middleware/rate-limit'
 
 export function createApp() {
   const app = express()
@@ -30,19 +30,19 @@ export function createApp() {
       credentials: true,
     })
   )
-  // Unggahan gambar memakai badan biner mentah, jadi parser-nya dipasang
-  // sebelum parser JSON dan hanya untuk jalur ini. `express.json` melewati
-  // permintaan yang sudah punya badan terbaca.
-  app.use(
-    `${UPLOAD_PATH}/login-cover`,
-    express.raw({ type: () => true, limit: '3mb' })
-  )
-  app.use(
-    `${UPLOAD_PATH}/logo`,
-    express.raw({ type: () => true, limit: '3mb' })
-  )
-  app.use(express.json({ limit: '1mb' }))
   app.use(cookieParser())
+
+  // Pembatas dipasang SEBELUM parser badan. Kalau tidak, permintaan yang akan
+  // ditolak batas tetap lebih dulu mengisi buffer badan (JSON 1 MB, gambar 3 MB)
+  // sehingga membanjiri server dengan permintaan yang seharusnya murah menjadi
+  // cara murah menghabiskan memori proses. `cookieParser` di atasnya karena
+  // kunci pembatas per sesi membaca cookie.
+  app.use('/api', floodLimiter)
+  app.use('/api', apiLimiter)
+
+  // Parser biner untuk unggahan gambar dipasang di `uploadsRouter`, setelah
+  // `requireAuth`: permintaan tanpa sesi ditolak sebelum satu byte pun dibaca.
+  app.use(express.json({ limit: '1mb' }))
 
   app.get('/api/health', (_req, res) => {
     res.json({
@@ -50,7 +50,6 @@ export function createApp() {
     })
   })
 
-  app.use('/api', apiLimiter)
   app.use('/api/auth', authRouter)
   app.use('/api/account', accountRouter)
   app.use('/api/users', usersRouter)

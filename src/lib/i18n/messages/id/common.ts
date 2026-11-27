@@ -39,6 +39,8 @@ export const common = {
     'Kode booking itu tidak ada. Periksa lagi angka dan tanggalnya.',
   'error.DATE_IN_PAST': 'Tanggal yang dipilih sudah lewat',
   'error.SLOT_IN_PAST': 'Jam tersebut sudah lewat',
+  'error.PROCESS_TYPE_REQUIRED':
+    'Jenis proses wajib dipilih. Hubungi Admin kalau daftarnya kosong.',
   'error.EMAIL_TAKEN': 'Email sudah dipakai akun lain',
   'error.EMAIL_UNCHANGED': 'Email baru sama dengan email sekarang.',
   'error.INVALID_PASSWORD': 'Kata sandi saat ini tidak cocok.',
@@ -168,8 +170,7 @@ export const common = {
   'password.hide': 'Sembunyikan password',
   'password.capsLock': 'Caps Lock menyala — password jadi huruf besar.',
   'comingSoon.title': 'Segera hadir!',
-  'comingSoon.body':
-    'Halaman ini belum dibuat. Nantikan pembaruannya, ya.',
+  'comingSoon.body': 'Halaman ini belum dibuat. Nantikan pembaruannya, ya.',
   'team.label': 'Tim',
   'team.add': 'Tambah tim',
 
@@ -215,8 +216,7 @@ export const common = {
   'table.pageLast': 'Halaman terakhir',
   'table.page': 'Halaman {page}',
   'table.sort': 'Urutkan {column}',
-  'table.sortAria':
-    'Urutkan {column}, {dir}; tekan untuk mengubah arah urutan',
+  'table.sortAria': 'Urutkan {column}, {dir}; tekan untuk mengubah arah urutan',
   'table.sortAsc': 'menaik',
   'table.sortDesc': 'menurun',
   'table.sortNone': 'belum diurutkan',
@@ -249,8 +249,7 @@ export const common = {
   'errors.forbidden': 'Akses Ditolak',
   'errors.notFound': 'Halaman Tidak Ditemukan',
   'errors.notFoundTitle': 'Halaman Tidak Ditemukan',
-  'errors.notFoundBody':
-    'Halaman yang Anda cari tidak ada atau sudah dihapus.',
+  'errors.notFoundBody': 'Halaman yang Anda cari tidak ada atau sudah dihapus.',
   'errors.forbiddenBody':
     'Anda tidak punya izin yang diperlukan untuk membuka halaman ini.',
   'errors.unauthorizedBody':
@@ -259,12 +258,12 @@ export const common = {
     'Situs sedang tidak tersedia. Kami akan kembali segera.',
   'errors.general': 'Terjadi Kesalahan',
   'errors.generalTitle': 'Terjadi kesalahan',
-  'errors.generalBody': 'Maaf atas ketidaknyamanannya. Silakan coba lagi nanti.',
+  'errors.generalBody':
+    'Maaf atas ketidaknyamanannya. Silakan coba lagi nanti.',
   'errors.goBack': 'Kembali',
   'errors.backHome': 'Ke beranda',
   'errors.maintenance': 'Dalam Perbaikan',
 
-  'footer.company':
-    'TSB · Warehouse Time Slot Booking — PT Sankyu Indonesia',
+  'footer.company': 'TSB · Warehouse Time Slot Booking — PT Sankyu Indonesia',
   'footer.location': 'Gudang Cikarang · Shift 1',
 } as const

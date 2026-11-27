@@ -1,0 +1,21 @@
+{
+  // Berkas tes API tidak pernah ikut dikompilasi: `tsconfig.json` hanya
+  // menyalin `src/**/*.ts` ke `dist`, dan `test/` berada di luar `rootDir`.
+  // Akibatnya galat tipe di salah satu berkas tes baru muncul saat dijalankan.
+  // Konfigurasi ini hanya memeriksa, tidak pernah menghasilkan berkas.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "rootDir": ".",
+    "outDir": "./dist-test",
+    // Tes dijalankan Vitest (vite-node), yang menyelesaikan modul seperti
+    // bundler: tanpa ekstensi dan tanpa memaksa aturan ESM Node. Memakai
+    // `node16` di sini akan menolak `import('../src/config/env')` yang justru
+    // berjalan baik saat tes dijalankan — pemeriksaan yang salah lebih buruk
+    // daripada tidak ada pemeriksaan.
+    "module": "Preserve",
+    "moduleResolution": "Bundler"
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"],
+  "exclude": ["node_modules", "dist", "dist-test"]
+}

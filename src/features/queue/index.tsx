@@ -13,8 +13,9 @@ import {
   unassignDock,
 } from '@/lib/api/endpoints'
 import type { Booking, DockWithBooking } from '@/lib/api/types'
-import { todayISO } from '@/lib/format'
 import { dockOptionLabel, dockWithArea } from '@/lib/dock-label'
+import { todayISO } from '@/lib/format'
+import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 import { useNow } from '@/hooks/use-now'
 import { usePendingApprovals } from '@/hooks/use-pending-approvals'
@@ -22,10 +23,10 @@ import { useRealtimeSync } from '@/hooks/use-realtime'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { PendingApprovalBadge } from '@/components/pending-approval-badge'
 import { DatePicker } from '@/components/date-picker'
 import { Main } from '@/components/layout/main'
 import { PageHeader } from '@/components/page-header'
+import { PendingApprovalBadge } from '@/components/pending-approval-badge'
 import { ErrorBlock, LoadingBlock } from '@/components/query-state'
 import { ApprovalsPanel } from '@/features/approvals'
 import { QueueCompact } from './queue-compact'
@@ -41,9 +42,8 @@ import {
 } from './queue-model'
 import { QueueSummary, type QueueFilter } from './queue-summary'
 import { QueueTable } from './queue-table'
-import { useQueueView } from './use-queue-view'
-import { useT } from '@/lib/i18n'
 import { QueueViewSwitch } from './queue-view-switch'
+import { useQueueView } from './use-queue-view'
 
 type AssignVars = { bookingId: string; dockId: number; dockLabel: string }
 
@@ -152,19 +152,21 @@ export function QueuePage({ tab, onTabChange }: QueuePageProps) {
       setAssignReset((n) => n + 1)
       setPendingAssign(null)
       void queryClient.invalidateQueries({ queryKey: ['ops'] })
-      toast.success(t('queue.assignDone', {
-        code: booking.bookingCode,
-        dock: variables.dockLabel,
-      }), {
-        description:
-          t('queue.assignDoneDesc'),
-        // Pembatalan salah pilih butuh waktu membaca; 4 detik bawaan terlalu cepat.
-        duration: 8_000,
-        action: {
-          label: t('queue.assignUndo'),
-          onClick: () => unassign.mutate(booking.id),
-        },
-      })
+      toast.success(
+        t('queue.assignDone', {
+          code: booking.bookingCode,
+          dock: variables.dockLabel,
+        }),
+        {
+          description: t('queue.assignDoneDesc'),
+          // Pembatalan salah pilih butuh waktu membaca; 4 detik bawaan terlalu cepat.
+          duration: 8_000,
+          action: {
+            label: t('queue.assignUndo'),
+            onClick: () => unassign.mutate(booking.id),
+          },
+        }
+      )
     },
     onError: (error) => toast.error(apiErrorMessage(error)),
   })
@@ -172,7 +174,7 @@ export function QueuePage({ tab, onTabChange }: QueuePageProps) {
   const noShow = useMutation({
     mutationFn: (bookingId: string) => markNoShow(bookingId),
     onSuccess: () => {
-      toast.success('Ditandai no-show')
+      toast.success(t('queue.noShowDone'))
       void queryClient.invalidateQueries({ queryKey: ['ops'] })
       setNoShowTarget(null)
     },
@@ -215,9 +217,7 @@ export function QueuePage({ tab, onTabChange }: QueuePageProps) {
 
       <Tabs
         value={tab}
-        onValueChange={(value) =>
-          onTabChange(value as 'queue' | 'approvals')
-        }
+        onValueChange={(value) => onTabChange(value as 'queue' | 'approvals')}
       >
         <TabsList>
           <TabsTrigger value='queue'>{t('queue.tabQueue')}</TabsTrigger>

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import request from 'supertest'
 import { createApp } from '../src/app'
 import { prisma } from '../src/lib/prisma'
@@ -114,6 +114,94 @@ describe('cron NO_SHOW', () => {
     expect(marked).toBe(1)
     const after = await prisma.booking.findUnique({ where: { id: booking.id } })
     expect(after?.status).toBe('NO_SHOW')
+  })
+
+  it('tidak menimpa booking yang sudah masuk gerbang walau snapshot job masih melihatnya siap', async () => {
+    await resetDatabase(prisma)
+    const { customer, truckTypes } = await seedBase(prisma, {
+      operatingStartMinute: 480,
+      operatingEndMinute: 1020,
+    })
+
+    const date = addDaysISO(todayISO(), -1)
+    const booking = await seedBooking({
+      customerId: customer.id,
+      truckTypeId: truckTypes[0]!.id,
+      startTime: jakartaInstant(date, 9 * 60),
+      bookingDate: date,
+    })
+
+    // Truk dipindai masuk gerbang SESUDAH `findMany` job mengambil snapshot.
+    await prisma.booking.update({
+      where: { id: booking.id },
+      data: { status: 'CHECKED_IN_ON_TIME' },
+    })
+
+    // Snapshot basi: job masih mengira booking ini BOOKED_READY.
+    const stale = { ...booking, status: 'BOOKED_READY', truckType: truckTypes[0] }
+    const spy = vi
+      .spyOn(prisma.booking, 'findMany')
+      .mockResolvedValueOnce([stale] as never)
+
+    const marked = await markNoShowBookings(jakartaInstant(todayISO(), 8 * 60))
+    spy.mockRestore()
+
+    // UPDATE tanpa syarat status akan menimpa CHECKED_IN_* menjadi NO_SHOW dan
+    // mengembalikan kuota yang masih dipakai truk itu — slotnya lalu bisa
+    // diberikan ke booking lain. Guard di SQL harus menolaknya.
+    expect(marked).toBe(0)
+    const after = await prisma.booking.findUnique({ where: { id: booking.id } })
+    expect(after?.status).toBe('CHECKED_IN_ON_TIME')
+  })
+
+  it('satu booking yang gagal tidak menghentikan booking lain', async () => {
+    await resetDatabase(prisma)
+    const { customer, truckTypes } = await seedBase(prisma, {
+      operatingStartMinute: 480,
+      operatingEndMinute: 1020,
+    })
+
+    const date = addDaysISO(todayISO(), -1)
+    const first = await seedBooking({
+      customerId: customer.id,
+      truckTypeId: truckTypes[0]!.id,
+      startTime: jakartaInstant(date, 9 * 60),
+      bookingDate: date,
+    })
+    const second = await seedBooking({
+      customerId: customer.id,
+      truckTypeId: truckTypes[0]!.id,
+      startTime: jakartaInstant(date, 10 * 60),
+      bookingDate: date,
+    })
+
+    // Transaksi pertama gagal (mis. pengaturan berubah), sisanya harus jalan.
+    // Tanpa isolasi per booking, baris yang selalu gagal kembali di batch
+    // berikutnya dan TIDAK ADA booking lain yang pernah ditandai — selamanya.
+    const originalTx = prisma.$transaction.bind(prisma)
+    let calls = 0
+    const spy = vi.spyOn(prisma, '$transaction').mockImplementation(((
+      fn: never,
+      ...rest: never[]
+    ) => {
+      calls += 1
+      if (calls === 1) return Promise.reject(new Error('gagal disengaja'))
+      return (originalTx as unknown as (f: never, ...r: never[]) => Promise<unknown>)(
+        fn,
+        ...rest
+      )
+    }) as never)
+
+    const marked = await markNoShowBookings(jakartaInstant(todayISO(), 8 * 60))
+    spy.mockRestore()
+
+    expect(marked).toBe(1)
+    expect((await prisma.booking.findUnique({ where: { id: first.id } }))?.status).toBe(
+      'BOOKED_READY'
+    )
+    expect((await prisma.booking.findUnique({ where: { id: second.id } }))?.status).toBe(
+      'NO_SHOW'
+    )
   })
 
   it('truk yang datang terlambat tetap bisa gate-in selama hari operasional belum tutup', async () => {

@@ -93,7 +93,7 @@ describe('computeAvailability', () => {
     const nineAm = slots.find((slot) => slot.startMinute === 540)
     expect(nineAm?.status).toBe('FULL')
     expect(nineAm?.remaining).toBe(0)
-    expect(nineAm?.limitReason).toContain('09:30')
+    expect(nineAm?.limit).toEqual({ code: 'BLOCK_FULL', blockLabel: '09:30' })
 
     // 10:00 tetap bisa karena tidak menyentuh blok 09:30.
     expect(slots.find((slot) => slot.startMinute === 600)?.status).toBe('AVAILABLE')
@@ -122,7 +122,7 @@ describe('computeAvailability', () => {
       usedByBlock: new Map(),
     })
     expect(slots[0]?.status).toBe('FULL')
-    expect(slots[0]?.limitReason).toBe('Tidak ada dock aktif untuk aktivitas ini')
+    expect(slots[0]?.limit).toEqual({ code: 'NO_DOCK' })
   })
 
   it('menandai slot yang tidak cukup waktu sebelum tutup', () => {
@@ -134,7 +134,7 @@ describe('computeAvailability', () => {
     })
     const late = slots.find((slot) => slot.startMinute === 960) // 16:00 + 2 jam = 18:00
     expect(late?.status).toBe('FULL')
-    expect(late?.limitReason).toBe('Tidak cukup waktu sebelum jam tutup')
+    expect(late?.limit).toEqual({ code: 'CLOSING_SOON' })
     expect(late?.endLabel).toBe('17:00')
   })
 })

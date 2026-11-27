@@ -193,6 +193,12 @@ export function buildByActivity(
 /**
  * Kedatangan per jam operasional. Menerima waktu gate-in mentah karena jam
  * yang dipakai adalah jam Jakarta, bukan jam mesin.
+ *
+ * Sumbu TIDAK boleh dipotong ke jam operasional saja. Truk boleh masuk sebelum
+ * gudang buka (sebatas `earlyArrivalLimitMinutes`) dan masih dilayani setelah
+ * jam tutup selama hari operasional belum berakhir, jadi kedatangan seperti itu
+ * akan hilang dari grafik dan jumlah seluruh batang tidak lagi sama dengan KPI
+ * "truk masuk". Sumbu diperluas seperlunya ke jam yang benar-benar teramati.
  */
 export function buildArrivalsByHour(
   gateInInstants: readonly Date[],
@@ -204,8 +210,13 @@ export function buildArrivalsByHour(
     counts.set(hour, (counts.get(hour) ?? 0) + 1)
   }
 
-  const firstHour = Math.floor(window.operatingStartMinute / 60)
-  const lastHour = Math.ceil(window.operatingEndMinute / 60)
+  let firstHour = Math.floor(window.operatingStartMinute / 60)
+  let lastHour = Math.ceil(window.operatingEndMinute / 60)
+
+  for (const hour of counts.keys()) {
+    if (hour < firstHour) firstHour = hour
+    if (hour + 1 > lastHour) lastHour = hour + 1
+  }
 
   return Array.from({ length: Math.max(0, lastHour - firstHour) }, (_, index) => {
     const hour = firstHour + index

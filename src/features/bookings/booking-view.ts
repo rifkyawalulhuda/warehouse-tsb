@@ -1,4 +1,4 @@
-import type { Booking } from '@/lib/api/types'
+import type { Booking, SlotLimit } from '@/lib/api/types'
 import { dockWithArea } from '@/lib/dock-label'
 import { TIME_ZONE, formatTime } from '@/lib/format'
 import { getCookie, setCookie } from '@/lib/cookies'
@@ -250,6 +250,30 @@ export function bookingUrgency(booking: Booking, now: Date, locale: Locale = 'id
 export function dockLabel(booking: Booking, locale: Locale = 'id'): string {
   if (!booking.assignedDock) return translate(locale, 'bookings.dockTbd')
   return dockWithArea(booking.assignedDock)
+}
+
+/**
+ * Sebab sebuah slot tidak bisa dipilih, dalam bahasa aktif.
+ *
+ * Server mengirim kode (`SlotLimit`), bukan kalimat, supaya layar berbahasa
+ * Inggris tidak menampilkan teks Indonesia. Slot penuh tanpa sebab yang
+ * dikenali tetap mendapat kata umum, bukan baris kosong.
+ */
+export function slotLimitLabel(limit: SlotLimit | null, locale: Locale = 'id'): string {
+  switch (limit?.code) {
+    case 'PAST_START':
+      return translate(locale, 'bookings.create.limit.pastStart')
+    case 'NO_DOCK':
+      return translate(locale, 'bookings.create.limit.noDock')
+    case 'CLOSING_SOON':
+      return translate(locale, 'bookings.create.limit.closingSoon')
+    case 'BLOCK_FULL':
+      return translate(locale, 'bookings.create.limit.blockFull', {
+        time: limit.blockLabel,
+      })
+    default:
+      return translate(locale, 'bookings.create.full')
+  }
 }
 
 /* ------------------------------------------------------------------ */

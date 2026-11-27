@@ -155,7 +155,12 @@ bookingsRouter.get('/slots/availability', async (req, res, next) => {
         // Customer cukup tahu berapa slot yang masih bisa ia ambil.
         slots: slots.map(({ capacity: _capacity, ...slot }) =>
           isToday && slot.startMinute <= nowMinute
-            ? { ...slot, status: 'FULL' as const, remaining: 0, limitReason: 'Jam sudah lewat' }
+            ? {
+                ...slot,
+                status: 'FULL' as const,
+                remaining: 0,
+                limit: { code: 'PAST_START' as const },
+              }
             : slot
         ),
       },
@@ -252,6 +257,14 @@ bookingsRouter.post('/', requireExactRole('CUSTOMER'), async (req, res, next) =>
         // walau ada beberapa customer submit bersamaan. Nilai awal diambil dari
         // jumlah booking yang sudah ada pada tanggal itu, sehingga data hasil
         // seed/import tidak membuat kode bertabrakan.
+        //
+        // Konsekuensinya sengaja diterima: semua booking pada tanggal yang sama
+        // mengantre pada satu baris penghitung sampai transaksinya selesai.
+        // Urutan ini JANGAN dibalik (kuota dulu, baru penghitung) — setiap
+        // transaksi harus mengambil kunci dalam urutan yang sama, kalau tidak
+        // dua booking bersamaan bisa saling menunggu (deadlock). Kalau suatu saat
+        // throughput per tanggal jadi masalah, angkat penghitung ke transaksi
+        // pendek tersendiri, bukan menukar urutannya.
         const seqRow = await tx.$queryRaw<Array<{ last_number: number }>>`
           INSERT INTO booking_day_sequences (booking_date, last_number)
           VALUES (
@@ -280,7 +293,10 @@ bookingsRouter.post('/', requireExactRole('CUSTOMER'), async (req, res, next) =>
         // truk + proses, karena penjumlahannya bisa melewati batas blok (2 → 3).
         const blocksLocked = blocksForDuration(totalMinutes, settings.slotUnitMinutes)
 
-        await reserveBlocks(
+        // Blok konkretnya ikut disimpan. `blocksLocked` hanya jumlah; tanpa
+        // posisinya, pelepasan kuota harus menghitung ulang dari pengaturan yang
+        // berlaku saat batal — dan Admin bisa sudah mengubah jam buka.
+        const blockStarts = await reserveBlocks(
           tx,
           {
             date: body.bookingDate,
@@ -331,6 +347,7 @@ bookingsRouter.post('/', requireExactRole('CUSTOMER'), async (req, res, next) =>
             driverName,
             driverPhone: body.driverPhone || null,
             blocksLocked,
+            blockStarts,
             status: complete ? 'BOOKED_READY' : 'BOOKED_INCOMPLETE',
             approvalStatus: approvalRequired ? 'PENDING' : 'NOT_REQUIRED',
             approvalDeadline,

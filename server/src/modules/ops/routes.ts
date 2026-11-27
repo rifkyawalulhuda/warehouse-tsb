@@ -2,7 +2,7 @@
 import { z } from 'zod'
 import type { BookingStatus, Prisma } from '@prisma/client'
 import { prisma, type Tx } from '../../lib/prisma'
-import { parse } from '../../lib/validate'
+import { dateISOSchema, parse } from '../../lib/validate'
 import { HttpError, badRequest, conflict, notFound } from '../../lib/http-error'
 import { pathParam } from '../../lib/params'
 import { requireAuth, requireRole } from '../../middleware/auth'
@@ -225,17 +225,23 @@ opsRouter.get('/scan/:qrToken', requireRole('GATE_OFFICER', 'CHECKER'), async (r
       earlyMinutes > settings.earlyArrivalLimitMinutes
         ? `Truk datang ${earlyMinutes} menit lebih awal. Batas kedatangan awal ${settings.earlyArrivalLimitMinutes} menit.`
         : null
+    const vehicleIncomplete = !(booking.licensePlate && booking.driverName)
+    // `canGateIn` harus sama persis dengan syarat yang diperiksa `/gate-in`.
+    // Dulu data kendaraan tidak ikut di sini, sehingga layar menampilkan tombol
+    // Gate-In yang pasti ditolak server, dan pemindaian yang gagal itu tidak
+    // tercatat sebagai penolakan.
     const canGateIn =
       ['BOOKED_INCOMPLETE', 'BOOKED_READY'].includes(booking.status) &&
       booking.approvalStatus !== 'PENDING' &&
-      earlyMinutes <= settings.earlyArrivalLimitMinutes
+      earlyMinutes <= settings.earlyArrivalLimitMinutes &&
+      !vehicleIncomplete
     const blocked = canGateIn
       ? null
       : blockedScanReason({
           status: booking.status,
           approvalPending: booking.approvalStatus === 'PENDING',
           earlyArrival: earlyMinutes > settings.earlyArrivalLimitMinutes,
-          vehicleIncomplete: !(booking.licensePlate && booking.driverName),
+          vehicleIncomplete,
           earlyArrivalMessage,
         })
 
@@ -261,7 +267,7 @@ opsRouter.get('/scan/:qrToken', requireRole('GATE_OFFICER', 'CHECKER'), async (r
                 message: earlyArrivalMessage,
               }
             : null,
-        vehicleIncomplete: !(booking.licensePlate && booking.driverName),
+        vehicleIncomplete,
         approvalPending: booking.approvalStatus === 'PENDING',
         projectedStatus:
           lateMinutes <= settings.gracePeriodMinutes
@@ -306,11 +312,18 @@ opsRouter.get(
 
       // Posisi antrean mengikuti siapa yang lebih dulu tercatat masuk gate,
       // bukan jadwal — truk yang datang lebih awal berhak dilayani lebih dulu.
+      //
+      // `bookingDate` WAJIB ikut disaring. Tanpa itu truk yang sudah menunggu
+      // sejak hari-hari sebelumnya (checker lupa menugaskan dock, dan job
+      // NO_SHOW tidak menyentuh status CHECKED_IN_*) ikut terhitung, sehingga
+      // nomor antrean hari ini terus membengkak dan tidak pernah cocok dengan
+      // papan antrean yang memang per tanggal.
       const waitingPosition =
         waiting && gateInAt
           ? (await prisma.booking.count({
               where: {
                 id: { not: booking.id },
+                bookingDate: booking.bookingDate,
                 status: { in: ['CHECKED_IN_ON_TIME', 'LATE_WAITING_LIST'] },
                 timeLog: { gateInAt: { lt: gateInAt } },
               },
@@ -1007,7 +1020,7 @@ opsRouter.post('/no-show', requireRole('ADMIN'), async (req, res, next) => {
 opsRouter.get('/queue', requireRole('CHECKER'), async (req, res, next) => {
   try {
     const query = parse(
-      z.object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() }),
+      z.object({ date: dateISOSchema.optional() }),
       req.query,
       'Filter tanggal'
     )
@@ -1177,8 +1190,8 @@ opsRouter.get('/gate-history', requireRole('GATE_OFFICER', 'CHECKER'), async (re
     const query = parse(
       z
         .object({
-          from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Tanggal harus YYYY-MM-DD'),
-          to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Tanggal harus YYYY-MM-DD'),
+          from: dateISOSchema,
+          to: dateISOSchema,
           q: z.string().trim().max(60).optional(),
           limit: z.coerce.number().int().min(1).max(500).default(300),
         })

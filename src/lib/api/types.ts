@@ -215,6 +215,16 @@ export type Booking = {
 }
 
 export type SlotStatus = 'AVAILABLE' | 'FULL'
+/**
+ * Sebab slot penuh, dikirim server sebagai kode agar bisa diterjemahkan.
+ * `blockLabel` hanya ada pada `BLOCK_FULL` — jam blok yang kuotanya habis.
+ */
+export type SlotLimit =
+  | { code: 'PAST_START' }
+  | { code: 'NO_DOCK' }
+  | { code: 'CLOSING_SOON' }
+  | { code: 'BLOCK_FULL'; blockLabel: string }
+
 export type AvailabilitySlot = {
   startMinute: number
   startLabel: string
@@ -222,7 +232,7 @@ export type AvailabilitySlot = {
   endLabel: string
   remaining: number
   status: SlotStatus
-  limitReason: string | null
+  limit: SlotLimit | null
 }
 
 export type Settings = {

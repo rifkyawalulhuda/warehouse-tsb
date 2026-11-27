@@ -11,6 +11,11 @@ export const rooms = {
   /** Semua petugas: Admin, Checker, Security. */
   staff: 'staff',
   admin: 'admin',
+  /**
+   * Semua socket yang sudah terautentikasi, tanpa memandang peran. Dipakai untuk
+   * ping murah yang memang dibutuhkan setiap pengguna masuk — bukan untuk data.
+   */
+  authenticated: 'authenticated',
   /** Room pribadi satu akun — halaman "Jadwal Saya" / detail booking. */
   user: (userId: string) => `user:${userId}`,
   /**
@@ -149,8 +154,13 @@ export function initRealtime(httpServer: HttpServer): Server {
 
   io.on('connection', async (socket) => {
     // Halaman tiket supir tidak punya login; ia bergabung lewat qr_token saja.
-    const qrToken = socket.handshake.auth?.qrToken as string | undefined
-    if (qrToken) socket.join(rooms.ticket(qrToken))
+    // Bentuknya diperiksa sebelum dipakai sebagai nama room: token adalah satu-
+    // satunya kunci di sini, dan tanpa pemeriksaan siapa pun bisa membuat room
+    // sembarang sepanjang apa pun tanpa pernah menyentuh database.
+    const qrToken = socket.handshake.auth?.qrToken
+    if (typeof qrToken === 'string' && qrToken.length >= 16 && qrToken.length <= 128) {
+      socket.join(rooms.ticket(qrToken))
+    }
 
     const identity = await resolveIdentity(socket.handshake.headers.cookie)
     if (!identity) return
@@ -158,6 +168,7 @@ export function initRealtime(httpServer: HttpServer): Server {
     connections.set(socket.id, identity)
     socket.once('disconnect', () => connections.delete(socket.id))
 
+    socket.join(rooms.authenticated)
     if (STAFF_ROLES.includes(identity.role)) socket.join(rooms.staff)
     if (identity.role === 'ADMIN') socket.join(rooms.admin)
     socket.join(rooms.user(identity.userId))
@@ -200,8 +211,12 @@ export function emitBookingUpdated(payload: {
 
   // Ping global tanpa isi: klien yang tidak punya room sendiri (mis. daftar
   // "Jadwal Saya") cukup menyegarkan query-nya, tanpa membocorkan data booking
-  // milik customer lain.
-  io.emit('queue.updated', { type: 'queue.updated' } satisfies RealtimeEvent)
+  // milik customer lain. Dikirim hanya ke socket terautentikasi: halaman tiket
+  // publik tidak memakainya, dan dulu setiap perubahan booking juga menyentuh
+  // semua penonton tiket.
+  io.to(rooms.authenticated).emit('queue.updated', {
+    type: 'queue.updated',
+  } satisfies RealtimeEvent)
 }
 
 export function emitDockUpdated(dockId: number) {

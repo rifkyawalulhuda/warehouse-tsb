@@ -122,7 +122,7 @@ export const master = {
   'master.trucks.editTitle': 'Edit truck type {name}',
   'master.trucks.newTitle': 'Add truck type',
   'master.trucks.newDescription':
-    'Slots are derived from duration: every 30 minutes is one slot.',
+    'Slots are derived from duration: every {minutes} minutes is one slot.',
   'master.trucks.nameLabel': 'Truck type name',
   'master.trucks.namePlaceholder': 'CDD Engkel',
   'master.trucks.durationLabel': 'Duration (minutes)',
@@ -164,8 +164,7 @@ export const master = {
     'Not the login email. Sign-in uses the account emails below.',
   'master.customers.cityLabel': 'City',
   'master.customers.noteLabel': 'Note',
-  'master.customers.accountInactiveHint':
-    'Inactive companies cannot book.',
+  'master.customers.accountInactiveHint': 'Inactive companies cannot book.',
   'master.customers.manualModeHint':
     'In manual mode, this company books without queueing.',
   'master.customers.warehouseArea': 'Warehouse area',
@@ -184,12 +183,12 @@ export const master = {
   'master.customers.accountsEmpty':
     'No account yet. Customers cannot sign in before an account is created.',
   'master.customers.emailLoginPlaceholder': 'email@company.co.id',
-    'master.phoneLabel': 'Phone no.',
+  'master.phoneLabel': 'Phone no.',
   'master.newPasswordLabel': 'New password (optional)',
   'master.customers.statusWaiting': 'Waiting',
   'master.customers.statusScheduled': 'Scheduled',
   'master.customers.queueLegend': 'Queue',
-'master.cancel': 'Cancel',
+  'master.cancel': 'Cancel',
   'master.users.title': 'Users',
   'master.users.add': 'Add user',
   'master.users.description':
@@ -296,14 +295,14 @@ export const master = {
   'master.docks.available': 'available',
   'master.docks.lockedByBooking': 'locked by an active booking',
   'master.docks.maintenance': 'maintenance',
-  'master.trucks.durationSummary':
-    '{duration} duration = {blocks} blocks.',
+  'master.trucks.durationSummary': '{duration} duration = {blocks} blocks.',
   'master.docks.capacityLoading': 'Loading capacity…',
   'master.customers.createAccount': 'Add customer account',
   'master.customers.accountCreated': 'Customer account created',
   'master.notFilled': 'Not filled in',
   'master.trucks.title': 'Truck types',
-  'master.trucks.editHint': 'Changes only apply to future bookings. Existing bookings keep the blocks locked when they were created.',
+  'master.trucks.editHint':
+    'Changes only apply to future bookings. Existing bookings keep the blocks locked when they were created.',
   'master.warehouses.title': 'Warehouses',
   'master.docks.allActivities': 'All activities',
 
@@ -334,7 +333,8 @@ export const master = {
   'master.process.activeLabel': 'Active',
   'master.process.created': 'Process type added',
   'master.process.updated': 'Process type updated',
-  'master.process.minDurationHint': 'Enter an extra duration of at least 1 minute.',
+  'master.process.minDurationHint':
+    'Enter an extra duration of at least 1 minute.',
   'master.process.editHint':
     'Changes only apply to future bookings. Existing bookings keep the duration copied when they were created.',
 }

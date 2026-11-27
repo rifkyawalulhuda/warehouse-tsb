@@ -41,10 +41,13 @@ export const common: Record<keyof typeof idCommon, string> = {
     'That booking code does not exist. Check the number and the date again.',
   'error.DATE_IN_PAST': 'That date has already passed',
   'error.SLOT_IN_PAST': 'That time has already passed',
+  'error.PROCESS_TYPE_REQUIRED':
+    'Pick a process type. Ask an Admin if the list is empty.',
   'error.EMAIL_TAKEN': 'This email is already used by another account',
   'error.EMAIL_UNCHANGED': 'The new email is the same as the current one.',
   'error.INVALID_PASSWORD': 'Your current password does not match.',
-  'error.PASSWORD_UNCHANGED': 'The new password is the same as the current one.',
+  'error.PASSWORD_UNCHANGED':
+    'The new password is the same as the current one.',
   'error.NO_CHANGES': 'Nothing changed',
   'error.CUSTOMER_INACTIVE': 'This customer account is inactive.',
   'error.UPLOAD_EMPTY': 'The image file is empty.',
@@ -52,7 +55,8 @@ export const common: Record<keyof typeof idCommon, string> = {
   'error.UPLOAD_TYPE': 'Image must be PNG or JPG.',
   'error.INVALID_CREDENTIALS':
     'Email or password does not match. Check it again, or ask the warehouse Admin if you are sure this account is registered.',
-  'error.TOO_MANY_REQUESTS': 'Too many requests. Wait a moment, then try again.',
+  'error.TOO_MANY_REQUESTS':
+    'Too many requests. Wait a moment, then try again.',
   'error.NETWORK': "Can't reach the server. Check your connection.",
   'error.APPROVAL_ALREADY_DECIDED':
     'This booking has already been decided or has expired.',
@@ -89,7 +93,8 @@ export const common: Record<keyof typeof idCommon, string> = {
   'error.VEHICLE_LOCKED':
     'Vehicle details cannot be changed because the truck already checked in.',
   'error.WAREHOUSE_NAME_TAKEN': 'That warehouse name is already used.',
-  'error.TOO_MANY_ATTEMPTS': 'Too many sign-in attempts. Wait 15 minutes, then try again.',
+  'error.TOO_MANY_ATTEMPTS':
+    'Too many sign-in attempts. Wait 15 minutes, then try again.',
   'error.TOO_MANY_PASSWORD_ATTEMPTS':
     'Too many password attempts. Wait 15 minutes, then try again.',
   'error.TOO_EARLY': 'Too early for this action.',
@@ -104,7 +109,8 @@ export const common: Record<keyof typeof idCommon, string> = {
   'error.WAREHOUSE_NOT_FOUND': 'The selected warehouse was not found.',
   'error.SLOT_OVERFLOW':
     'The truck duration runs past closing time. Pick another time.',
-  'error.SLOT_NOT_ALIGNED': 'The start time must be a multiple of the block unit.',
+  'error.SLOT_NOT_ALIGNED':
+    'The start time must be a multiple of the block unit.',
   'error.SLOT_BEFORE_OPENING': 'The start time is before the warehouse opens.',
   'error.SLOT_AFTER_CLOSING': 'The end time runs past closing time.',
   'error.DATE_TOO_FAR': 'That date is beyond the booking window.',
@@ -166,8 +172,7 @@ export const common: Record<keyof typeof idCommon, string> = {
   'password.hide': 'Hide password',
   'password.capsLock': 'Caps Lock is on — the password will be in capitals.',
   'comingSoon.title': 'Coming soon!',
-  'comingSoon.body':
-    'This page has not been created yet. Stay tuned though!',
+  'comingSoon.body': 'This page has not been created yet. Stay tuned though!',
   'team.label': 'Teams',
   'team.add': 'Add team',
 
@@ -234,12 +239,14 @@ export const common: Record<keyof typeof idCommon, string> = {
   'picker.selectDock': 'Pick a dock',
   'picker.searchDock': 'Search dock, area, or warehouse…',
   'picker.noDock': 'No matching dock.',
-  'picker.blockedWarehouseGroup': 'Other warehouse — outside this customer’s area',
+  'picker.blockedWarehouseGroup':
+    'Other warehouse — outside this customer’s area',
   'picker.dockLabel': '{label}: {dock}',
 
   'signOut.title': 'Sign out',
   'signOut.body': 'You need to sign in again to continue. Sign out anyway?',
-  'signOut.warning': 'The local session was cleared, but the server did not respond.',
+  'signOut.warning':
+    'The local session was cleared, but the server did not respond.',
 
   'errors.unauthorized': 'Not Authenticated',
   'errors.forbidden': 'Access Denied',
@@ -255,12 +262,12 @@ export const common: Record<keyof typeof idCommon, string> = {
     'The site is not available right now. We will be back shortly.',
   'errors.general': 'Something Went Wrong',
   'errors.generalTitle': 'Something went wrong',
-  'errors.generalBody': 'We apologise for the inconvenience. Please try again later.',
+  'errors.generalBody':
+    'We apologise for the inconvenience. Please try again later.',
   'errors.goBack': 'Go Back',
   'errors.backHome': 'Back to Home',
   'errors.maintenance': 'Under Maintenance',
 
-  'footer.company':
-    'TSB · Warehouse Time Slot Booking — PT Sankyu Indonesia',
+  'footer.company': 'TSB · Warehouse Time Slot Booking — PT Sankyu Indonesia',
   'footer.location': 'Cikarang Warehouse · Shift 1',
 }

@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest'
 import request from 'supertest'
 import { createApp } from '../src/app'
 import { prisma } from '../src/lib/prisma'
-import { dateOnlyToUtc, jakartaInstant, todayISO, utcToDateOnly } from '../src/lib/time'
+import {
+  addDaysISO,
+  dateOnlyToUtc,
+  jakartaInstant,
+  todayISO,
+  utcToDateOnly,
+} from '../src/lib/time'
 import { loginCookie, resetDatabase, seedBase } from './helpers'
 
 const app = createApp()
@@ -165,6 +171,39 @@ describe('pindai checker', () => {
     expect(kedua.body.data.waitingSince).toBe(
       jakartaInstant(date, 9 * 60 + 15).toISOString()
     )
+  })
+
+  it('tidak menghitung sisa antrean hari sebelumnya ke posisi hari ini', async () => {
+    await resetDatabase(prisma)
+    const { customer, truckTypes } = await seedBase(prisma)
+    const cookie = await loginCookie(app, 'checker@test.local')
+    const date = todayISO()
+    const kemarin = addDaysISO(date, -1)
+
+    // Truk kemarin yang masuk gate tapi lupa ditugaskan dock. Job NO_SHOW tidak
+    // menyentuhnya (statusnya sudah CHECKED_IN_*), jadi baris ini akan menumpuk
+    // selamanya kalau posisi antrean dihitung lintas tanggal.
+    await seedBooking({
+      customerId: customer.id,
+      truckTypeId: truckTypes[0]!.id,
+      startTime: jakartaInstant(kemarin, 9 * 60),
+      status: 'CHECKED_IN_ON_TIME',
+      gateInAt: jakartaInstant(kemarin, 8 * 60 + 30),
+    })
+    const hariIni = await seedBooking({
+      customerId: customer.id,
+      truckTypeId: truckTypes[1]!.id,
+      startTime: jakartaInstant(date, 10 * 60),
+      status: 'CHECKED_IN_ON_TIME',
+      gateInAt: jakartaInstant(date, 9 * 60),
+    })
+
+    const response = await request(app)
+      .get(`/api/ops/checker/scan/${hariIni.qrToken}`)
+      .set('Cookie', cookie)
+
+    expect(response.status).toBe(200)
+    expect(response.body.data.waitingPosition).toBe(1)
   })
 
   it('memberi satu aksi saja sesuai status truk', async () => {
