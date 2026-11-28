@@ -16,6 +16,11 @@ import {
   startProcess,
 } from '@/lib/api/endpoints'
 import type { CheckerScanResult } from '@/lib/api/types'
+import {
+  dockOptionLabel,
+  dockOptionPlace,
+  dockWithArea,
+} from '@/lib/dock-label'
 import { activityLabels, formatDate, formatTime } from '@/lib/format'
 import { useT } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
@@ -31,7 +36,6 @@ import {
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { dockOptionLabel, dockOptionPlace, dockWithArea } from '@/lib/dock-label'
 import { Main } from '@/components/layout/main'
 import { PageHeader } from '@/components/page-header'
 import { StatusBadge } from '@/components/status-badge'
@@ -172,7 +176,8 @@ export function CheckerScanPage() {
   // terpakai, atau aktivitas lain) — bukan soal izin.
   const blockedDocks =
     result?.docks.filter(
-      (dock) => !dock.eligible && !areaBlockedDocks.some((d) => d.id === dock.id)
+      (dock) =>
+        !dock.eligible && !areaBlockedDocks.some((d) => d.id === dock.id)
     ) ?? []
   const chosenDock = eligibleDocks.find((dock) => dock.id === dockId)
 
@@ -489,12 +494,15 @@ export function CheckerScanPage() {
 }
 
 function inactiveTitle(result: CheckerScanResult, t: Translate) {
-  if (result.booking.approvalStatus === 'PENDING')
-    return t('ops.checker.inactiveApprovalTitle')
+  /**
+   * Status akhir diperiksa LEBIH DULU. Booking yang dibatalkan customer tetap
+   * ber-`approvalStatus = PENDING`, jadi memeriksa persetujuan lebih dulu
+   * membuat checker diberi tahu "menunggu persetujuan" untuk tiket yang sudah
+   * batal dan tidak akan pernah disetujui.
+   */
   switch (result.booking.status) {
-    case 'BOOKED_INCOMPLETE':
-    case 'BOOKED_READY':
-      return t('ops.checker.inactiveNotGatedTitle')
+    case 'CANCELLED':
+      return t('ops.checker.inactiveCancelledTitle')
     case 'COMPLETED':
       return t('ops.checker.inactiveCompletedTitle')
     case 'CHECKED_OUT':
@@ -502,23 +510,38 @@ function inactiveTitle(result: CheckerScanResult, t: Translate) {
     case 'NO_SHOW':
       return t('ops.checker.inactiveNoShowTitle')
     default:
+      break
+  }
+  if (result.booking.approvalStatus === 'PENDING')
+    return t('ops.checker.inactiveApprovalTitle')
+  switch (result.booking.status) {
+    case 'BOOKED_INCOMPLETE':
+    case 'BOOKED_READY':
+      return t('ops.checker.inactiveNotGatedTitle')
+    default:
       return t('ops.checker.inactiveDefaultTitle')
   }
 }
 
 function inactiveBody(result: CheckerScanResult, t: Translate) {
-  if (result.booking.approvalStatus === 'PENDING')
-    return t('ops.checker.inactiveApprovalBody')
   switch (result.booking.status) {
-    case 'BOOKED_INCOMPLETE':
-    case 'BOOKED_READY':
-      return t('ops.checker.inactiveNotGatedBody')
+    case 'CANCELLED':
+      return t('ops.checker.inactiveCancelledBody')
     case 'COMPLETED':
       return t('ops.checker.inactiveCompletedBody')
     case 'CHECKED_OUT':
       return t('ops.checker.inactiveCheckedOutBody')
     case 'NO_SHOW':
       return t('ops.checker.inactiveNoShowBody')
+    default:
+      break
+  }
+  if (result.booking.approvalStatus === 'PENDING')
+    return t('ops.checker.inactiveApprovalBody')
+  switch (result.booking.status) {
+    case 'BOOKED_INCOMPLETE':
+    case 'BOOKED_READY':
+      return t('ops.checker.inactiveNotGatedBody')
     default:
       return t('ops.checker.inactiveDefaultBody')
   }

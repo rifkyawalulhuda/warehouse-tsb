@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { apiErrorMessage } from '@/lib/api/client'
 import { completeVehicleByTicket, fetchPublicTicket } from '@/lib/api/endpoints'
 import { useBranding } from '@/lib/branding'
-import { formatTime, waNumber } from '@/lib/format'
+import { waNumber } from '@/lib/format'
 import { useT } from '@/lib/i18n'
 import { closeTicketSocket, getTicketSocket } from '@/lib/socket'
 import { Button } from '@/components/ui/button'
@@ -20,6 +20,7 @@ import { ErrorBlock, LoadingBlock } from '@/components/query-state'
 import { StatusBadge } from '@/components/status-badge'
 import { TicketPanel } from './ticket-panel'
 import './ticket-print.css'
+import { TicketTimeline } from './timeline'
 
 /**
  * Halaman ini dibuka supir tanpa login. QR hanya ditampilkan setelah data
@@ -79,7 +80,11 @@ export function TicketPage() {
   // Dua syarat, bukan satu: kendaraan lengkap DAN sudah disetujui.
   // Keduanya bisa gagal bersamaan, jadi pesannya harus dibedakan — kalau
   // digabung, supir tidak tahu apa yang harus dilakukan.
-  const approvalBlocked = ticket.approvalStatus === 'PENDING'
+  //
+  // `!finished` penting: booking yang dibatalkan customer tetap ber-
+  // `approvalStatus = PENDING`, dan tanpa syarat ini tiket yang sudah batal
+  // memberi tahu supir untuk "menunggu persetujuan" yang tidak akan datang.
+  const approvalBlocked = ticket.approvalStatus === 'PENDING' && !finished
   const qrVisible = ticket.vehicleComplete && !approvalBlocked
 
   return (
@@ -92,7 +97,11 @@ export function TicketPage() {
             dari sistem mana, dan logonya jauh lebih cepat dikenali daripada
             nama gudang. */}
         <div className='mb-2 flex justify-center'>
-          <BrandLogo name={brand.appName} logoUrl={brand.appLogoUrl} size={32} />
+          <BrandLogo
+            name={brand.appName}
+            logoUrl={brand.appLogoUrl}
+            size={32}
+          />
         </div>
         <p className='text-xs tracking-wide text-muted-foreground uppercase'>
           {ticket.warehouseName}
@@ -168,22 +177,21 @@ export function TicketPage() {
 
       {ticket.timeLog?.gateInAt && (
         <Card>
-          <CardContent className='space-y-2 pt-6 text-sm'>
-            <p className='text-xs tracking-wide text-muted-foreground uppercase'>
-              {t('ticket.history')}
-            </p>
-            <Row label={t('ticket.gateIn')}>
-              {formatTime(ticket.timeLog.gateInAt)}
-            </Row>
-            <Row label={t('ticket.processStart')}>
-              {formatTime(ticket.timeLog.processStartedAt)}
-            </Row>
-            <Row label={t('ticket.processDone')}>
-              {formatTime(ticket.timeLog.processCompletedAt)}
-            </Row>
-            <Row label={t('ticket.gateOut')}>
-              {formatTime(ticket.timeLog.gateOutAt)}
-            </Row>
+          <CardContent className='pt-6'>
+            <TicketTimeline
+              steps={[
+                { label: t('ticket.gateIn'), at: ticket.timeLog.gateInAt },
+                {
+                  label: t('ticket.processStart'),
+                  at: ticket.timeLog.processStartedAt,
+                },
+                {
+                  label: t('ticket.processDone'),
+                  at: ticket.timeLog.processCompletedAt,
+                },
+                { label: t('ticket.gateOut'), at: ticket.timeLog.gateOutAt },
+              ]}
+            />
           </CardContent>
         </Card>
       )}
@@ -265,20 +273,5 @@ function VehicleForm({
         </Button>
       </CardContent>
     </Card>
-  )
-}
-
-function Row({
-  label,
-  children,
-}: {
-  label: string
-  children: React.ReactNode
-}) {
-  return (
-    <div className='flex items-start justify-between gap-4'>
-      <dt className='text-muted-foreground'>{label}</dt>
-      <dd className='text-end font-medium'>{children}</dd>
-    </div>
   )
 }

@@ -17,6 +17,17 @@ export const approvalsRouter = Router()
 
 approvalsRouter.use(requireAuth, requireApprover)
 
+/**
+ * Booking yang MASIH bisa diputuskan Admin.
+ *
+ * Booking yang dibatalkan customer tetap ber-`approval_status = PENDING`
+ * (persetujuan tidak pernah selesai, dan job expire sengaja tidak menyentuhnya
+ * — lihat catatan di jobs/approval-expiry.ts). Tanpa saringan status di sini,
+ * booking batal menumpuk di antrean Admin selamanya dan tombol Setujui pasti
+ * gagal karena `claimApproval` mensyaratkan status BOOKED_*.
+ */
+const DECIDABLE_STATUSES = ['BOOKED_INCOMPLETE', 'BOOKED_READY'] as const
+
 /* ------------------------------------------------------------------ */
 /* Daftar antrean                                                      */
 /* ------------------------------------------------------------------ */
@@ -35,6 +46,9 @@ approvalsRouter.get('/', async (req, res, next) => {
 
     const where = {
       approvalStatus: query.status as ApprovalStatus,
+      // Booking batal yang approval-nya tak pernah selesai bukan pekerjaan
+      // Admin: tombol Setujui pasti gagal untuk baris seperti itu.
+      ...(query.status === 'PENDING' ? { status: { in: [...DECIDABLE_STATUSES] } } : {}),
       ...(query.date ? { bookingDate: new Date(`${query.date}T00:00:00.000Z`) } : {}),
     }
 
@@ -83,7 +97,10 @@ approvalsRouter.get('/', async (req, res, next) => {
 approvalsRouter.get('/count', async (_req, res, next) => {
   try {
     const pending = await prisma.booking.count({
-      where: { approvalStatus: 'PENDING' },
+      where: {
+        approvalStatus: 'PENDING',
+        status: { in: [...DECIDABLE_STATUSES] },
+      },
     })
     res.json({ data: { pending } })
   } catch (error) {
@@ -133,16 +150,22 @@ approvalsRouter.post('/:id/approve', async (req, res, next) => {
     })
     if (!existing) throw badRequest('NOT_FOUND', 'Booking tidak ditemukan')
 
-    if (existing.approvalStatus !== 'PENDING') {
-      throw conflict(
-        'APPROVAL_ALREADY_DECIDED',
-        'Booking ini sudah diputuskan atau kedaluwarsa'
-      )
-    }
+    /**
+     * Status booking diperiksa LEBIH DULU. Booking yang dibatalkan customer
+     * tetap ber-`approval_status = PENDING` — pembatalan tidak menyentuh kolom
+     * itu — jadi memeriksa persetujuan lebih dulu menjawab "sudah diputuskan"
+     * untuk booking yang sebenarnya tidak pernah diputuskan.
+     */
     if (!['BOOKED_INCOMPLETE', 'BOOKED_READY'].includes(existing.status)) {
       throw conflict(
         'APPROVAL_NOT_APPLICABLE',
         'Booking ini sudah dibatalkan atau diproses, tidak bisa disetujui'
+      )
+    }
+    if (existing.approvalStatus !== 'PENDING') {
+      throw conflict(
+        'APPROVAL_ALREADY_DECIDED',
+        'Booking ini sudah diputuskan atau kedaluwarsa'
       )
     }
 
@@ -206,6 +229,20 @@ approvalsRouter.post('/:id/reject', async (req, res, next) => {
     const booking = await prisma.booking.findUnique({ where: { id } })
     if (!booking) throw badRequest('NOT_FOUND', 'Booking tidak ditemukan')
 
+    /**
+     * Status booking diperiksa lebih dulu, sama seperti rute Setujui. Booking
+     * yang dibatalkan customer tetap ber-`approval_status = PENDING`, jadi
+     * memeriksa persetujuan saja akan membiarkan Admin "menolak" booking yang
+     * sudah batal — status akhirnya sama (CANCELLED) tetapi audit log mencatat
+     * penolakan yang tidak pernah terjadi, dan alasan penolakan menimpa booking
+     * yang dibatalkan atas permintaan customer sendiri.
+     */
+    if (!DECIDABLE_STATUSES.includes(booking.status as (typeof DECIDABLE_STATUSES)[number])) {
+      throw conflict(
+        'APPROVAL_NOT_APPLICABLE',
+        'Booking ini sudah dibatalkan atau diproses, tidak bisa ditolak'
+      )
+    }
     if (booking.approvalStatus !== 'PENDING') {
       throw conflict(
         'APPROVAL_ALREADY_DECIDED',
@@ -226,6 +263,7 @@ approvalsRouter.post('/:id/reject', async (req, res, next) => {
             rejection_reason = ${body.reason}
         WHERE id = ${id}::uuid
           AND approval_status = 'PENDING'
+          AND status IN ('BOOKED_INCOMPLETE', 'BOOKED_READY')
         RETURNING id
       `
       if (rows.length === 0) return null

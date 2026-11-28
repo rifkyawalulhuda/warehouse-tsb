@@ -121,6 +121,8 @@ export const bookings = {
     'Booking {code} akan dibatalkan dan slot jamnya dikembalikan.',
   'bookings.detail.cancelConfirm': 'Ya, batalkan',
   'bookings.detail.approvalPending': 'Menunggu persetujuan Admin gudang.',
+  'bookings.detail.approvalClosed':
+    'Booking ini sudah {status}, jadi tidak ada lagi yang menunggu persetujuan.',
   'bookings.detail.approvalDeadline': 'Tenggat {date} {time}.',
   'bookings.detail.approvalQrInactive': 'QR baru aktif setelah disetujui.',
   'bookings.detail.approvalApproved': 'Disetujui.',

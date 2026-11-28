@@ -13,7 +13,9 @@ import {
   slotLimitLabel,
 } from './booking-view'
 
-function booking(partial: Partial<Booking> & Pick<Booking, 'bookingCode'>): Booking {
+function booking(
+  partial: Partial<Booking> & Pick<Booking, 'bookingCode'>
+): Booking {
   return {
     id: partial.bookingCode,
     qrToken: `token-${partial.bookingCode}`,
@@ -66,16 +68,58 @@ describe('parseViewMode', () => {
 
 describe('needsAction', () => {
   it('flags incomplete vehicle data', () => {
-    expect(needsAction(booking({ bookingCode: 'A', status: 'BOOKED_INCOMPLETE' }))).toBe(true)
+    expect(
+      needsAction(booking({ bookingCode: 'A', status: 'BOOKED_INCOMPLETE' }))
+    ).toBe(true)
   })
 
   it('flags pending approval even when the vehicle is complete', () => {
-    expect(needsAction(booking({ bookingCode: 'A', approvalStatus: 'PENDING' }))).toBe(true)
+    expect(
+      needsAction(booking({ bookingCode: 'A', approvalStatus: 'PENDING' }))
+    ).toBe(true)
   })
 
   it('ignores rejected and expired bookings', () => {
-    expect(needsAction(booking({ bookingCode: 'A', approvalStatus: 'REJECTED' }))).toBe(false)
-    expect(needsAction(booking({ bookingCode: 'A', approvalStatus: 'EXPIRED' }))).toBe(false)
+    expect(
+      needsAction(booking({ bookingCode: 'A', approvalStatus: 'REJECTED' }))
+    ).toBe(false)
+    expect(
+      needsAction(booking({ bookingCode: 'A', approvalStatus: 'EXPIRED' }))
+    ).toBe(false)
+  })
+
+  /**
+   * Regresi: booking yang dibatalkan customer tetap ber-`approvalStatus =
+   * 'PENDING'`, jadi dulu muncul di "Perlu tindakan" selamanya.
+   */
+  it('ignores cancelled bookings that still say pending', () => {
+    expect(
+      needsAction(
+        booking({
+          bookingCode: 'A',
+          status: 'CANCELLED',
+          approvalStatus: 'PENDING',
+        })
+      )
+    ).toBe(false)
+    expect(
+      needsAction(
+        booking({
+          bookingCode: 'B',
+          status: 'NO_SHOW',
+          approvalStatus: 'PENDING',
+        })
+      )
+    ).toBe(false)
+    expect(
+      needsAction(
+        booking({
+          bookingCode: 'C',
+          status: 'CHECKED_OUT',
+          approvalStatus: 'PENDING',
+        })
+      )
+    ).toBe(false)
   })
 })
 
@@ -232,8 +276,12 @@ describe('bookingUrgency', () => {
   })
 
   it('keeps the badge short so it does not repeat the big time', () => {
-    expect(bookingUrgency(target, at('2026-11-09T20:00:00.000Z')).badge).toBe('Hari ini')
-    expect(bookingUrgency(target, at('2026-11-09T05:00:00.000Z')).badge).toBe('Besok')
+    expect(bookingUrgency(target, at('2026-11-09T20:00:00.000Z')).badge).toBe(
+      'Hari ini'
+    )
+    expect(bookingUrgency(target, at('2026-11-09T05:00:00.000Z')).badge).toBe(
+      'Besok'
+    )
   })
 
   it('reports tomorrow', () => {
@@ -243,7 +291,9 @@ describe('bookingUrgency', () => {
   })
 
   it('counts days beyond tomorrow', () => {
-    expect(bookingUrgency(target, at('2026-11-07T05:00:00.000Z')).label).toBe('3 hari lagi')
+    expect(bookingUrgency(target, at('2026-11-07T05:00:00.000Z')).label).toBe(
+      '3 hari lagi'
+    )
   })
 
   it('marks a running booking as in progress', () => {
@@ -253,7 +303,9 @@ describe('bookingUrgency', () => {
   })
 
   it('marks a finished booking as overdue', () => {
-    expect(bookingUrgency(target, at('2026-11-10T04:00:00.000Z')).key).toBe('overdue')
+    expect(bookingUrgency(target, at('2026-11-10T04:00:00.000Z')).key).toBe(
+      'overdue'
+    )
   })
 })
 
@@ -271,7 +323,9 @@ describe('slotLimitLabel', () => {
       { code: 'CLOSING_SOON' },
     ]
     for (const reason of reasons) {
-      expect(slotLimitLabel(reason, 'en')).not.toMatch(/Tidak|Belum|Jam sudah|Kuota/)
+      expect(slotLimitLabel(reason, 'en')).not.toMatch(
+        /Tidak|Belum|Jam sudah|Kuota/
+      )
     }
   })
 

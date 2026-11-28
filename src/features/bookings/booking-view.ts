@@ -1,7 +1,7 @@
 import type { Booking, SlotLimit } from '@/lib/api/types'
+import { getCookie, setCookie } from '@/lib/cookies'
 import { dockWithArea } from '@/lib/dock-label'
 import { TIME_ZONE, formatTime } from '@/lib/format'
-import { getCookie, setCookie } from '@/lib/cookies'
 import { translate, type Locale, type MessageKey } from '@/lib/i18n'
 
 /* ------------------------------------------------------------------ */
@@ -20,7 +20,9 @@ const VIEWS: BookingsView[] = ['list', 'grid', 'schedule']
  * `undefined`, supaya halaman tidak pernah merender tanpa tampilan terpilih.
  */
 export function parseViewMode(value: string | undefined): BookingsView {
-  return VIEWS.includes(value as BookingsView) ? (value as BookingsView) : 'list'
+  return VIEWS.includes(value as BookingsView)
+    ? (value as BookingsView)
+    : 'list'
 }
 
 export function readViewMode(): BookingsView {
@@ -35,13 +37,24 @@ export function saveViewMode(view: BookingsView): void {
 /* Filter cepat                                                        */
 /* ------------------------------------------------------------------ */
 
-export type BookingFilter = 'all' | 'action' | 'ready' | 'onsite' | 'done' | 'cancelled' | 'noshow'
+export type BookingFilter =
+  'all' | 'action' | 'ready' | 'onsite' | 'done' | 'cancelled' | 'noshow'
 
 /** Chip untuk tab Aktif: yang masih bisa dikerjakan atau ditunggu. */
-export const ACTIVE_FILTERS: BookingFilter[] = ['all', 'action', 'ready', 'onsite']
+export const ACTIVE_FILTERS: BookingFilter[] = [
+  'all',
+  'action',
+  'ready',
+  'onsite',
+]
 
 /** Chip untuk tab Riwayat: hasil akhir sebuah booking. */
-export const PAST_FILTERS: BookingFilter[] = ['all', 'done', 'cancelled', 'noshow']
+export const PAST_FILTERS: BookingFilter[] = [
+  'all',
+  'done',
+  'cancelled',
+  'noshow',
+]
 
 export const BOOKING_FILTERS: { value: BookingFilter; key: MessageKey }[] = [
   { value: 'all', key: 'bookings.filter.all' },
@@ -64,12 +77,27 @@ const ONSITE_STATUSES = [
   'IN_PROGRESS',
 ] as const
 
+/** Status yang sudah selesai — tidak ada lagi yang bisa dikerjakan. */
+const TERMINAL_STATUSES: readonly string[] = [
+  'COMPLETED',
+  'CHECKED_OUT',
+  'CANCELLED',
+  'NO_SHOW',
+]
+
 /**
  * Booking butuh tindakan customer bila datanya belum lengkap atau sedang
- * menunggu keputusan Admin. `REJECTED`/`EXPIRED` tidak masuk hitungan: slotnya
- * sudah tidak bisa dipakai, jadi tidak ada yang bisa dikerjakan di halaman ini.
+ * menunggu keputusan Admin. Booking yang sudah berakhir tidak masuk hitungan:
+ * slotnya sudah tidak bisa dipakai, jadi tidak ada yang bisa dikerjakan di
+ * halaman ini.
+ *
+ * Status terminal WAJIB ikut disaring, bukan hanya `approvalStatus`. Booking
+ * yang dibatalkan customer tetap ber-`approval_status = PENDING` (persetujuan
+ * tidak pernah selesai), jadi tanpa saringan ini booking batal muncul di
+ * "Perlu tindakan" selamanya dengan label "Menunggu persetujuan".
  */
 export function needsAction(booking: Booking): boolean {
+  if (TERMINAL_STATUSES.includes(booking.status)) return false
   return (
     booking.status === 'BOOKED_INCOMPLETE' ||
     booking.approvalStatus === 'PENDING'
@@ -80,12 +108,18 @@ export function isOnSite(booking: Booking): boolean {
   return (ONSITE_STATUSES as readonly string[]).includes(booking.status)
 }
 
-export function matchesFilter(booking: Booking, filter: BookingFilter): boolean {
+export function matchesFilter(
+  booking: Booking,
+  filter: BookingFilter
+): boolean {
   switch (filter) {
     case 'action':
       return needsAction(booking)
     case 'ready':
-      return booking.status === 'BOOKED_READY' || booking.approvalStatus === 'APPROVED'
+      return (
+        booking.status === 'BOOKED_READY' ||
+        booking.approvalStatus === 'APPROVED'
+      )
     case 'onsite':
       return isOnSite(booking)
     case 'done':
@@ -99,7 +133,9 @@ export function matchesFilter(booking: Booking, filter: BookingFilter): boolean 
   }
 }
 
-export function filterCounts(bookings: Booking[]): Record<BookingFilter, number> {
+export function filterCounts(
+  bookings: Booking[]
+): Record<BookingFilter, number> {
   const counts: Record<BookingFilter, number> = {
     all: bookings.length,
     action: 0,
@@ -129,7 +165,10 @@ export function filterCounts(bookings: Booking[]): Record<BookingFilter, number>
  * berdasarkan `startTime`, tetapi perbandingan eksplisit di sini membuat fungsi
  * ini tetap benar untuk masukan yang tidak terurut (mis. hasil filter lokal).
  */
-export function pickNextBooking(bookings: Booking[], now: Date): Booking | null {
+export function pickNextBooking(
+  bookings: Booking[],
+  now: Date
+): Booking | null {
   const current = now.getTime()
   let next: Booking | null = null
   let nextStart = Number.POSITIVE_INFINITY
@@ -148,7 +187,8 @@ export function pickNextBooking(bookings: Booking[], now: Date): Booking | null 
   return next
 }
 
-export type UrgencyKey = 'in-progress' | 'imminent' | 'today' | 'upcoming' | 'overdue'
+export type UrgencyKey =
+  'in-progress' | 'imminent' | 'today' | 'upcoming' | 'overdue'
 
 export type Urgency = {
   key: UrgencyKey
@@ -177,7 +217,11 @@ function dayDistance(from: number, to: number): number {
  * Label waktu relatif untuk blok booking berikutnya. Satuan menit dipakai
  * sampai satu jam, setelah itu hari lebih mudah dicerna daripada "1.440 menit".
  */
-export function bookingUrgency(booking: Booking, now: Date, locale: Locale = 'id'): Urgency {
+export function bookingUrgency(
+  booking: Booking,
+  now: Date,
+  locale: Locale = 'id'
+): Urgency {
   const t = (key: MessageKey, vars?: Record<string, string | number>) =>
     translate(locale, key, vars)
   const start = Date.parse(booking.startTime)
@@ -259,7 +303,10 @@ export function dockLabel(booking: Booking, locale: Locale = 'id'): string {
  * Inggris tidak menampilkan teks Indonesia. Slot penuh tanpa sebab yang
  * dikenali tetap mendapat kata umum, bukan baris kosong.
  */
-export function slotLimitLabel(limit: SlotLimit | null, locale: Locale = 'id'): string {
+export function slotLimitLabel(
+  limit: SlotLimit | null,
+  locale: Locale = 'id'
+): string {
   switch (limit?.code) {
     case 'PAST_START':
       return translate(locale, 'bookings.create.limit.pastStart')
@@ -291,7 +338,10 @@ export type BookingDay = {
  * dipertahankan, sehingga tampilan jadwal mengikuti urutan dari server
  * (naik untuk aktif, turun untuk riwayat).
  */
-export function groupByDay(bookings: Booking[], locale: Locale = 'id'): BookingDay[] {
+export function groupByDay(
+  bookings: Booking[],
+  locale: Locale = 'id'
+): BookingDay[] {
   const days: BookingDay[] = []
   const index = new Map<string, BookingDay>()
 

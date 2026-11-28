@@ -120,6 +120,8 @@ export const bookings = {
     'Booking {code} will be cancelled and its slot released.',
   'bookings.detail.cancelConfirm': 'Yes, cancel',
   'bookings.detail.approvalPending': 'Waiting for warehouse admin approval.',
+  'bookings.detail.approvalClosed':
+    'This booking is {status}, so nothing is waiting for approval.',
   'bookings.detail.approvalDeadline': 'Deadline {date} {time}.',
   'bookings.detail.approvalQrInactive': 'The QR code activates once approved.',
   'bookings.detail.approvalApproved': 'Approved.',

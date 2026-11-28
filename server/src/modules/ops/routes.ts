@@ -477,7 +477,7 @@ opsRouter.post(
         bookingId: updated.id,
         qrToken: updated.qrToken,
         status: updated.status,
-      customerId: updated.customer.id,
+        customerId: updated.customer.id,
       })
 
       res.json({ data: updated })
@@ -508,7 +508,6 @@ opsRouter.post(
 
       const booking = await prisma.booking.findUnique({
         where: { id: body.bookingId },
-        include: { truckType: true },
       })
       if (!booking) throw notFound('Booking tidak ditemukan')
 
@@ -617,7 +616,7 @@ opsRouter.post(
         bookingId: updated.id,
         qrToken: updated.qrToken,
         status: updated.status,
-      customerId: updated.customer.id,
+        customerId: updated.customer.id,
       })
       emitDockUpdated(dock.id)
 
@@ -791,7 +790,7 @@ opsRouter.post(
         bookingId: updated.id,
         qrToken: updated.qrToken,
         status: updated.status,
-      customerId: updated.customer.id,
+        customerId: updated.customer.id,
       })
 
       res.json({ data: updated })
@@ -861,7 +860,7 @@ opsRouter.post(
         bookingId: updated.id,
         qrToken: updated.qrToken,
         status: updated.status,
-      customerId: updated.customer.id,
+        customerId: updated.customer.id,
       })
       if (booking.assignedDockId) emitDockUpdated(booking.assignedDockId)
 
@@ -943,7 +942,6 @@ opsRouter.post('/no-show', requireRole('ADMIN'), async (req, res, next) => {
 
     const booking = await prisma.booking.findUnique({
       where: { id: body.bookingId },
-      include: { truckType: true },
     })
     if (!booking) throw notFound('Booking tidak ditemukan')
     assertStatus(
@@ -1006,6 +1004,9 @@ opsRouter.post('/no-show', requireRole('ADMIN'), async (req, res, next) => {
       status: updated.status,
       customerId: updated.customer.id,
     })
+    // Dock yang dibebaskan harus dikabarkan juga: tanpa ini layar checker lain
+    // masih menampilkan dock itu terisi sampai ada aksi lain di dock tersebut.
+    if (booking.assignedDockId) emitDockUpdated(booking.assignedDockId)
 
     res.json({ data: updated })
   } catch (error) {

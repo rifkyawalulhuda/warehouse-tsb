@@ -3,7 +3,8 @@ import type { MessageKey } from '../id'
 export const ops: Record<Extract<MessageKey, `ops.${string}`>, string> = {
   'ops.scanTitle': 'Scan ticket',
   'ops.scanChecking': 'Checking ticket…',
-  'ops.scanHint': 'Point the camera at the QR, or type the token / booking code.',
+  'ops.scanHint':
+    'Point the camera at the QR, or type the token / booking code.',
   'ops.scanAnother': 'Scan another ticket',
   'ops.scanCameraOn': 'Turn camera on',
   'ops.scanCameraOff': 'Turn camera off',
@@ -92,8 +93,7 @@ export const ops: Record<Extract<MessageKey, `ops.${string}`>, string> = {
   'ops.checker.start': 'Start processing',
   'ops.checker.inProgressAt': 'Processing at {dock}',
   'ops.checker.startedAt': 'Started {time}.',
-  'ops.checker.finishBody':
-    'Finish once loading/unloading is completely done.',
+  'ops.checker.finishBody': 'Finish once loading/unloading is completely done.',
   'ops.checker.finish': 'Finish processing',
   'ops.checker.confirmAssignTitle': 'Assign and start processing?',
   'ops.checker.confirmStartTitle': 'Start processing at this dock?',
@@ -124,6 +124,10 @@ export const ops: Record<Extract<MessageKey, `ops.${string}`>, string> = {
   'ops.checker.inactiveNoShowTitle': 'Booking marked as no-show',
   'ops.checker.inactiveNoShowBody':
     'An Admin marked this booking as not arriving. Contact the Admin if the truck is in fact there.',
+  'ops.checker.inactiveCancelledTitle': 'Booking already cancelled',
+  'ops.checker.inactiveCancelledBody':
+    'Its slot has been released and this ticket can no longer be used. Ask the customer to book again.',
   'ops.checker.inactiveDefaultTitle': 'No action available for this ticket',
-  'ops.checker.inactiveDefaultBody': 'Check the ticket status on the Dock board.',
+  'ops.checker.inactiveDefaultBody':
+    'Check the ticket status on the Dock board.',
 }

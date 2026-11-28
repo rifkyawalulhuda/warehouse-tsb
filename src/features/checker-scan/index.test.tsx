@@ -222,4 +222,24 @@ describe('halaman pindai checker', () => {
       .element(getByText('Menunggu persetujuan Admin'))
       .toBeInTheDocument()
   })
+
+  /**
+   * Regresi: booking yang dibatalkan customer tetap ber-`approvalStatus =
+   * 'PENDING'`. Dulu layar pindai memeriksa persetujuan lebih dulu, sehingga
+   * checker diberi tahu tiket "menunggu persetujuan" padahal sudah batal.
+   */
+  it('mengutamakan status batal di atas persetujuan yang tertinggal', async () => {
+    const { getByText } = await openTicket(
+      result({
+        status: 'CANCELLED',
+        approvalStatus: 'PENDING',
+        actions: { assignDock: false, start: false, finish: false },
+      })
+    )
+
+    await expect
+      .element(getByText('Booking sudah dibatalkan'))
+      .toBeInTheDocument()
+    expect(getByText('Menunggu persetujuan Admin').elements()).toHaveLength(0)
+  })
 })

@@ -79,8 +79,7 @@ export const ops = {
   'ops.checker.blockedMaintenance': 'perawatan',
   'ops.checker.blockedOccupied': 'terpakai',
   'ops.checker.blockedOtherActivity': 'aktivitas berbeda',
-  'ops.checker.blockedWarehouse':
-    'Bukan area customer ini: {list}',
+  'ops.checker.blockedWarehouse': 'Bukan area customer ini: {list}',
   'ops.checker.noDockWarehouseTitle': 'Tidak ada dock di area customer ini',
   'ops.checker.noDockWarehouseBody':
     'Dock {activity} yang kosong ada di gudang lain. Hubungi Admin kalau customer ini memang boleh memakai gudang tersebut.',
@@ -122,6 +121,9 @@ export const ops = {
   'ops.checker.inactiveNoShowTitle': 'Booking ditandai no-show',
   'ops.checker.inactiveNoShowBody':
     'Admin menandai booking ini tidak hadir. Hubungi Admin bila truk ternyata ada.',
+  'ops.checker.inactiveCancelledTitle': 'Booking sudah dibatalkan',
+  'ops.checker.inactiveCancelledBody':
+    'Slotnya sudah dilepas dan tiket ini tidak bisa dipakai. Minta customer membuat booking baru.',
   'ops.checker.inactiveDefaultTitle': 'Belum ada tindakan untuk tiket ini',
   'ops.checker.inactiveDefaultBody': 'Periksa status tiket di Papan Dock.',
 } as const

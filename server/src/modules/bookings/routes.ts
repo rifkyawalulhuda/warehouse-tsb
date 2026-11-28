@@ -502,14 +502,31 @@ bookingsRouter.patch('/:id/vehicle-info', async (req, res, next) => {
     const complete = Boolean(plate && driverName)
 
     const updated = await prisma.$transaction(async (tx) => {
-      const result = await tx.booking.update({
-        where: { id },
+      // Compare-and-set, bukan `update` biasa. Pemeriksaan status di atas
+      // berjalan di luar transaksi, dan truk bisa dipindai masuk gerbang di
+      // sela itu. Tanpa syarat status di sini, penyimpanan data kendaraan
+      // menimpa CHECKED_IN_* kembali menjadi BOOKED_READY — truk yang sudah di
+      // dalam tercatat belum datang. Rute publik tiket sudah memakai pola ini;
+      // keduanya menulis kolom yang sama, jadi aturannya harus sama.
+      const applied = await tx.booking.updateMany({
+        where: { id, status: { in: ['BOOKED_INCOMPLETE', 'BOOKED_READY'] } },
         data: {
           licensePlate: plate,
           driverName,
           driverPhone: body.driverPhone?.trim() ? body.driverPhone : booking.driverPhone,
           status: statusForVehicleData(booking.status, complete),
         },
+      })
+
+      if (applied.count === 0) {
+        throw conflict(
+          'VEHICLE_LOCKED',
+          'Data kendaraan tidak bisa diubah karena truk sudah masuk gerbang'
+        )
+      }
+
+      const result = await tx.booking.findUniqueOrThrow({
+        where: { id },
         select: bookingSelect,
       })
 
@@ -532,7 +549,15 @@ bookingsRouter.patch('/:id/vehicle-info', async (req, res, next) => {
           userRole: user.role,
           action: 'VEHICLE_INFO_UPDATED',
           bookingId: id,
-          meta: { complete, licensePlate: plate },
+          meta: {
+            complete,
+            licensePlate: plate,
+            previous: {
+              licensePlate: booking.licensePlate,
+              driverName: booking.driverName,
+              driverPhone: booking.driverPhone,
+            },
+          },
         },
         tx as Tx
       )
@@ -575,7 +600,6 @@ bookingsRouter.post(
 
       const booking = await prisma.booking.findUnique({
         where: { id },
-        include: { truckType: true },
       })
       if (!booking) throw notFound('Booking tidak ditemukan')
 
